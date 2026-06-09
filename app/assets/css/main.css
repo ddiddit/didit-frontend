@@ -1,0 +1,60 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    font-family: 'PretendardVariable', 'Pretendard', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-color: #F5F5F8;
+    color: #191919;
+    overscroll-behavior: none;
+  }
+}
+
+@layer utilities {
+  /* 기본 50px + 네이티브 safe area 합산 */
+  .safe-bottom {
+    padding-bottom: max(50px, env(safe-area-inset-bottom));
+  }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .mobile-container {
+    @apply mx-auto w-full max-w-mobile;
+  }
+
+  /* 타이포그래피 스케일 — 굵기는 font-bold / font-semibold / font-medium / font-normal 조합 */
+  /* Title */
+  .text-title1         { font-size: 28px; line-height: 1.38; letter-spacing: -0.02em; }
+  .text-title2         { font-size: 24px; line-height: 1.40; letter-spacing: -0.02em; }
+  .text-title3         { font-size: 22px; line-height: 1.40; letter-spacing: -0.02em; }
+  /* Heading / Headline */
+  .text-heading1       { font-size: 20px; line-height: 1.40; letter-spacing: -0.02em; }
+  .text-headline1      { font-size: 18px; line-height: 1.40; letter-spacing: -0.02em; }
+  /* Body */
+  .text-body1          { font-size: 16px; line-height: 1.50; letter-spacing: -0.02em; }
+  .text-body1-reading  { font-size: 16px; line-height: 1.60; letter-spacing: -0.02em; }
+  .text-body2          { font-size: 15px; line-height: 1.50; letter-spacing: -0.02em; }
+  .text-body2-reading  { font-size: 15px; line-height: 1.60; letter-spacing: -0.02em; }
+  .text-body2-17       { font-size: 17px; line-height: 1.40; letter-spacing: -0.02em; }
+  /* Label */
+  .text-label1         { font-size: 14px; line-height: 1.40; letter-spacing: -0.02em; }
+  .text-label1-reading { font-size: 14px; line-height: 1.60; letter-spacing: -0.02em; }
+  .text-label2         { font-size: 13px; line-height: 1.40; letter-spacing: -0.02em; }
+  .text-label2-reading { font-size: 13px; line-height: 1.50; letter-spacing: -0.02em; }
+  /* Caption */
+  .text-caption1       { font-size: 12px; line-height: 1.36; letter-spacing: -0.02em; }
+  .text-caption2       { font-size: 11px; line-height: 1.30; letter-spacing: -0.02em; }
+}
