@@ -12,8 +12,9 @@
       <div class="flex flex-col gap-[10px]">
         <!-- Google -->
         <button
-          class="w-full h-14 bg-white rounded-xl flex items-center justify-center text-body1 font-medium text-[#191919]"
-          @click="loginWith('google')"
+          class="w-full h-14 bg-white rounded-xl flex items-center justify-center text-body1 font-medium text-[#191919] disabled:opacity-50"
+          :disabled="isLoading"
+          @click="loginWithGoogle"
         >
           <div ref="googleContent" class="flex items-center gap-2">
             <svg class="w-6 h-6 flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -28,8 +29,9 @@
 
         <!-- Kakao -->
         <button
-          class="w-full h-14 bg-[#FEE500] rounded-xl flex items-center justify-center text-body1 font-medium text-[#181600]"
-          @click="loginWith('kakao')"
+          class="w-full h-14 bg-[#FEE500] rounded-xl flex items-center justify-center text-body1 font-medium text-[#181600] disabled:opacity-50"
+          :disabled="isLoading"
+          @click="loginWithKakao"
         >
           <div class="flex items-center gap-2" :style="{ minWidth: syncWidth }">
             <svg class="w-6 h-6 flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -39,10 +41,11 @@
           </div>
         </button>
 
-        <!-- Apple (웹·iOS 모두 표시) -->
+        <!-- Apple -->
         <button
-          class="w-full h-14 bg-gray-900 rounded-xl flex items-center justify-center text-body1 font-medium text-white"
-          @click="loginWith('apple')"
+          class="w-full h-14 bg-gray-900 rounded-xl flex items-center justify-center text-body1 font-medium text-white disabled:opacity-50"
+          :disabled="isLoading"
+          @click="loginWithApple"
         >
           <div class="flex items-center gap-2" :style="{ minWidth: syncWidth }">
             <svg class="w-6 h-6 flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -52,28 +55,131 @@
           </div>
         </button>
       </div>
+
+      <p v-if="errorMessage" class="text-red-400 text-center text-sm mt-4">{{ errorMessage }}</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import type { ApiResponse, TokenResponse } from '~/types/api'
+
+// 각 SDK의 최소 타입 선언
+declare const Kakao: {
+  isInitialized: () => boolean
+  init: (key: string) => void
+  Auth: {
+    authorize: (opts: { redirectUri: string }) => void
+  }
+}
+declare const google: {
+  accounts: {
+    id: {
+      initialize: (cfg: {
+        client_id: string
+        callback: (res: { credential: string }) => void
+        cancel_on_tap_outside?: boolean
+      }) => void
+      prompt: (cb?: (n: { isNotDisplayed: () => boolean; isSkippedMoment: () => boolean }) => void) => void
+    }
+  }
+}
+declare const AppleID: {
+  auth: {
+    init: (cfg: { clientId: string; scope: string; redirectURI: string; usePopup: boolean }) => void
+    signIn: () => Promise<{ authorization: { id_token: string } }>
+  }
+}
+
 definePageMeta({ layout: false })
 
+const { $api } = useNuxtApp()
 const config = useRuntimeConfig()
 const googleContent = ref<HTMLElement | null>(null)
 const syncWidth = ref('')
+const isLoading = ref(false)
+const errorMessage = ref('')
 
 onMounted(async () => {
-  const token = localStorage.getItem('accessToken')
-  if (token) navigateTo('/home', { replace: true })
+  if (localStorage.getItem('accessToken')) {
+    navigateTo('/home', { replace: true })
+    return
+  }
 
   await nextTick()
   if (googleContent.value) {
     syncWidth.value = `${googleContent.value.offsetWidth}px`
   }
+
+  // Google, Apple SDK 로딩 (카카오는 직접 URL 방식으로 SDK 불필요)
+  await Promise.all([
+    loadScript('https://accounts.google.com/gsi/client'),
+    loadScript('https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js'),
+  ])
+
+  google.accounts.id.initialize({
+    client_id: config.public.googleClientId,
+    callback: (res) => submitLogin('GOOGLE', res.credential),
+    cancel_on_tap_outside: true,
+  })
 })
 
-function loginWith(provider: 'google' | 'kakao' | 'apple') {
-  window.location.href = `${config.public.apiBase}/api/v1/auth/oauth/${provider}`
+function loadScript(src: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return }
+    const el = document.createElement('script')
+    el.src = src
+    el.onload = () => resolve()
+    el.onerror = () => resolve()
+    document.head.appendChild(el)
+  })
+}
+
+async function submitLogin(provider: 'KAKAO' | 'GOOGLE' | 'APPLE', oauthToken: string) {
+  isLoading.value = true
+  errorMessage.value = ''
+  try {
+    const { data } = await $api.post<ApiResponse<TokenResponse>>('/api/v1/auth/login', { provider, oauthToken })
+    localStorage.setItem('accessToken', data.data.accessToken)
+    localStorage.setItem('refreshToken', data.data.refreshToken)
+
+    const dest = data.data.isNewUser || !data.data.isOnboardingCompleted ? '/onboarding' : '/home'
+    navigateTo(dest, { replace: true })
+  } catch {
+    errorMessage.value = '로그인에 실패했습니다. 다시 시도해주세요.'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+function loginWithKakao() {
+  errorMessage.value = ''
+  const redirectUri = encodeURIComponent(`${window.location.origin}/auth/kakao/callback`)
+  window.location.href = `https://kauth.kakao.com/oauth/authorize?client_id=${config.public.kakaoRestKey}&redirect_uri=${redirectUri}&response_type=code`
+}
+
+function loginWithGoogle() {
+  errorMessage.value = ''
+  google.accounts.id.prompt((notification) => {
+    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+      errorMessage.value = 'Google 로그인 창이 표시되지 않았습니다. 팝업 차단을 해제해주세요.'
+    }
+  })
+}
+
+async function loginWithApple() {
+  errorMessage.value = ''
+  AppleID.auth.init({
+    clientId: config.public.appleClientId,
+    scope: 'name email',
+    redirectURI: window.location.origin,
+    usePopup: true,
+  })
+  try {
+    const result = await AppleID.auth.signIn()
+    await submitLogin('APPLE', result.authorization.id_token)
+  } catch {
+    errorMessage.value = 'Apple 로그인에 실패했습니다.'
+  }
 }
 </script>
