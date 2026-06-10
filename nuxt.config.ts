@@ -17,6 +17,10 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE ?? 'https://api.didit.ai.kr',
+      kakaoJsKey: process.env.NUXT_PUBLIC_KAKAO_JS_KEY ?? '',
+      kakaoRestKey: process.env.NUXT_PUBLIC_KAKAO_REST_KEY ?? '',
+      googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID ?? '',
+      appleClientId: process.env.NUXT_PUBLIC_APPLE_CLIENT_ID ?? '',
     },
   },
 

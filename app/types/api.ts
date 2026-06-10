@@ -2,6 +2,13 @@ export interface ApiResponse<T> {
   data: T
 }
 
+// 앱 설정
+export interface AppConfig {
+  maintenanceMode: boolean
+  maintenanceMessage: string | null
+  minimumVersion: string
+}
+
 export interface PaginatedResponse<T> {
   data: T[]
   page: number
@@ -15,6 +22,8 @@ export interface PaginatedResponse<T> {
 export interface TokenResponse {
   accessToken: string
   refreshToken: string
+  isNewUser: boolean
+  isOnboardingCompleted: boolean
 }
 
 export interface UserProfile {
