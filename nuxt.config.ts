@@ -3,6 +3,17 @@ export default defineNuxtConfig({
   ssr: false,
   devtools: { enabled: true },
 
+  vite: {
+    server: {
+      proxy: {
+        '/api': {
+          target: process.env.NUXT_PUBLIC_API_BASE ?? 'https://dev-api.didit.ai.kr',
+          changeOrigin: true,
+        },
+      },
+    },
+  },
+
   modules: [
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',

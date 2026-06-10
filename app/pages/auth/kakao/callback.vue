@@ -51,6 +51,7 @@ onMounted(async () => {
 
     localStorage.setItem('accessToken', data.data.accessToken)
     localStorage.setItem('refreshToken', data.data.refreshToken)
+    localStorage.setItem('isOnboardingCompleted', String(data.data.isOnboardingCompleted))
 
     const dest = data.data.isNewUser || !data.data.isOnboardingCompleted ? '/onboarding' : '/home'
     navigateTo(dest, { replace: true })

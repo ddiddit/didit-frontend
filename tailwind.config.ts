@@ -83,7 +83,7 @@ export default {
         },
 
         surface: '#FFFFFF',
-        background: '#F5F5F8',
+        background: '#F6F6F6',
       },
       borderRadius: {
         '2xl': '16px',

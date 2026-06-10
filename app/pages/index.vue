@@ -5,12 +5,11 @@
 </template>
 
 <script setup lang="ts">
-import type { ApiResponse, AppConfig, UserProfile } from '~/types/api'
+import type { ApiResponse, AppConfig } from '~/types/api'
 
 definePageMeta({ layout: false })
 
 const { $api } = useNuxtApp()
-const authStore = useAuthStore()
 
 onMounted(async () => {
   const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000))
@@ -35,24 +34,15 @@ onMounted(async () => {
       return
     }
 
-    // 자동 로그인 시도
     const accessToken = localStorage.getItem('accessToken')
     if (!accessToken) {
       navigateTo('/auth/login', { replace: true })
       return
     }
 
-    const userResult = await Promise.race([
-      $api.get<ApiResponse<UserProfile>>('/api/v1/users/me').then((res) => res.data.data),
-      timeout,
-    ])
-
-    if (userResult) {
-      authStore.setUser(userResult)
-      navigateTo('/home', { replace: true })
-    } else {
-      navigateTo('/auth/login', { replace: true })
-    }
+    // 온보딩 미완료 시 온보딩으로 이동
+    const isOnboardingCompleted = localStorage.getItem('isOnboardingCompleted')
+    navigateTo(isOnboardingCompleted === 'true' ? '/home' : '/onboarding', { replace: true })
   } catch {
     navigateTo('/auth/login', { replace: true })
   }
