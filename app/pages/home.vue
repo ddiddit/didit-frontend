@@ -6,13 +6,12 @@
       class="flex items-center justify-end px-5 h-[50px] shrink-0"
       style="margin-top: max(54px, env(safe-area-inset-top, 54px));"
     >
-      <button class="relative p-1" @click="goToNotifications">
+      <button class="p-1" @click="goToNotifications">
         <img
-          :src="hasUnread ? '/icons/bell-on.png' : '/icons/bell-off.png'"
+          :src="hasUnread ? '/icons/bell-on.svg' : '/icons/bell-off.svg'"
           alt="알림"
           class="w-6 h-6"
         />
-        <span v-if="hasUnread" class="absolute top-1 right-1 w-[6px] h-[6px] bg-primary rounded-full" />
       </button>
     </header>
 
