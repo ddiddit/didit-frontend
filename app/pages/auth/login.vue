@@ -2,7 +2,7 @@
   <div class="h-dvh bg-primary flex flex-col">
     <!-- 상단: 헤드라인 (중앙 정렬) -->
     <div class="flex-1 flex flex-col items-center justify-center px-6 safe-top text-center">
-      <img src="/heading-login.svg" alt="Growth through your didit. 더 간단해진 회고, 디딧" class="w-full max-w-[280px] h-auto" />
+      <img src="/heading-login.svg" alt="Growth through your didit. 더 간단해진 회고, 디딧" class="w-full max-w-[280px] h-auto" fetchpriority="high" />
     </div>
 
     <!-- 하단: 소셜 로그인 버튼 -->
