@@ -33,7 +33,7 @@
         v-if="!isLoading && retrospects.length === 0"
         class="flex-1 flex flex-col items-center justify-center gap-[6px]"
       >
-        <img src="/icons/empty-retrospects.svg" alt="" class="w-[52px] h-[52px] mb-[6px]" />
+        <img src="/icons/empty-retrospects.svg" alt="" class="w-[70px] h-[70px] mb-[6px]" />
         <p class="text-heading2 font-semibold text-grey-13">
           {{ keyword ? '검색 결과가 없어요' : '아직 기록된 회고가 없어요' }}
         </p>
