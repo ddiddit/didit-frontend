@@ -1,57 +1,58 @@
 <template>
   <div class="h-full bg-background flex flex-col">
-    <!-- 헤더: 벨 아이콘만 우측 -->
-    <header class="flex justify-end px-5 pt-14 pb-2 shrink-0">
-      <button class="p-1" @click="goToNotifications">
+
+    <!-- 헤더: H:50, 벨 아이콘만 우측 -->
+    <header
+      class="flex items-center justify-end px-5 h-[50px] shrink-0"
+      style="margin-top: max(54px, env(safe-area-inset-top, 54px));"
+    >
+      <button class="relative p-1" @click="goToNotifications">
         <img
           :src="hasUnread ? '/icons/bell-on.png' : '/icons/bell-off.png'"
           alt="알림"
           class="w-6 h-6"
         />
+        <span v-if="hasUnread" class="absolute top-1 right-1 w-[6px] h-[6px] bg-primary rounded-full" />
       </button>
     </header>
 
-    <!-- 인사말 -->
-    <div class="px-5 pt-1 pb-0 shrink-0">
-      <h1 class="text-heading1 font-bold text-gray-900 leading-snug">
-        <template v-if="isLoading">
-          <span class="inline-block w-24 h-6 bg-gray-200 rounded animate-pulse mb-1 block" />
-          <span class="inline-block w-52 h-6 bg-gray-200 rounded animate-pulse block" />
-        </template>
-        <template v-else>
-          {{ nickname }}님,<br />
-          {{ greetingMessage }}
-        </template>
+    <!-- 인사말: 닉네임 + 문구 -->
+    <div class="px-5 shrink-0">
+      <template v-if="isLoading">
+        <span class="inline-block w-24 h-6 bg-grey-4 rounded animate-pulse mb-1 block" />
+        <span class="inline-block w-52 h-6 bg-grey-4 rounded animate-pulse block" />
+      </template>
+      <h1 v-else class="text-title3 font-bold text-grey-13 leading-[1.4]">
+        {{ nickname }}님,<br />
+        {{ greetingMessage }}
       </h1>
     </div>
 
-    <!-- 빈 상태 (flex-1, 세로 중앙 정렬) -->
+    <!-- 빈 상태: 세로 중앙 정렬 -->
     <div
       v-if="!isLoading && recentRetrospectives.length === 0"
-      class="flex-1 flex flex-col items-center justify-center gap-3 pb-4"
+      class="flex-1 flex flex-col items-center justify-center gap-3 pb-16"
     >
-      <!-- 70×70, border-radius 12, 배경 없음 -->
-      <div class="w-[70px] h-[70px] rounded-[12px] overflow-hidden">
-        <img src="/icon-empty.png" alt="" class="w-full h-full object-contain" />
-      </div>
+      <img src="/icons/empty-home.svg" alt="" class="w-[70px] h-[70px]" />
 
-      <div class="text-center flex flex-col items-center gap-1">
-        <!-- Heading 2/Bold: 18px, line-height 140%, grey-13 -->
-        <p class="font-bold text-[#191919]" style="font-size:18px;line-height:1.4;">
+      <div class="text-center flex flex-col items-center gap-[6px]">
+        <!-- Heading 2/SemiBold: 18px/140% -->
+        <p class="text-heading2 font-semibold text-grey-13">
           아직 작성한 회고가 없어요
         </p>
-        <!-- Label 1/Reading: 14px, line-height 160%, grey-9 -->
-        <p class="text-center text-[#575757]" style="font-size:14px;line-height:1.6;">
+        <!-- Regular 14px/160%, #575757 = grey-9 -->
+        <p class="text-label1-reading font-normal text-grey-9 text-center">
           회고를 시작하고<br />오늘의 일을 기록해 보세요!
         </p>
       </div>
 
+      <!-- 회고 시작하기 버튼: H:42, radius:12, gap:4 / 텍스트↔버튼 40px (gap-3 12px + mt-7 28px) -->
       <button
-        class="flex items-center gap-1.5 mt-3 px-6 py-3.5 bg-primary rounded-full text-white text-body3 font-bold"
+        class="flex items-center gap-1 mt-7 px-[18px] h-[42px] bg-primary rounded-xl"
         @click="startRetrospect"
       >
-        <Icon name="heroicons:plus" class="w-4 h-4" />
-        회고 시작하기
+        <img src="/icons/add.png" alt="" class="w-6 h-6" />
+        <span class="text-body2 font-semibold text-grey-13">회고 시작하기</span>
       </button>
     </div>
 

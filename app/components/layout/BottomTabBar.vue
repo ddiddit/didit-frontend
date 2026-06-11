@@ -12,15 +12,16 @@
         :key="tab.to"
         :to="tab.to"
         class="flex flex-col items-center gap-1"
-        :class="isActive(tab.to) ? 'text-gray-900' : 'text-gray-400'"
       >
-        <Icon
-          :name="isActive(tab.to) ? tab.iconActive : tab.icon"
-          class="w-6 h-6"
+        <img
+          :src="tab.icon"
+          :alt="tab.label"
+          class="w-6 h-6 transition-opacity duration-150"
+          :class="isActive(tab.to) ? 'opacity-100' : 'opacity-30'"
         />
         <span
-          class="text-caption2 font-medium"
-          :class="isActive(tab.to) ? 'text-gray-900' : 'text-gray-400'"
+          class="text-caption2 font-medium transition-colors duration-150"
+          :class="isActive(tab.to) ? 'text-grey-13' : 'text-grey-5'"
         >
           {{ tab.label }}
         </span>
@@ -33,9 +34,9 @@
 const route = useRoute()
 
 const tabs = [
-  { to: '/home', label: '홈', icon: 'heroicons:home', iconActive: 'heroicons:home-solid' },
-  { to: '/retrospects', label: '회고기록', icon: 'heroicons:document-text', iconActive: 'heroicons:document-text-solid' },
-  { to: '/my', label: '마이', icon: 'heroicons:user', iconActive: 'heroicons:user-solid' },
+  { to: '/home', label: '홈', icon: '/icons/tab-home.svg' },
+  { to: '/retrospects', label: '회고기록', icon: '/icons/tab-retrospect.svg' },
+  { to: '/my', label: '마이', icon: '/icons/tab-profile.svg' },
 ]
 
 function isActive(path: string) {
