@@ -61,16 +61,53 @@
       <!-- TODO: 회고 카드 목록 -->
     </div>
 
-    <!-- 플로팅 액션 버튼 -->
-    <button
-      class="absolute right-5 w-12 h-12 rounded-full bg-primary flex items-center justify-center"
-      style="bottom: calc(max(28px, env(safe-area-inset-bottom, 28px)) + 56px + 16px); box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
-      @click="startRetrospect"
+    <!-- FAB + 툴팁 -->
+    <div
+      v-if="!isLoading"
+      class="absolute right-5 flex items-center gap-2"
+      style="bottom: 16px;"
     >
-      <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
-        <path d="M15 7V23M7 15H23" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-      </svg>
-    </button>
+      <!-- 툴팁 버블 -->
+      <div
+        class="relative flex items-center h-9 px-3 rounded-xl"
+        :class="isCompleted ? 'bg-grey-5' : 'bg-grey-10'"
+        style="box-shadow: 0 2px 8px rgba(0,0,0,0.12);"
+      >
+        <span v-if="!isCompleted" class="text-label1 font-medium text-grey-1 whitespace-nowrap">
+          오늘 남은 회고 횟수&nbsp;<span class="font-semibold text-primary">{{ remaining }}/{{ maxDaily }}</span>
+        </span>
+        <span v-else class="text-label1 font-medium text-grey-7 whitespace-nowrap">
+          오늘 회고 {{ maxDaily }}회 완료
+        </span>
+        <!-- 오른쪽 꼬리 -->
+        <div
+          class="absolute -right-[5px] top-1/2 -translate-y-1/2 w-0 h-0"
+          :style="{
+            borderTop: '5px solid transparent',
+            borderBottom: '5px solid transparent',
+            borderLeft: `5px solid ${isCompleted ? '#E6E6E6' : '#3C3C3C'}`,
+          }"
+        />
+      </div>
+
+      <!-- FAB -->
+      <button
+        class="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+        :class="isCompleted ? 'bg-grey-5 cursor-not-allowed' : 'bg-primary'"
+        style="box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
+        :disabled="isCompleted"
+        @click="startRetrospect"
+      >
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+          <path
+            d="M15 7V23M7 15H23"
+            :stroke="isCompleted ? '#989898' : '#191919'"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -84,10 +121,15 @@ const { $api } = useNuxtApp()
 // 페이지 이동 후 재방문 시 깜빡임 없도록 SPA 전체에서 상태 유지
 const nickname = useState<string>('home:nickname', () => '')
 const recentRetrospectives = useState<HomeResponse['recentRetrospectives']>('home:retrospectives', () => [])
+const todayRetrospectiveCount = useState<number>('home:todayCount', () => 0)
 const hasUnread = ref(false)
 
 // 캐시된 데이터가 있으면 로딩 스켈레톤 생략
 const isLoading = ref(nickname.value === '')
+
+const maxDaily = 3
+const remaining = computed(() => Math.max(0, maxDaily - todayRetrospectiveCount.value))
+const isCompleted = computed(() => remaining.value === 0)
 
 const greetingMessage = computed(() =>
   recentRetrospectives.value.length === 0 ? '첫 회고를 시작해볼까요?' : '오늘도 성장하는 하루 보내세요!',
@@ -98,6 +140,7 @@ onMounted(async () => {
     const res = await $api.get<ApiResponse<HomeResponse>>('/api/v1/home')
     nickname.value = res.data.data.nickname
     recentRetrospectives.value = res.data.data.recentRetrospectives
+    todayRetrospectiveCount.value = res.data.data.todayRetrospectiveCount
   } catch {
     // 401/403은 axios 인터셉터가 처리
   } finally {
