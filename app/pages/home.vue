@@ -98,14 +98,12 @@
         :disabled="isCompleted"
         @click="startRetrospect"
       >
-        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
-          <path
-            d="M15 7V23M7 15H23"
-            :stroke="isCompleted ? '#989898' : '#191919'"
-            stroke-width="2.5"
-            stroke-linecap="round"
-          />
-        </svg>
+        <img
+          src="/icons/add.png"
+          alt="회고 시작"
+          class="w-[30px] h-[30px]"
+          :style="isCompleted ? 'opacity: 0.4;' : ''"
+        />
       </button>
     </div>
   </div>
