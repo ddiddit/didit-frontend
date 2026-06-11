@@ -14,14 +14,14 @@
         class="flex flex-col items-center gap-1"
       >
         <img
-          :src="tab.icon"
+          :src="isActive(tab.to) ? tab.iconActive : tab.icon"
           :alt="tab.label"
-          class="w-6 h-6 transition-opacity duration-150"
-          :class="isActive(tab.to) ? 'opacity-100' : 'opacity-30'"
+          class="w-6 h-6 transition-all duration-150"
+          :style="isActive(tab.to) ? 'filter: brightness(0) invert(1) brightness(0.098)' : 'filter: brightness(0) invert(1) brightness(0.596)'"
         />
         <span
-          class="text-caption2 font-medium transition-colors duration-150"
-          :class="isActive(tab.to) ? 'text-grey-13' : 'text-grey-5'"
+          class="text-caption1 font-bold transition-colors duration-150"
+          :class="isActive(tab.to) ? 'text-grey-13' : 'text-grey-7'"
         >
           {{ tab.label }}
         </span>
@@ -34,12 +34,16 @@
 const route = useRoute()
 
 const tabs = [
-  { to: '/home', label: '홈', icon: '/icons/tab-home.svg' },
-  { to: '/retrospects', label: '회고기록', icon: '/icons/tab-retrospect.svg' },
-  { to: '/my', label: '마이', icon: '/icons/tab-profile.svg' },
+  { to: '/home', label: '홈', icon: '/icons/tab-home.svg', iconActive: '/icons/tab-home.svg' },
+  { to: '/retrospects', label: '회고기록', icon: '/icons/tab-retrospect.svg', iconActive: '/icons/tab-retrospect-active.svg' },
+  { to: '/my', label: '마이', icon: '/icons/tab-profile.svg', iconActive: '/icons/tab-profile-active.svg' },
 ]
 
+// 홈 섹션에 속하는 경로 (알림창 포함)
+const homeRelatedPaths = ['/notifications']
+
 function isActive(path: string) {
+  if (path === '/home' && homeRelatedPaths.includes(route.path)) return true
   return route.path.startsWith(path)
 }
 </script>
