@@ -4,6 +4,15 @@
 @tailwind components;
 @tailwind utilities;
 
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.15s ease;
+}
+.page-enter-from,
+.page-leave-to {
+  opacity: 0;
+}
+
 @layer base {
   * {
     -webkit-tap-highlight-color: transparent;
