@@ -133,7 +133,7 @@ async function fetchRetrospects() {
     const params = keyword.value
       ? `?keyword=${encodeURIComponent(keyword.value)}&page=0&size=50`
       : '?page=0&size=50'
-    const res = await $api.get<ApiResponse<PaginatedResponse<Retrospective>>>(`/api/v1/retrospects${params}`)
+    const res = await $api.get<ApiResponse<PaginatedResponse<Retrospective>>>(`/api/v1/retrospectives${params}`)
     retrospects.value = res.data.data.data
   } catch {
     retrospects.value = []
