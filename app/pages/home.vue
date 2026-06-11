@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-background flex flex-col">
+  <div class="h-full bg-background flex flex-col relative">
 
     <!-- 헤더: H:50, 벨 아이콘만 우측 -->
     <header
@@ -60,6 +60,17 @@
     <div v-else-if="!isLoading && recentRetrospectives.length > 0" class="flex-1 px-5 pt-4">
       <!-- TODO: 회고 카드 목록 -->
     </div>
+
+    <!-- 플로팅 액션 버튼 -->
+    <button
+      class="absolute right-5 w-12 h-12 rounded-full bg-primary flex items-center justify-center"
+      style="bottom: calc(max(28px, env(safe-area-inset-bottom, 28px)) + 56px + 16px); box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
+      @click="startRetrospect"
+    >
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+        <path d="M15 7V23M7 15H23" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </button>
   </div>
 </template>
 
