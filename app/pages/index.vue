@@ -12,6 +12,13 @@ definePageMeta({ layout: false })
 const { $api } = useNuxtApp()
 
 onMounted(async () => {
+  // 이미 로그인된 경우 스플래시 없이 즉시 이동
+  if (localStorage.getItem('accessToken') && localStorage.getItem('refreshToken')) {
+    const isOnboardingCompleted = localStorage.getItem('isOnboardingCompleted')
+    navigateTo(isOnboardingCompleted === 'true' ? '/home' : '/onboarding', { replace: true })
+    return
+  }
+
   const minDisplay = new Promise<void>((resolve) => setTimeout(resolve, 1500))
   const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000))
 
