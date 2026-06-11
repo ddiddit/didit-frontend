@@ -76,7 +76,7 @@ const hasUnread = computed(() => notifications.value.some(n => !n.isRead))
 
 onMounted(async () => {
   try {
-    const res = await $api.get<ApiResponse<NotificationHistory[]>>('/api/v1/notifications')
+    const res = await $api.get<ApiResponse<NotificationHistory[]>>('/api/v1/notification-histories')
     notifications.value = res.data.data
   } catch {
     // 오류 처리
@@ -87,7 +87,7 @@ onMounted(async () => {
 
 async function markAllRead() {
   try {
-    await $api.post('/api/v1/notifications/read-all')
+    await $api.post('/api/v1/notification-histories/read-all')
     notifications.value = notifications.value.map(n => ({ ...n, isRead: true }))
   } catch {
     // 오류 처리
