@@ -110,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ApiResponse, PaginatedResponse, Retrospective } from '~/types/api'
+import type { ApiResponse, Retrospective } from '~/types/api'
 
 definePageMeta({ middleware: 'auth', layout: 'default' })
 
@@ -131,10 +131,10 @@ async function fetchRetrospects() {
   if (keyword.value || retrospects.value.length === 0) isLoading.value = true
   try {
     const params = keyword.value
-      ? `?keyword=${encodeURIComponent(keyword.value)}&page=0&size=50`
-      : '?page=0&size=50'
-    const res = await $api.get<ApiResponse<PaginatedResponse<Retrospective>>>(`/api/v1/retrospectives${params}`)
-    retrospects.value = res.data.data.data
+      ? `?keyword=${encodeURIComponent(keyword.value)}`
+      : ''
+    const res = await $api.get<ApiResponse<Retrospective[]>>(`/api/v1/retrospectives${params}`)
+    retrospects.value = res.data.data
   } catch {
     retrospects.value = []
   } finally {
