@@ -70,10 +70,13 @@ definePageMeta({ middleware: 'auth' })
 
 const { $api } = useNuxtApp()
 
-const isLoading = ref(true)
-const nickname = ref('')
-const recentRetrospectives = ref<HomeResponse['recentRetrospectives']>([])
+// 페이지 이동 후 재방문 시 깜빡임 없도록 SPA 전체에서 상태 유지
+const nickname = useState<string>('home:nickname', () => '')
+const recentRetrospectives = useState<HomeResponse['recentRetrospectives']>('home:retrospectives', () => [])
 const hasUnread = ref(false)
+
+// 캐시된 데이터가 있으면 로딩 스켈레톤 생략
+const isLoading = ref(nickname.value === '')
 
 const greetingMessage = computed(() =>
   recentRetrospectives.value.length === 0 ? '첫 회고를 시작해볼까요?' : '오늘도 성장하는 하루 보내세요!',
@@ -85,7 +88,7 @@ onMounted(async () => {
     nickname.value = res.data.data.nickname
     recentRetrospectives.value = res.data.data.recentRetrospectives
   } catch {
-    // 401은 axios 인터셉터가 처리
+    // 401/403은 axios 인터셉터가 처리
   } finally {
     isLoading.value = false
   }

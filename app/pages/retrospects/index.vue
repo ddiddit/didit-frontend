@@ -27,21 +27,36 @@
 
     <!-- 리스트 탭 -->
     <template v-if="activeTab === 'list'">
+
       <!-- 빈 상태 -->
       <div
         v-if="!isLoading && retrospects.length === 0"
         class="flex-1 flex flex-col items-center justify-center gap-[6px]"
       >
-        <img src="/icons/empty-retrospects.svg" alt="" class="w-[52px] h-[52px] mb-2" />
-        <p class="text-heading2 font-semibold text-grey-13">아직 기록된 회고가 없어요</p>
+        <img src="/icons/empty-retrospects.svg" alt="" class="w-[52px] h-[52px] mb-[6px]" />
+        <p class="text-heading2 font-semibold text-grey-13">
+          {{ keyword ? '검색 결과가 없어요' : '아직 기록된 회고가 없어요' }}
+        </p>
         <p class="text-label1-reading font-normal text-grey-9 text-center">
-          회고를 작성하면<br />이곳에 차곡차곡 쌓여요!
+          <template v-if="keyword">"{{ keyword }}"에 해당하는<br />회고를 찾을 수 없어요.</template>
+          <template v-else>회고를 작성하면<br />이곳에 차곡차곡 쌓여요!</template>
         </p>
       </div>
 
-      <!-- 목록 (추후 구현) -->
-      <div v-else-if="!isLoading" class="flex-1 overflow-y-auto scrollbar-hide px-5 pt-2">
-        <!-- TODO: 회고 카드 목록 -->
+      <!-- 목록 -->
+      <div v-else-if="!isLoading" class="flex-1 overflow-y-auto scrollbar-hide">
+        <ul>
+          <li
+            v-for="item in retrospects"
+            :key="item.id"
+            class="px-5 py-4 border-b border-grey-4"
+            @click="navigateTo(`/retrospects/${item.id}`)"
+          >
+            <p class="text-caption1 font-normal text-grey-7 mb-1">{{ formatDate(item.completedAt ?? item.createdAt) }}</p>
+            <p class="text-label1 font-semibold text-grey-13 leading-[1.4]">{{ item.title }}</p>
+            <p v-if="item.summary" class="text-label2 font-normal text-grey-7 mt-1 line-clamp-2 leading-[1.5]">{{ item.summary }}</p>
+          </li>
+        </ul>
       </div>
     </template>
 
@@ -95,13 +110,42 @@
 </template>
 
 <script setup lang="ts">
+import type { ApiResponse, PaginatedResponse, Retrospective } from '~/types/api'
+
 definePageMeta({ middleware: 'auth', layout: 'default' })
 
 const { $api } = useNuxtApp()
+const route = useRoute()
 
-const isLoading = ref(false)
-const retrospects = ref<{ date: string }[]>([])
+// 페이지 재방문 시 깜빡임 없도록 SPA 전체에서 상태 유지
+const retrospects = useState<Retrospective[]>('retrospects:list', () => [])
 const activeTab = ref<'list' | 'calendar'>('list')
+const isLoading = ref(retrospects.value.length === 0)
+
+const keyword = computed(() => route.query.keyword as string | undefined)
+
+watch(keyword, () => fetchRetrospects(), { immediate: true })
+
+async function fetchRetrospects() {
+  // 키워드 검색이거나 캐시가 없을 때만 로딩 표시
+  if (keyword.value || retrospects.value.length === 0) isLoading.value = true
+  try {
+    const params = keyword.value
+      ? `?keyword=${encodeURIComponent(keyword.value)}&page=0&size=50`
+      : '?page=0&size=50'
+    const res = await $api.get<ApiResponse<PaginatedResponse<Retrospective>>>(`/api/v1/retrospects${params}`)
+    retrospects.value = res.data.data.data
+  } catch {
+    retrospects.value = []
+  } finally {
+    isLoading.value = false
+  }
+}
+
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr)
+  return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
+}
 
 // 캘린더 상태
 const today = new Date()

@@ -13,81 +13,57 @@
     </div>
 
     <!-- 검색 입력 -->
-    <div class="px-5 pt-3 pb-4 shrink-0">
-      <div class="flex items-center bg-grey-3 rounded-xl px-4 h-[46px] gap-2">
+    <div class="px-5 pt-4 shrink-0">
+      <div class="flex items-center bg-grey-3 rounded-xl px-4 h-[56px] gap-2">
         <input
           ref="inputRef"
           v-model="searchQuery"
           type="text"
           placeholder="키워드로 검색해 보세요."
-          class="flex-1 bg-transparent text-body3 font-normal text-grey-13 placeholder:text-grey-6 outline-none"
-          @input="onInput"
+          class="flex-1 bg-transparent text-body3 font-medium text-grey-13 placeholder:text-grey-7 outline-none"
           @keydown.enter="onEnter"
+          @compositionstart="isComposing = true"
+          @compositionend="onCompositionEnd"
         />
-        <!-- 입력값 없을 때: 검색 아이콘 -->
         <button v-if="!searchQuery" class="flex items-center shrink-0">
-          <img src="/icons/search.svg" alt="검색" class="w-5 h-5 block" />
+          <img src="/icons/search.svg" alt="검색" class="w-6 h-6 block" />
         </button>
-        <!-- 입력값 있을 때: X 클리어 버튼 -->
         <button v-else class="flex items-center shrink-0" @click="clearQuery">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <circle cx="10" cy="10" r="10" fill="#C6C6C6"/>
-            <path d="M7 7L13 13M13 7L7 13" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="12" fill="#6A6A6A"/>
+            <path d="M8.5 8.5L15.5 15.5M15.5 8.5L8.5 15.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
           </svg>
         </button>
       </div>
     </div>
 
-    <!-- 최근 검색어 섹션 -->
-    <div v-if="recentSearches.length > 0 && !hasResults" class="px-5 shrink-0">
+    <!-- 최근 검색어 -->
+    <div v-if="recentSearches.length > 0" class="px-5 mt-[30px] shrink-0">
       <div class="flex items-center justify-between mb-3">
         <span class="text-label1 font-semibold text-grey-13">최근 검색어</span>
-        <button class="text-label2 font-normal text-grey-7" @click="clearAllRecent">전체 삭제</button>
+        <button class="text-caption1 font-medium text-grey-7" @click="clearAllRecent">전체 삭제</button>
       </div>
       <div class="flex flex-wrap gap-2">
         <button
           v-for="item in recentSearches"
           :key="item"
-          class="flex items-center gap-1 h-[34px] px-3 bg-grey-3 rounded-full"
-          @click="selectRecent(item)"
+          class="flex items-center gap-2 h-[36px] pl-[14px] pr-[9px] bg-white border border-grey-4 rounded-full overflow-hidden"
+          @click="goSearch(item)"
         >
-          <span class="text-label2 font-normal text-grey-11">{{ item }}</span>
-          <span class="flex items-center" @click.stop="removeRecent(item)">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M4 4L10 10M10 4L4 10" stroke="#989898" stroke-width="1.4" stroke-linecap="round"/>
-            </svg>
+          <span class="text-label2 font-medium text-grey-13 truncate">{{ item }}</span>
+          <span class="flex items-center shrink-0" @click.stop="removeRecent(item)">
+            <img src="/icons/close.svg" class="w-4 h-4 block" style="filter: brightness(0) invert(1) brightness(0.776)" />
           </span>
         </button>
       </div>
     </div>
 
-    <!-- 검색 결과 -->
-    <div v-if="hasResults" class="flex-1 overflow-y-auto scrollbar-hide">
-      <ul>
-        <li
-          v-for="item in searchResults"
-          :key="item.id"
-          class="px-5 py-4 border-b border-grey-4"
-          @click="navigateTo(`/retrospects/${item.id}`)"
-        >
-          <p class="text-label1 font-semibold text-grey-13 leading-[1.4]">{{ item.title }}</p>
-          <p v-if="item.summary" class="text-label2 font-normal text-grey-7 mt-1 line-clamp-1">{{ item.summary }}</p>
-          <p class="text-caption1 font-normal text-grey-6 mt-1">{{ formatDate(item.completedAt ?? item.createdAt) }}</p>
-        </li>
-      </ul>
-      <!-- 결과 없음 -->
-      <div v-if="searchQuery && searchResults.length === 0 && !isSearching" class="flex-1 flex flex-col items-center justify-center py-20 gap-2">
-        <p class="text-body3 font-semibold text-grey-13">검색 결과가 없어요</p>
-        <p class="text-label1 font-normal text-grey-7 text-center">"{{ searchQuery }}"에 대한 결과를 찾을 수 없어요.</p>
-      </div>
-    </div>
-
-    <!-- 빈 상태 (검색어 없음, 최근 검색어 없음) -->
+    <!-- 빈 상태 -->
     <div
-      v-if="!searchQuery && recentSearches.length === 0"
+      v-if="recentSearches.length === 0"
       class="flex-1 flex items-center justify-center pb-20"
     >
-      <p class="text-label1 font-normal text-grey-7 text-center leading-[1.6]">
+      <p class="text-[14px] font-normal text-grey-9 text-center leading-[1.6] tracking-[-0.02em]">
         회고 제목이나 키워드로<br />저장된 회고를 검색해 보세요.
       </p>
     </div>
@@ -96,23 +72,14 @@
 </template>
 
 <script setup lang="ts">
-import { useDebounceFn } from '@vueuse/core'
-import type { ApiResponse, PaginatedResponse, Retrospective } from '~/types/api'
-
 definePageMeta({ middleware: 'auth', layout: 'default' })
-
-const { $api } = useNuxtApp()
 
 const inputRef = ref<HTMLInputElement | null>(null)
 const searchQuery = ref('')
-const searchResults = ref<Retrospective[]>([])
-const isSearching = ref(false)
 
 const RECENT_KEY = 'recentSearches'
 const MAX_RECENT = 10
-
 const recentSearches = ref<string[]>([])
-const hasResults = computed(() => searchQuery.value.trim().length > 0)
 
 onMounted(() => {
   const saved = localStorage.getItem(RECENT_KEY)
@@ -120,44 +87,28 @@ onMounted(() => {
   nextTick(() => inputRef.value?.focus())
 })
 
-const debouncedSearch = useDebounceFn(async (keyword: string) => {
-  if (!keyword.trim()) {
-    searchResults.value = []
-    return
-  }
-  isSearching.value = true
-  try {
-    const res = await $api.get<ApiResponse<PaginatedResponse<Retrospective>>>(
-      `/api/v1/retrospects?keyword=${encodeURIComponent(keyword)}&page=0&size=20`
-    )
-    searchResults.value = res.data.data.data
-  } catch {
-    searchResults.value = []
-  } finally {
-    isSearching.value = false
-  }
-}, 300)
+const isComposing = ref(false)
 
-function onInput() {
-  debouncedSearch(searchQuery.value)
+function onCompositionEnd() {
+  isComposing.value = false
 }
 
-function onEnter() {
-  if (!searchQuery.value.trim()) return
-  saveRecent(searchQuery.value.trim())
-  debouncedSearch.cancel?.()
-  debouncedSearch(searchQuery.value)
+function onEnter(event: KeyboardEvent) {
+  // 한국어 IME 조합 중 엔터 무시
+  if (event.isComposing || isComposing.value) return
+  const keyword = searchQuery.value.trim()
+  if (!keyword) return
+  goSearch(keyword)
+}
+
+function goSearch(keyword: string) {
+  saveRecent(keyword)
+  navigateTo(`/retrospects?keyword=${encodeURIComponent(keyword)}`)
 }
 
 function clearQuery() {
   searchQuery.value = ''
-  searchResults.value = []
   inputRef.value?.focus()
-}
-
-function selectRecent(keyword: string) {
-  searchQuery.value = keyword
-  debouncedSearch(keyword)
 }
 
 function saveRecent(keyword: string) {
@@ -175,10 +126,5 @@ function removeRecent(keyword: string) {
 function clearAllRecent() {
   recentSearches.value = []
   localStorage.removeItem(RECENT_KEY)
-}
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 }
 </script>

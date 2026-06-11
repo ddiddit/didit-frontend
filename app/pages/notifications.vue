@@ -25,7 +25,7 @@
       v-if="!isLoading && notifications.length === 0"
       class="flex-1 flex items-center justify-center"
     >
-      <p class="text-body3 font-normal text-grey-7">새로운 알림이 없어요.</p>
+      <p class="text-[14px] font-normal text-grey-9 leading-[1.6] tracking-[-0.02em]">새로운 알림이 없어요.</p>
     </div>
 
     <!-- 알림 목록 -->

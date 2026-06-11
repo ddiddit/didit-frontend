@@ -101,7 +101,8 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 
 onMounted(async () => {
-  if (localStorage.getItem('accessToken')) {
+  // accessToken과 refreshToken이 모두 있을 때만 자동 로그인
+  if (localStorage.getItem('accessToken') && localStorage.getItem('refreshToken')) {
     navigateTo('/home', { replace: true })
     return
   }
