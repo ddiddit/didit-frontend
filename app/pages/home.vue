@@ -64,46 +64,47 @@
     <!-- FAB + 툴팁 -->
     <div
       v-if="!isLoading"
-      class="absolute right-5 flex items-center gap-2"
+      class="absolute right-5 flex items-center gap-[14px]"
       style="bottom: 16px;"
     >
       <!-- 툴팁 버블 -->
       <div
-        class="relative flex items-center h-9 px-3 rounded-xl"
+        class="relative flex items-center h-[38px] px-[8px] rounded-xl"
         :class="isCompleted ? 'bg-grey-5' : 'bg-grey-10'"
         style="box-shadow: 0 2px 8px rgba(0,0,0,0.12);"
       >
         <span v-if="!isCompleted" class="text-label1 font-medium text-grey-1 whitespace-nowrap">
-          오늘 남은 회고 횟수&nbsp;<span class="font-semibold text-primary">{{ remaining }}/{{ maxDaily }}</span>
+          오늘 남은 회고 횟수&nbsp;<span class="text-label1 font-semibold text-primary">{{ remaining }}</span><span class="text-label1 font-medium text-grey-7">/{{ maxDaily }}</span>
         </span>
         <span v-else class="text-label1 font-medium text-grey-7 whitespace-nowrap">
           오늘 회고 {{ maxDaily }}회 완료
         </span>
-        <!-- 오른쪽 꼬리 -->
-        <div
-          class="absolute -right-[5px] top-1/2 -translate-y-1/2 w-0 h-0"
-          :style="{
-            borderTop: '5px solid transparent',
-            borderBottom: '5px solid transparent',
-            borderLeft: `5px solid ${isCompleted ? '#E6E6E6' : '#3C3C3C'}`,
-          }"
-        />
+        <!-- 오른쪽 꼬리: 피그마 Polygon 1.svg -->
+        <svg
+          class="absolute -right-[9px] top-1/2 -translate-y-1/2"
+          width="12" height="12" viewBox="0 0 12 12" fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10.0328 3.87689C11.4819 4.62057 11.4819 6.69193 10.0328 7.43561L2.91317 11.0894C1.58225 11.7724 1.56809e-07 10.806 1.3897e-07 9.31005L5.18278e-08 2.00244C3.39887e-08 0.506487 1.58224 -0.459945 2.91317 0.223086L10.0328 3.87689Z"
+            :fill="isCompleted ? '#E6E6E6' : '#3C3C3C'"
+          />
+        </svg>
       </div>
 
       <!-- FAB -->
       <button
         class="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
         :class="isCompleted ? 'bg-grey-5 cursor-not-allowed' : 'bg-primary'"
-        style="box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
         :disabled="isCompleted"
         @click="startRetrospect"
       >
-        <img
-          src="/icons/add.png"
-          alt="회고 시작"
-          class="w-[30px] h-[30px]"
-          :style="isCompleted ? 'opacity: 0.4;' : ''"
-        />
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M13.75 16.25H6.25V13.75H13.75V6.25H16.25V13.75H23.75V16.25H16.25V23.75H13.75V16.25Z"
+            :fill="isCompleted ? '#989898' : '#191919'"
+          />
+        </svg>
       </button>
     </div>
   </div>
