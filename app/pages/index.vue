@@ -19,13 +19,17 @@ onMounted(async () => {
     return
   }
 
+  const minDisplay = new Promise<void>((resolve) => setTimeout(resolve, 2000))
   const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000))
 
   try {
-    // 앱 설정 조회 (점검 모드 확인)
-    const configResult = await Promise.race([
-      $api.get<ApiResponse<AppConfig>>('/api/v1/app/config').then((res) => res.data.data),
-      timeout,
+    // 앱 설정 조회와 최소 표시 시간을 병렬로 대기
+    const [configResult] = await Promise.all([
+      Promise.race([
+        $api.get<ApiResponse<AppConfig>>('/api/v1/app/config').then((res) => res.data.data),
+        timeout,
+      ]),
+      minDisplay,
     ])
 
     if (!configResult) {
