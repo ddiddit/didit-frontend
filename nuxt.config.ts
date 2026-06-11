@@ -43,7 +43,6 @@ export default defineNuxtConfig({
         { name: 'theme-color', content: '#ffffff' },
       ],
       link: [
-        { rel: 'preload', as: 'image', href: '/heading-login.svg' },
         { rel: 'preload', as: 'image', href: '/icon.png' },
       ],
     },

@@ -93,6 +93,10 @@ declare const AppleID: {
 
 definePageMeta({ layout: false })
 
+useHead({
+  link: [{ rel: 'preload', as: 'image', href: '/heading-login.svg' }],
+})
+
 const { $api } = useNuxtApp()
 const config = useRuntimeConfig()
 const googleContent = ref<HTMLElement | null>(null)
