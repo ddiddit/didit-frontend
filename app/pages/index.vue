@@ -5,10 +5,46 @@
 </template>
 
 <script setup lang="ts">
+import type { ApiResponse, AppConfig } from '~/types/api'
+
 definePageMeta({ layout: false })
 
-onMounted(() => {
-  const token = localStorage.getItem('accessToken')
-  navigateTo(token ? '/home' : '/auth/login', { replace: true })
+const { $api } = useNuxtApp()
+
+onMounted(async () => {
+  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000))
+
+  try {
+    // 앱 설정 조회 (점검 모드 확인)
+    const configResult = await Promise.race([
+      $api.get<ApiResponse<AppConfig>>('/api/v1/app/config').then((res) => res.data.data),
+      timeout,
+    ])
+
+    if (!configResult) {
+      navigateTo('/auth/login', { replace: true })
+      return
+    }
+
+    if (configResult.maintenanceMode) {
+      navigateTo(
+        { path: '/maintenance', query: { message: configResult.maintenanceMessage ?? undefined } },
+        { replace: true },
+      )
+      return
+    }
+
+    const accessToken = localStorage.getItem('accessToken')
+    if (!accessToken) {
+      navigateTo('/auth/login', { replace: true })
+      return
+    }
+
+    // 온보딩 미완료 시 온보딩으로 이동
+    const isOnboardingCompleted = localStorage.getItem('isOnboardingCompleted')
+    navigateTo(isOnboardingCompleted === 'true' ? '/home' : '/onboarding', { replace: true })
+  } catch {
+    navigateTo('/auth/login', { replace: true })
+  }
 })
 </script>

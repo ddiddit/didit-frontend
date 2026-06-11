@@ -68,8 +68,12 @@
         </div>
       </aside>
 
-      <!-- 앱 영역 -->
-      <div class="w-full max-w-[390px] mx-auto desktop:max-w-none desktop:mx-0 desktop:w-[390px] desktop:flex-shrink-0 min-h-dvh bg-background">
+      <!-- 앱 영역: 모바일=흰 배경 전체화면, 데스크탑=390px 흰 패널+그림자 -->
+      <div
+        id="app-container"
+        class="w-full max-w-[390px] mx-auto desktop:max-w-none desktop:mx-0 desktop:w-[390px] desktop:flex-shrink-0 h-dvh overflow-hidden flex flex-col bg-background relative"
+        style="box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 8px 16px rgba(0,0,0,0.06), 0 24px 48px rgba(0,0,0,0.08);"
+      >
         <NuxtLayout>
           <NuxtPage />
         </NuxtLayout>

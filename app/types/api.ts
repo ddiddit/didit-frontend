@@ -2,6 +2,13 @@ export interface ApiResponse<T> {
   data: T
 }
 
+// 앱 설정
+export interface AppConfig {
+  maintenanceMode: boolean
+  maintenanceMessage: string | null
+  minimumVersion: string
+}
+
 export interface PaginatedResponse<T> {
   data: T[]
   page: number
@@ -15,14 +22,34 @@ export interface PaginatedResponse<T> {
 export interface TokenResponse {
   accessToken: string
   refreshToken: string
+  isNewUser: boolean
+  isOnboardingCompleted: boolean
 }
 
+export type JobType = 'DEVELOPER' | 'PLANNER' | 'DESIGNER'
+export type AgeType = 'AGE_20' | 'AGE_30' | 'AGE_40_PLUS'
+export type ExperienceType = 'LESS_THAN_1_YEAR' | 'YEARS_1_TO_2' | 'YEARS_3_TO_5' | 'YEARS_6_TO_9' | 'YEARS_10_PLUS'
+
 export interface UserProfile {
-  id: string
-  nickname: string
-  email: string
-  profileImageUrl: string | null
+  nickname: string | null
+  job: JobType | null
+  email: string | null
+  age: AgeType | null
+  experience: ExperienceType | null
   provider: 'KAKAO' | 'GOOGLE' | 'APPLE'
+}
+
+export interface NicknameCheckResponse {
+  isDuplicate: boolean
+}
+
+export interface OnboardingRequest {
+  nickname: string
+  job: JobType
+  age: AgeType
+  experience: ExperienceType
+  marketingAgreed: boolean
+  nightPushAgreed: boolean
 }
 
 // Home
