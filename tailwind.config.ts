@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['PretendardVariable', 'Pretendard', 'system-ui', 'sans-serif'],
+        sans: ['Pretendard', 'system-ui', 'sans-serif'],
       },
       colors: {
         // 피그마 Primary (= Green/Normal)

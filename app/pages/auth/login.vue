@@ -12,7 +12,7 @@
       <div class="flex flex-col gap-[10px]">
         <!-- Google -->
         <button
-          class="w-full h-14 bg-white rounded-xl flex items-center justify-center text-body1 font-medium text-[#191919] disabled:opacity-50"
+          class="w-full h-14 bg-white rounded-xl flex items-center justify-center text-body2 font-medium text-[#191919] disabled:opacity-50"
           :disabled="isLoading"
           @click="loginWithGoogle"
         >
@@ -29,7 +29,7 @@
 
         <!-- Kakao -->
         <button
-          class="w-full h-14 bg-[#FEE500] rounded-xl flex items-center justify-center text-body1 font-medium text-[#181600] disabled:opacity-50"
+          class="w-full h-14 bg-[#FEE500] rounded-xl flex items-center justify-center text-body2 font-medium text-[#181600] disabled:opacity-50"
           :disabled="isLoading"
           @click="loginWithKakao"
         >
@@ -43,7 +43,7 @@
 
         <!-- Apple -->
         <button
-          class="w-full h-14 bg-gray-900 rounded-xl flex items-center justify-center text-body1 font-medium text-white disabled:opacity-50"
+          class="w-full h-14 bg-gray-900 rounded-xl flex items-center justify-center text-body2 font-medium text-white disabled:opacity-50"
           :disabled="isLoading"
           @click="loginWithApple"
         >

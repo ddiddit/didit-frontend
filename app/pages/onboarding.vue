@@ -16,14 +16,19 @@
       <div
         v-for="i in 3"
         :key="i"
-        class="flex-1 h-[4px] rounded-full transition-colors duration-300"
-        :class="i <= step ? 'bg-primary' : 'bg-grey-4'"
-      />
+        class="flex-1 h-[4px] rounded-full bg-grey-4 overflow-hidden"
+      >
+        <div
+          class="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+          :class="i <= step ? 'w-full' : 'w-0'"
+        />
+      </div>
     </div>
 
     <!-- ── 제목: Y:136 = 상태바54 + 백버튼50 + 프로그레스4 + 간격28 ── -->
     <div class="px-5 shrink-0" style="padding-top:28px;">
       <h1 class="font-bold text-grey-13 whitespace-pre-line" style="font-size:22px;line-height:1.4;">{{ stepTitle }}</h1>
+      <p v-if="stepSubtitle" class="text-body3 font-normal text-grey-7 mt-2">{{ stepSubtitle }}</p>
     </div>
 
     <!-- ── STEP 1: 약관 동의 ── -->
@@ -32,15 +37,17 @@
       <div class="flex-1" />
 
       <!-- 약관 섹션 -->
-      <div class="px-5 pb-5 shrink-0">
+      <div class="px-5 shrink-0">
         <!-- 전체 동의: Figma H:56, gap:8, radius:12, px:16, 좌측정렬 -->
         <UiButton variant="secondary" justify="start" :active="allAgreed" @click="toggleAll">
-          <img
-            :src="allAgreed ? '/icons/check-on.png' : '/icons/check-off.png'"
-            alt="전체 동의"
-            class="w-6 h-6 shrink-0"
-          />
-          <span class="font-semibold">전체 동의</span>
+          <span class="w-6 h-6 flex items-center justify-center shrink-0">
+            <img
+              :src="allAgreed ? '/icons/check-on.svg' : '/icons/check-off.svg'"
+              alt="전체 동의"
+              class="w-4 h-4"
+            />
+          </span>
+          <span class="font-semibold text-[17px] leading-[1.4] tracking-[-0.02em] text-grey-13">전체 동의</span>
         </UiButton>
 
         <!-- 전체동의 ↔ 개별항목: 20px 간격 -->
@@ -51,19 +58,21 @@
             :key="term.key"
             class="flex items-center"
           >
-            <button class="flex items-center gap-3 flex-1 py-1.5" @click="toggleTerm(term.key)">
-              <img
-                :src="agreements[term.key] ? '/icons/check-on.png' : '/icons/check-off.png'"
-                :alt="term.label"
-                class="w-6 h-6 shrink-0"
-              />
+            <button class="flex items-center gap-2 flex-1" @click="toggleTerm(term.key)">
+              <span class="w-6 h-6 flex items-center justify-center shrink-0">
+                <img
+                  :src="agreements[term.key] ? '/icons/check-on.svg' : '/icons/check-off.svg'"
+                  :alt="term.label"
+                  class="w-4 h-4"
+                />
+              </span>
               <span
-                class="text-[14px] text-left"
-                :class="agreements[term.key] ? 'text-grey-13' : 'text-grey-7'"
+                class="text-label1 font-medium text-left"
+                :class="agreements[term.key] ? 'text-grey-13' : 'text-grey-8'"
               >{{ term.label }}</span>
             </button>
-            <button class="p-2" @click="openTermModal(term.key)">
-              <Icon name="heroicons:chevron-right" class="w-4 h-4 text-grey-6" />
+            <button class="w-5 h-5 shrink-0" @click="openTermModal(term.key)">
+              <img src="/icons/chevron-right.svg" alt="" class="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -72,52 +81,31 @@
 
     <!-- ── STEP 2: 프로필 설정 ── -->
     <template v-else-if="step === 2">
-      <div class="flex-1 px-5 overflow-y-auto">
+      <div class="flex-1 px-5 overflow-y-auto scrollbar-hide flex flex-col gap-7 pt-7">
         <!-- 닉네임 -->
-        <div class="mb-7">
-          <label class="text-[14px] font-semibold text-grey-9 mb-2 block">닉네임</label>
-          <div class="flex gap-2">
-            <div class="flex-1 relative">
-              <input
-                v-model="nickname"
-                type="text"
-                placeholder="2~10자 (한글, 영문, 숫자)"
-                maxlength="10"
-                class="w-full px-4 py-3.5 rounded-2xl border text-[15px] outline-none transition-colors bg-grey-3"
-                :class="nicknameInputClass"
-                @input="onNicknameInput"
-              />
-              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-grey-6">
-                {{ nickname.length }}/10
-              </span>
-            </div>
-            <button
-              class="px-4 py-3.5 rounded-2xl text-[14px] font-semibold shrink-0 transition-colors"
-              :class="
-                nickname.length >= 2 && nicknameStatus !== 'available'
-                  ? 'bg-primary text-white'
-                  : 'bg-grey-4 text-grey-6'
-              "
-              :disabled="nickname.length < 2 || nicknameStatus === 'available'"
-              @click="checkNickname"
-            >
-              중복확인
-            </button>
-          </div>
-          <p v-if="nicknameMessage" class="mt-1.5 text-[12px]" :class="nicknameMessageClass">
-            {{ nicknameMessage }}
-          </p>
-        </div>
+        <UiTextInput
+          v-model="nickname"
+          label="닉네임"
+          placeholder="어떤 이름으로 불러드릴까요?"
+          :maxlength="10"
+          hint="한글 또는 영문 2~10자"
+          :error="nicknameMessage"
+          :success="nicknameStatus === 'available'"
+          clearable
+          @keydown.enter.prevent="onNicknameEnter"
+        />
 
-        <!-- 직무 -->
-        <div class="mb-7">
-          <label class="text-[14px] font-semibold text-grey-9 mb-3 block">직무</label>
-          <div class="grid grid-cols-3 gap-2">
+        <!-- 직무 선택 -->
+        <div>
+          <label class="text-label1 font-medium text-grey-13 mb-3 block">직무 선택</label>
+          <div class="grid grid-cols-3 gap-[10px]">
             <UiButton
               v-for="job in jobs"
               :key="job.value"
-              variant="secondary"
+              variant="chip"
+              size="md"
               :active="selectedJob === job.value"
+              :muted="selectedJob !== null && selectedJob !== job.value"
               @click="selectedJob = job.value"
             >{{ job.label }}</UiButton>
           </div>
@@ -127,30 +115,34 @@
 
     <!-- ── STEP 3: 추가 정보 ── -->
     <template v-else-if="step === 3">
-      <div class="flex-1 px-5 overflow-y-auto">
+      <div class="flex-1 px-5 overflow-y-auto scrollbar-hide flex flex-col gap-7 pt-7">
         <!-- 나이대 -->
-        <div class="mb-7">
-          <label class="text-[14px] font-semibold text-grey-9 mb-3 block">나이대</label>
-          <div class="grid grid-cols-3 gap-2">
+        <div>
+          <label class="text-label1 font-medium text-grey-13 mb-3 block">나이대</label>
+          <div class="grid grid-cols-3 gap-[10px]">
             <UiButton
               v-for="age in ages"
               :key="age.value"
-              variant="secondary"
+              variant="chip"
+              size="md"
               :active="selectedAge === age.value"
+              :muted="selectedAge !== null && selectedAge !== age.value"
               @click="selectedAge = age.value"
             >{{ age.label }}</UiButton>
           </div>
         </div>
 
         <!-- 연차 -->
-        <div class="mb-7">
-          <label class="text-[14px] font-semibold text-grey-9 mb-3 block">연차</label>
-          <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-label1 font-medium text-grey-13 mb-3 block">연차</label>
+          <div class="grid grid-cols-3 gap-[10px]">
             <UiButton
               v-for="exp in experiences"
               :key="exp.value"
-              variant="secondary"
+              variant="chip"
+              size="md"
               :active="selectedExperience === exp.value"
+              :muted="selectedExperience !== null && selectedExperience !== exp.value"
               @click="selectedExperience = exp.value"
             >{{ exp.label }}</UiButton>
           </div>
@@ -159,7 +151,7 @@
     </template>
 
     <!-- ── 다음/완료 버튼: 하단 항상 50px ── -->
-    <div class="px-5 pt-3 shrink-0" style="padding-bottom: max(50px, env(safe-area-inset-bottom, 50px));">
+    <div class="px-5 pt-9 shrink-0" style="padding-bottom: max(50px, env(safe-area-inset-bottom, 50px));">
       <UiButton
         :disabled="!isNextEnabled || isSubmitting"
         :loading="isSubmitting"
@@ -172,28 +164,65 @@
   </div>
 
   <!-- ── 약관 상세 모달 ── -->
-  <Teleport to="body">
+  <Teleport to="#app-container">
     <div
       v-if="activeTermModal"
-      class="fixed inset-0 z-50 flex flex-col bg-white"
+      class="absolute inset-0 z-50 flex flex-col"
+      style="background: rgba(0,0,0,0.4);"
     >
-      <div class="flex items-center px-5 pt-14 pb-4 border-b border-grey-4 shrink-0">
-        <button class="mr-3 p-1" @click="activeTermModal = null">
-          <Icon name="heroicons:x-mark" class="w-6 h-6 text-grey-13" />
-        </button>
-        <h2 class="text-[18px] font-bold text-grey-13 flex-1">{{ activeTermTitle }}</h2>
-      </div>
-      <div class="flex-1 overflow-y-auto px-5 py-4">
-        <div class="text-[14px] text-grey-9 whitespace-pre-wrap leading-relaxed">{{ activeTermContent }}</div>
-      </div>
-      <div class="px-5 pt-4 shrink-0" style="padding-bottom: max(50px, env(safe-area-inset-bottom, 50px));">
-        <UiButton @click="agreeAndClose">동의하기</UiButton>
+      <!-- 상단 70px: 클릭 시 닫기 -->
+      <div class="shrink-0" style="height:70px;" @click="activeTermModal = null" />
+      <!-- 흰 카드: 나머지 공간 전체 -->
+      <div
+        class="flex-1 bg-white flex flex-col overflow-hidden"
+        style="border-radius: 20px 20px 0 0;"
+      >
+        <!-- X 버튼 -->
+        <div class="flex justify-end px-5 pt-6 shrink-0">
+          <button
+            type="button"
+            class="w-6 h-6 shrink-0 outline-none appearance-none bg-transparent border-0 p-0 flex items-center justify-center"
+            @click="activeTermModal = null"
+          >
+            <img src="/icons/close.svg" alt="닫기" class="w-6 h-6 block" />
+          </button>
+        </div>
+        <!-- 제목: X와 10px 간격, SemiBold 20px/140%/-2% -->
+        <div class="px-5 shrink-0" style="padding-top:10px; padding-bottom:24px;">
+          <h2 class="text-heading1 font-semibold text-grey-13">{{ activeTermTitle }}</h2>
+        </div>
+        <!-- 본문: 섹션(제N조) 기준, 섹션 간 24px / 소제목↔본문·본문↔본문 8px -->
+        <div class="flex-1 overflow-y-auto scrollbar-hide px-5">
+          <div class="pb-6">
+            <div
+              v-for="(section, i) in termSections"
+              :key="i"
+              :style="i > 0 ? 'margin-top:24px;' : ''"
+            >
+              <p
+                v-if="section.heading"
+                class="font-bold text-grey-13"
+                style="font-size:14px;line-height:1.4;letter-spacing:-0.02em;margin-bottom:8px;"
+              >{{ section.heading }}</p>
+              <template v-for="(para, j) in section.body" :key="j">
+                <!-- 줄바꿈 포함된 단락은 한 줄씩 분리 출력 -->
+                <p
+                  v-for="(line, k) in para.split('\n').map(l => l.trim()).filter(Boolean)"
+                  :key="k"
+                  class="font-normal"
+                  style="font-size:14px;line-height:1.6;letter-spacing:-0.02em;color:#3C3C3C;"
+                >{{ line }}</p>
+              </template>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </Teleport>
 </template>
 
 <script setup lang="ts">
+import { useDebounceFn } from '@vueuse/core'
 import type { ApiResponse, JobType, AgeType, ExperienceType, NicknameCheckResponse } from '~/types/api'
 
 definePageMeta({ layout: false })
@@ -206,8 +235,13 @@ const isSubmitting = ref(false)
 
 const stepTitle = computed(() => {
   if (step.value === 1) return '서비스 이용을 위해\n약관에 동의해 주세요'
-  if (step.value === 2) return '프로필을\n설정해 주세요'
-  return '조금 더\n알려주세요'
+  if (step.value === 2) return '프로필 설정'
+  return '추가 정보 입력'
+})
+
+const stepSubtitle = computed(() => {
+  if (step.value === 3) return '아래 정보를 입력하고 나에게 맞는 회고를 시작해 보세요'
+  return ''
 })
 
 // STEP 1
@@ -248,28 +282,41 @@ const jobs = [
   { value: 'DESIGNER' as JobType, label: '디자인' },
 ]
 
-const nicknameInputClass = computed(() => {
-  if (nicknameStatus.value === 'available') return 'border-primary'
-  if (nicknameStatus.value === 'duplicate' || nicknameStatus.value === 'invalid') return 'border-red-400'
-  return 'border-transparent focus:border-primary'
+// 0.2초 디바운스로 중복 체크 호출
+const debouncedCheckNickname = useDebounceFn(async () => {
+  const value = nickname.value.trim()
+  if (value.length < 2 || /[^가-힣a-zA-Z]/.test(value)) return
+  await checkNickname()
+}, 200)
+
+// 실시간 형식 검사 + 디바운스 중복 체크
+watch(nickname, (value) => {
+  nicknameMessage.value = ''
+  if (value.length === 0) {
+    nicknameStatus.value = 'idle'
+    return
+  }
+  if (/[^가-힣a-zA-Z]/.test(value)) {
+    nicknameStatus.value = 'invalid'
+    nicknameMessage.value = '공백, 숫자, 특수문자는 사용할 수 없어요'
+    return
+  }
+  nicknameStatus.value = 'idle'
+  if (value.length >= 2) {
+    debouncedCheckNickname()
+  }
 })
 
-const nicknameMessageClass = computed(() =>
-  nicknameStatus.value === 'available' ? 'text-primary' : 'text-red-500',
-)
-
-function onNicknameInput() {
-  nicknameStatus.value = 'idle'
-  nicknameMessage.value = ''
+// 엔터키로 즉시 중복 체크
+async function onNicknameEnter() {
+  const value = nickname.value.trim()
+  if (value.length < 2 || /[^가-힣a-zA-Z]/.test(value)) return
+  if (nicknameStatus.value === 'checking' || nicknameStatus.value === 'available') return
+  await checkNickname()
 }
 
 async function checkNickname() {
   const value = nickname.value.trim()
-  if (!/^[가-힣a-zA-Z0-9]{2,10}$/.test(value)) {
-    nicknameStatus.value = 'invalid'
-    nicknameMessage.value = '닉네임은 2~10자 한글, 영문, 숫자만 가능합니다.'
-    return
-  }
   nicknameStatus.value = 'checking'
   try {
     const res = await $api.get<ApiResponse<NicknameCheckResponse>>(
@@ -277,14 +324,14 @@ async function checkNickname() {
     )
     if (res.data.data.isDuplicate) {
       nicknameStatus.value = 'duplicate'
-      nicknameMessage.value = '이미 사용 중인 닉네임이에요.'
+      nicknameMessage.value = '이미 사용 중인 닉네임이에요'
     } else {
       nicknameStatus.value = 'available'
-      nicknameMessage.value = '사용 가능한 닉네임이에요.'
+      nicknameMessage.value = ''
     }
   } catch {
     nicknameStatus.value = 'idle'
-    nicknameMessage.value = '확인 중 오류가 발생했어요.'
+    nicknameMessage.value = '확인 중 오류가 발생했어요'
   }
 }
 
@@ -338,25 +385,48 @@ async function nextStep() {
 // ── 약관 모달 ─────────────────────────────────────────────────────
 const activeTermModal = ref<keyof typeof agreements | null>(null)
 
-const activeTermTitle = computed(() => terms.find((t) => t.key === activeTermModal.value)?.label ?? '')
-const activeTermContent = computed(() => {
+// 약관 전문의 첫 줄이 제목 — 모달 헤더에 표시하고 본문에서 제거
+const activeTermRaw = computed(() => {
   if (activeTermModal.value === 'service') return SERVICE_TERMS
   if (activeTermModal.value === 'privacy') return PRIVACY_TERMS
   if (activeTermModal.value === 'marketing') return MARKETING_TERMS
   if (activeTermModal.value === 'nightPush') return NIGHT_PUSH_TERMS
   return ''
 })
+const activeTermTitle = computed(() => activeTermRaw.value.split('\n')[0].trim())
+const activeTermContent = computed(() => activeTermRaw.value.split('\n').slice(1).join('\n').trimStart())
+
+// 제N조 기준으로 섹션 분리 — 섹션 간 24px, 소제목↔본문 8px, 본문↔본문 8px
+const termSections = computed(() => {
+  const sections: { heading: string; body: string[] }[] = []
+  let current: { heading: string; body: string[] } | null = null
+
+  activeTermContent.value
+    .split(/\n\n+/)
+    .map(b => b.trim())
+    .filter(Boolean)
+    .forEach(block => {
+      const lines = block.split('\n')
+      const firstLine = lines[0].trim()
+      if (/^제\d+조/.test(firstLine) || /^\d+\.\s/.test(firstLine)) {
+        if (current) sections.push(current)
+        current = { heading: firstLine, body: [] }
+        const rest = lines.slice(1).join('\n').trim()
+        if (rest) current.body.push(rest)
+      } else {
+        if (!current) current = { heading: '', body: [] }
+        current.body.push(block)
+      }
+    })
+
+  if (current) sections.push(current)
+  return sections
+})
 
 function openTermModal(key: keyof typeof agreements) {
   activeTermModal.value = key
 }
 
-function agreeAndClose() {
-  if (activeTermModal.value) {
-    agreements[activeTermModal.value] = true
-    activeTermModal.value = null
-  }
-}
 
 // ── 온보딩 제출 ───────────────────────────────────────────────────
 async function submitOnboarding() {

@@ -47,7 +47,7 @@
       </div>
 
       <button
-        class="flex items-center gap-1.5 mt-3 px-6 py-3.5 bg-primary rounded-full text-white text-body2 font-bold"
+        class="flex items-center gap-1.5 mt-3 px-6 py-3.5 bg-primary rounded-full text-white text-body3 font-bold"
         @click="startRetrospect"
       >
         <Icon name="heroicons:plus" class="w-4 h-4" />
