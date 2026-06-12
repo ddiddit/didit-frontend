@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-white flex flex-col">
+  <div class="h-full bg-white flex flex-col relative">
 
     <!-- 헤더 -->
     <div class="flex items-center px-5 h-[50px] shrink-0">
@@ -30,49 +30,58 @@
     </div>
 
     <!-- 프로젝트 리스트 -->
-    <div v-else-if="!isLoading" class="flex-1 overflow-y-auto scrollbar-hide bg-white">
+    <div v-else-if="!isLoading" class="flex-1 overflow-y-auto scrollbar-hide bg-white" @touchstart.passive="onContainerTouch">
       <ul>
         <li
           v-for="(project, index) in localProjects"
           :key="index"
-          class="flex items-center px-5 h-[54px] border-b border-grey-4"
+          class="flex items-center px-5 h-[54px]"
         >
           <!-- 삭제 버튼 -->
           <button class="shrink-0 mr-3" @click="requestDelete(project)">
-            <img src="/icons/delete.svg" alt="삭제" class="w-6 h-6" />
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="10" fill="#FF5C5C"/>
+              <rect x="7" y="11.25" width="10" height="1.5" rx="0.75" fill="white"/>
+            </svg>
           </button>
 
-          <!-- 프로젝트명 -->
-          <input
-            v-if="project.isNew"
-            v-model="project.name"
-            type="text"
-            maxlength="15"
-            placeholder="프로젝트 이름을 입력하세요"
-            class="flex-1 bg-transparent text-label1 text-grey-13 placeholder:text-grey-6 outline-none border-b border-grey-5 focus:border-grey-13 py-1 transition-colors"
-          />
-          <span v-else class="flex-1 text-label1 text-grey-13">{{ project.name }}</span>
+          <!-- 프로젝트명 / 입력 필드 (밑줄은 이 영역에만) -->
+          <div
+            class="flex-1 self-stretch flex items-center border-b transition-colors"
+            :class="focusedIndex === index ? 'border-grey-5' : 'border-transparent'"
+          >
+            <input
+              v-if="project.isNew || project.isEditing"
+              :ref="el => setInputRef(el, index)"
+              v-model="project.name"
+              type="text"
+              maxlength="12"
+              :placeholder="project.isNew ? '프로젝트 이름을 입력하세요' : ''"
+              class="w-full bg-transparent text-label1 text-grey-13 placeholder:text-[15px] placeholder:font-normal placeholder:text-[#989898] outline-none py-1"
+              @focus="focusedIndex = index"
+              @blur="onInputBlur(project, index)"
+              @keydown.enter.prevent="inputRefs[index]?.blur()"
+            />
+            <span
+              v-else
+              class="w-full text-label1 text-grey-13 py-1 cursor-text"
+              @click="startEditing(project, index)"
+            >{{ project.name }}</span>
+          </div>
 
           <!-- 드래그 핸들 -->
-          <svg class="shrink-0 ml-3 cursor-grab" width="12" height="18" viewBox="0 0 12 18" fill="none">
-            <circle cx="3" cy="3" r="1.5" fill="#C6C6C6"/>
-            <circle cx="9" cy="3" r="1.5" fill="#C6C6C6"/>
-            <circle cx="3" cy="9" r="1.5" fill="#C6C6C6"/>
-            <circle cx="9" cy="9" r="1.5" fill="#C6C6C6"/>
-            <circle cx="3" cy="15" r="1.5" fill="#C6C6C6"/>
-            <circle cx="9" cy="15" r="1.5" fill="#C6C6C6"/>
-          </svg>
+          <img src="/icons/drag-handle.svg" alt="" class="shrink-0 ml-3 w-6 h-6 cursor-grab" />
         </li>
       </ul>
 
       <!-- + 추가 버튼 -->
-      <div class="flex justify-center py-5">
+      <div class="flex justify-center pt-3">
         <button
           class="w-[30px] h-[30px] rounded-[6px] bg-grey-4 flex items-center justify-center text-grey-9"
           :disabled="!canAdd"
           @click="addNewProject"
         >
-          <svg width="24" height="24" viewBox="0 0 30 30" fill="none">
+          <svg width="24" height="24" viewBox="-2.5 -2.5 35 35" fill="none">
             <path d="M13.75 16.25H6.25V13.75H13.75V6.25H16.25V13.75H23.75V16.25H16.25V23.75H13.75V16.25Z" fill="currentColor"/>
           </svg>
         </button>
@@ -90,17 +99,17 @@
     </div>
 
     <!-- 삭제 확인 다이얼로그 -->
-    <div v-if="pendingDelete" class="fixed inset-0 z-30 flex items-center justify-center">
-      <div class="fixed inset-0 bg-black/40" @click="pendingDelete = null" />
+    <div v-if="pendingDelete" class="absolute inset-0 z-30 flex items-center justify-center">
+      <div class="absolute inset-0 bg-black/40" @click="pendingDelete = null" />
       <div
         class="relative bg-grey-1 rounded-2xl z-10 w-[300px] flex flex-col gap-[14px]"
-        style="padding: 16px 20px; box-shadow: 0px 0px 20px 0px rgba(0,0,0,0.10);"
+        style="padding: 20px 16px; box-shadow: 0px 0px 20px 0px rgba(0,0,0,0.10);"
       >
-        <h3 class="text-body2 font-semibold text-grey-13 text-center">프로젝트를 삭제하시겠어요?</h3>
-        <p class="text-label2 font-normal text-grey-8 text-center leading-[1.5]">
+        <h3 class="text-body1 font-bold text-grey-13 text-center">프로젝트를 삭제하시겠어요?</h3>
+        <p class="text-label1-reading font-normal text-grey-8 text-center">
           프로젝트에 포함된 회고는 삭제되지 않으며,<br />전체보기에서 계속 확인할 수 있어요.
         </p>
-        <div class="flex gap-3">
+        <div class="flex gap-2">
           <button
             class="flex-1 h-[50px] rounded-xl bg-grey-5 text-label1 font-semibold text-grey-8 transition-none"
             @click="pendingDelete = null"
@@ -128,7 +137,9 @@ const router = useRouter()
 interface LocalProject {
   id?: string
   name: string
+  originalName: string
   isNew: boolean
+  isEditing: boolean
   retrospectiveCount: number
 }
 
@@ -138,6 +149,13 @@ const localProjects = ref<LocalProject[]>([])
 const pendingDelete = ref<LocalProject | null>(null)
 const isSubmitting = ref(false)
 const isDeleting = ref(false)
+const focusedIndex = ref<number | null>(null)
+
+// input ref 맵 (포커스 제어용)
+const inputRefs = ref<Record<number, HTMLInputElement | null>>({})
+function setInputRef(el: unknown, index: number) {
+  inputRefs.value[index] = el as HTMLInputElement | null
+}
 
 const MAX_PROJECTS = 10
 const canAdd = computed(() => localProjects.value.length < MAX_PROJECTS)
@@ -153,7 +171,9 @@ onMounted(async () => {
     localProjects.value = projects.value.map(p => ({
       id: p.id,
       name: p.name,
+      originalName: p.name,
       isNew: false,
+      isEditing: false,
       retrospectiveCount: p.retrospectiveCount,
     }))
   } catch {
@@ -163,13 +183,50 @@ onMounted(async () => {
   }
 })
 
+function onContainerTouch(e: TouchEvent) {
+  if (focusedIndex.value === null) return
+  const input = inputRefs.value[focusedIndex.value]
+  if (input && e.target !== input) input.blur()
+}
+
 function addNewProject() {
   if (!canAdd.value) return
-  localProjects.value.push({ name: '', isNew: true, retrospectiveCount: 0 })
+  localProjects.value.push({ name: '', originalName: '', isNew: true, isEditing: false, retrospectiveCount: 0 })
+  const newIndex = localProjects.value.length - 1
   nextTick(() => {
-    const inputs = document.querySelectorAll<HTMLInputElement>('input[type="text"]')
-    inputs[inputs.length - 1]?.focus()
+    inputRefs.value[newIndex]?.focus()
   })
+}
+
+function startEditing(project: LocalProject, index: number) {
+  project.isEditing = true
+  nextTick(() => {
+    inputRefs.value[index]?.focus()
+  })
+}
+
+async function onInputBlur(project: LocalProject, _index: number) {
+  focusedIndex.value = null
+
+  // 기존 프로젝트 이름 수정 후 blur → PATCH API 호출
+  if (project.isEditing && project.id) {
+    const trimmed = project.name.trim()
+    if (trimmed && trimmed !== project.originalName) {
+      try {
+        await $api.patch(`/api/v1/projects/${project.id}/name`, { name: trimmed })
+        project.name = trimmed
+        project.originalName = trimmed
+        // 전역 캐시도 업데이트
+        const target = projects.value.find(p => p.id === project.id)
+        if (target) target.name = trimmed
+      } catch {
+        project.name = project.originalName
+      }
+    } else if (!trimmed) {
+      project.name = project.originalName
+    }
+    project.isEditing = false
+  }
 }
 
 function requestDelete(project: LocalProject) {

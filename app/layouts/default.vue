@@ -1,9 +1,12 @@
 <template>
-  <!-- 앱 컨테이너 안에서 flex-col로 탭바를 하단에 고정 -->
   <div class="flex flex-col h-full">
-    <div class="flex-1 overflow-y-auto">
+    <div class="flex-1 overflow-hidden min-h-0">
       <slot />
     </div>
-    <LayoutBottomTabBar />
+    <LayoutBottomTabBar v-if="!hideTabBar" />
   </div>
 </template>
+
+<script setup lang="ts">
+const hideTabBar = useState('hideTabBar', () => false)
+</script>
