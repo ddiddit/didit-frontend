@@ -57,12 +57,12 @@
       </div>
     </div>
 
-    <!-- 태그 섹션 (실제 API 데이터 + 하드코딩 미리보기 병합) -->
-    <div v-if="displayTags.length > 0" class="px-5 mt-[30px] shrink-0">
+    <!-- 태그 섹션 -->
+    <div v-if="tags.length > 0" class="px-5 mt-[30px] shrink-0">
       <span class="text-label1 font-semibold text-grey-13 block mb-3">태그</span>
       <div class="flex flex-wrap gap-2">
         <button
-          v-for="(tag, index) in displayTags"
+          v-for="(tag, index) in tags"
           :key="tag.id"
           class="py-[4px] px-[6px] rounded-[6px] font-semibold whitespace-nowrap"
           :style="{
@@ -79,7 +79,7 @@
 
     <!-- 빈 상태 -->
     <div
-      v-if="recentSearches.length === 0 && displayTags.length === 0"
+      v-if="recentSearches.length === 0 && tags.length === 0"
       class="flex-1 flex items-center justify-center pb-20"
     >
       <p class="text-[14px] font-normal text-grey-9 text-center leading-[1.6] tracking-[-0.02em]">
@@ -107,16 +107,6 @@ const recentSearches = ref<string[]>([])
 const tags = ref<Tag[]>([])
 
 // 태그 색상은 프론트에서 순환 할당 (백엔드에 color 필드 없음)
-const PREVIEW_TAGS: Tag[] = [
-  { id: 'p1', name: '디자인' },
-  { id: 'p2', name: '개발' },
-  { id: 'p3', name: '회의' },
-  { id: 'p4', name: '기획' },
-  { id: 'p5', name: '리뷰' },
-]
-
-const displayTags = computed(() => tags.value.length > 0 ? tags.value : PREVIEW_TAGS)
-
 const tagColors = [
   { bg: '#E2FAF0', text: '#37C58A' },
   { bg: '#FAEBFA', text: '#E079E0' },

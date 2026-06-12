@@ -58,13 +58,14 @@
           @mouseleave="onChipDragEnd"
         >
           <button
-            class="shrink-0 py-[8px] px-[11px] rounded-[8px] text-label1 font-semibold transition-none border"
+            class="shrink-0 py-[8px] px-[11px] rounded-[8px] text-label1 font-semibold transition-colors duration-200 border"
             :class="selectedProjectId === null ? 'bg-grey-13 text-grey-1 border-transparent' : 'bg-white text-grey-7 border-grey-5'"
             @click.stop="!isChipDragging && selectProject(null)"
           >ALL</button>
           <button
             v-for="project in projects"
             :key="project.id"
+            :data-project-id="project.id"
             class="shrink-0 py-[8px] px-[11px] rounded-[8px] text-label1 font-medium transition-none whitespace-nowrap border"
             :class="selectedProjectId === project.id ? 'bg-grey-13 text-grey-1 border-transparent' : 'bg-white text-grey-7 border-grey-5'"
             @click.stop="!isChipDragging && selectProject(project.id)"
@@ -78,7 +79,7 @@
         <!-- 칩 overflow 시에만 표시: 그라디언트 + 체브론 -->
         <template v-if="chipsOverflow">
           <div
-            class="absolute right-0 top-0 bottom-0 w-[52px] pointer-events-none"
+            class="absolute right-0 top-0 bottom-0 w-[28px] pointer-events-none"
             style="background: linear-gradient(to right, rgba(246,246,246,0) 0%, #F6F6F6 55%);"
           />
           <button
@@ -130,7 +131,7 @@
                 class="w-full rounded-[8px] flex items-center text-grey-13 transition-none text-left active:bg-grey-3"
                 style="padding: 11px 14px; font-size: 15px; font-weight: 500; line-height: 150%; letter-spacing: -0.3px;"
                 :class="selectedProjectId === project.id ? 'bg-grey-3' : ''"
-                @click="selectProject(project.id); closeProjectPicker()"
+                @click="selectProject(project.id, true); closeProjectPicker()"
               >{{ project.name }}</button>
             </div>
           </div>
@@ -290,10 +291,40 @@ async function fetchRetrospects() {
   }
 }
 
-async function selectProject(id: string | null) {
+async function selectProject(id: string | null, fromPicker = false) {
   selectedProjectId.value = id
   isLoading.value = true
+
+  // 픽커에서 선택 시 API 응답 전에 즉시 스크롤
+  if (fromPicker && id !== null) {
+    await nextTick()
+    const container = chipRowRef.value
+    const chipEl = container?.querySelector(`[data-project-id="${id}"]`) as HTMLElement | null
+    if (container && chipEl) {
+      scrollToChip(container, chipEl.offsetLeft - 8)
+    }
+  }
+
   await fetchRetrospects()
+}
+
+function scrollToChip(container: HTMLElement, targetLeft: number) {
+  const startLeft = container.scrollLeft
+  const distance = targetLeft - startLeft
+  const duration = 550
+  const startTime = performance.now()
+
+  function easeInOutSine(t: number) {
+    return -(Math.cos(Math.PI * t) - 1) / 2
+  }
+
+  function step(now: number) {
+    const progress = Math.min((now - startTime) / duration, 1)
+    container.scrollLeft = startLeft + distance * easeInOutSine(progress)
+    if (progress < 1) requestAnimationFrame(step)
+  }
+
+  requestAnimationFrame(step)
 }
 
 function formatDate(dateStr: string): string {
