@@ -164,16 +164,17 @@
 
   <!-- ── 약관 상세 모달 ── -->
   <Teleport to="#app-container">
-    <div
-      v-if="activeTermModal"
-      class="absolute inset-0 z-50 flex flex-col"
-      style="background: rgba(0,0,0,0.4);"
-    >
+    <Transition name="bottom-sheet">
+      <div
+        v-if="activeTermModal"
+        class="absolute inset-0 z-50 flex flex-col"
+        style="background: rgba(0,0,0,0.4);"
+      >
       <!-- 상단 70px: 클릭 시 닫기 -->
       <div class="shrink-0" style="height:70px;" @click="activeTermModal = null" />
       <!-- 흰 카드: 나머지 공간 전체 -->
       <div
-        class="flex-1 bg-white flex flex-col overflow-hidden"
+        class="sheet-panel flex-1 bg-white flex flex-col overflow-hidden"
         style="border-radius: 20px 20px 0 0;"
       >
         <!-- X 버튼 -->
@@ -217,6 +218,7 @@
         </div>
       </div>
     </div>
+    </Transition>
   </Teleport>
 </template>
 
@@ -636,6 +638,11 @@ const MARKETING_TERMS = `디딧(didit) 마케팅 정보 수신 동의
 제5조 (동의 철회)
 앱 내 설정 메뉴 또는 고객센터를 통해 언제든지 철회할 수 있습니다.`
 
+// ── 약관 모달 닫기 ─────────────────────────────────────────────────
+function closeTermModal() {
+  activeTermModal.value = null
+}
+
 const NIGHT_PUSH_TERMS = `디딧(didit) 야간 마케팅 정보 수신 동의
 
 본 동의는 선택 사항이며, 동의하지 않아도 서비스 이용에 제한이 없습니다.
@@ -656,3 +663,31 @@ const NIGHT_PUSH_TERMS = `디딧(didit) 야간 마케팅 정보 수신 동의
 제4조 (동의 철회)
 앱 내 마이페이지 → 알림 설정에서 야간 알림 수신을 해제할 수 있습니다.`
 </script>
+
+<style>
+/* 바텀시트 오버레이 fade */
+.bottom-sheet-enter-active {
+  transition: opacity 0.3s ease;
+}
+.bottom-sheet-leave-active {
+  transition: opacity 0.25s ease;
+}
+.bottom-sheet-enter-from,
+.bottom-sheet-leave-to {
+  opacity: 0;
+}
+
+/* 흰 패널 slide-up / slide-down */
+.bottom-sheet-enter-active .sheet-panel {
+  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.bottom-sheet-leave-active .sheet-panel {
+  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.bottom-sheet-enter-from .sheet-panel {
+  transform: translateY(100%);
+}
+.bottom-sheet-leave-to .sheet-panel {
+  transform: translateY(100%);
+}
+</style>
