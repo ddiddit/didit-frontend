@@ -6,7 +6,7 @@
       <button class="absolute left-5" @click="router.back()">
         <img src="/icons/back.svg" alt="뒤로" class="w-6 h-6" />
       </button>
-      <span class="text-body3 font-semibold text-grey-13">프로젝트 편집</span>
+      <span class="text-body2 font-semibold text-grey-13">프로젝트 편집</span>
     </div>
 
     <!-- 빈 상태 -->
