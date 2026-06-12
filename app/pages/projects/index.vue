@@ -1,12 +1,13 @@
 <template>
-  <div class="h-full bg-background flex flex-col">
+  <div class="h-full bg-white flex flex-col">
 
     <!-- 헤더 -->
-    <div class="relative flex items-center justify-center px-5 h-[50px] shrink-0">
-      <button class="absolute left-5" @click="router.back()">
+    <div class="flex items-center px-5 h-[50px] shrink-0">
+      <button class="p-1 -ml-1" @click="router.back()">
         <img src="/icons/back.svg" alt="뒤로" class="w-6 h-6" />
       </button>
-      <span class="text-body2 font-semibold text-grey-13">프로젝트 편집</span>
+      <span class="flex-1 text-center text-body2 font-semibold text-grey-13">프로젝트 편집</span>
+      <div class="w-6 h-6" />
     </div>
 
     <!-- 빈 상태 -->
@@ -81,14 +82,13 @@
     </div>
 
     <!-- 하단 저장 영역 -->
-    <div v-if="!isLoading && localProjects.length > 0" class="shrink-0 px-5 pt-3 bg-background" style="padding-bottom: max(50px, env(safe-area-inset-bottom, 50px));">
+    <div v-if="!isLoading && localProjects.length > 0" class="shrink-0 px-5 pt-3 bg-white" style="padding-bottom: max(50px, env(safe-area-inset-bottom, 50px));">
       <p class="text-center text-caption1 text-grey-7 mb-3">프로젝트는 최대 10개까지 생성 가능합니다</p>
-      <button
-        class="w-full h-[50px] rounded-xl text-label1 font-semibold transition-none"
-        :class="hasNewProjects ? 'bg-grey-13 text-white' : 'bg-grey-4 text-grey-7'"
-        :disabled="!hasNewProjects || isSubmitting"
+      <UiButton
+        :disabled="!hasNewProjects"
+        :loading="isSubmitting"
         @click="saveProjects"
-      >저장</button>
+      >저장</UiButton>
     </div>
 
     <!-- 삭제 확인 다이얼로그 -->
