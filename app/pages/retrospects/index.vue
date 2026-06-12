@@ -8,7 +8,7 @@
           <img src="/icons/search.svg" alt="검색" class="w-7 h-7" />
         </button>
         <button @click="toggleMoreMenu">
-          <img src="/icons/more-vertical.png" alt="더보기" class="w-6 h-6" />
+          <img src="/icons/more-vertical.svg" alt="더보기" class="w-6 h-6" />
         </button>
       </div>
 
@@ -18,11 +18,11 @@
       <!-- 더보기 팝업 -->
       <div
         v-if="showMoreMenu"
-        class="absolute top-[46px] right-5 bg-grey-1 border border-grey-4 rounded-xl z-10 overflow-hidden"
-        style="box-shadow: 0px 4px 16px rgba(0,0,0,0.10);"
+        class="absolute top-[46px] right-5 bg-grey-1 border border-grey-4 rounded-xl z-10 overflow-hidden w-[180px] h-[55px] p-[6px] flex items-center"
+        style="box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.08);"
       >
         <button
-          class="flex items-center px-[14px] py-[10px] text-label1 font-medium text-grey-13 w-full text-left whitespace-nowrap"
+          class="w-full h-full flex items-center text-label1 font-medium text-grey-13 px-[6px]"
           @click="goToProjectEdit"
         >
           프로젝트 편집
@@ -58,7 +58,42 @@
         :class="selectedProjectId === project.id ? 'bg-grey-13 text-grey-1' : 'bg-white text-grey-7'"
         @click="selectProject(project.id)"
       >{{ project.name }}</button>
+
+      <!-- 프로젝트 추가 버튼 -->
+      <button
+        class="shrink-0 h-[34px] px-[11px] rounded-lg text-label1 font-medium text-grey-7 bg-white transition-none whitespace-nowrap"
+        @click="showAddProject = true"
+      >+프로젝트 추가</button>
     </div>
+
+    <!-- 프로젝트 추가 바텀시트 -->
+    <Transition name="bottom-sheet">
+      <div
+        v-if="showAddProject"
+        class="fixed inset-0 z-20 flex flex-col justify-end"
+        @click.self="closeAddProject"
+      >
+        <div class="fixed inset-0 bg-black/40" @click="closeAddProject" />
+        <div class="sheet-panel relative bg-white rounded-t-2xl px-5 pt-6 pb-10 z-10">
+          <p class="text-heading2 font-semibold text-grey-13 mb-5">프로젝트 추가</p>
+          <input
+            v-model="newProjectName"
+            type="text"
+            maxlength="15"
+            placeholder="프로젝트 이름 (최대 15자)"
+            class="w-full h-[48px] px-4 rounded-xl border border-grey-4 bg-grey-1 text-label1 text-grey-13 placeholder:text-grey-6 outline-none focus:border-grey-8 transition-colors"
+            @keyup.enter="submitAddProject"
+          />
+          <p class="text-right text-caption1 text-grey-6 mt-1">{{ newProjectName.length }}/15</p>
+          <button
+            class="w-full h-[50px] rounded-xl mt-4 text-label1 font-semibold transition-none"
+            :class="newProjectName.trim().length > 0 ? 'bg-grey-13 text-white' : 'bg-grey-3 text-grey-6'"
+            :disabled="newProjectName.trim().length === 0 || isSubmitting"
+            @click="submitAddProject"
+          >추가하기</button>
+        </div>
+      </div>
+    </Transition>
 
     <!-- 리스트 탭 -->
     <template v-if="activeTab === 'list'">
