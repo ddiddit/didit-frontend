@@ -35,7 +35,7 @@
 
     <!-- 고객지원 -->
     <div class="mx-5 mb-3 bg-white rounded-2xl p-2">
-      <p class="text-label1 font-normal text-grey-7 px-3 h-[44px] flex items-center">고객지원</p>
+      <p class="text-label1 font-semibold text-grey-7 px-3 h-[44px] flex items-center">고객지원</p>
       <button class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3">
         <span class="text-body2 font-medium text-grey-10">공지사항</span>
         <img src="/icons/chevron-right.svg" alt="" class="w-5 h-5" />
@@ -48,7 +48,7 @@
 
     <!-- 이용약관 -->
     <div class="mx-5 mb-6 bg-white rounded-2xl p-2">
-      <p class="text-label1 font-normal text-grey-7 px-3 h-[44px] flex items-center">이용약관</p>
+      <p class="text-label1 font-semibold text-grey-7 px-3 h-[44px] flex items-center">이용약관</p>
       <button class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3">
         <span class="text-body2 font-medium text-grey-10">서비스 이용약관</span>
         <img src="/icons/chevron-right.svg" alt="" class="w-5 h-5" />
