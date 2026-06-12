@@ -49,23 +49,19 @@
             type="text"
             maxlength="15"
             placeholder="프로젝트 이름을 입력하세요"
-            class="flex-1 bg-transparent text-label1 text-grey-13 placeholder:text-grey-6 outline-none border-b border-transparent focus:border-grey-13 py-1 transition-colors"
+            class="flex-1 bg-transparent text-label1 text-grey-13 placeholder:text-grey-6 outline-none border-b border-grey-5 focus:border-grey-13 py-1 transition-colors"
           />
           <span v-else class="flex-1 text-label1 text-grey-13">{{ project.name }}</span>
 
           <!-- 드래그 핸들 -->
-          <div class="shrink-0 flex gap-[3px] ml-3 cursor-grab">
-            <div class="flex flex-col gap-[3px]">
-              <div class="w-[3px] h-[3px] rounded-full bg-grey-6" />
-              <div class="w-[3px] h-[3px] rounded-full bg-grey-6" />
-              <div class="w-[3px] h-[3px] rounded-full bg-grey-6" />
-            </div>
-            <div class="flex flex-col gap-[3px]">
-              <div class="w-[3px] h-[3px] rounded-full bg-grey-6" />
-              <div class="w-[3px] h-[3px] rounded-full bg-grey-6" />
-              <div class="w-[3px] h-[3px] rounded-full bg-grey-6" />
-            </div>
-          </div>
+          <svg class="shrink-0 ml-3 cursor-grab" width="12" height="18" viewBox="0 0 12 18" fill="none">
+            <circle cx="3" cy="3" r="1.5" fill="#C6C6C6"/>
+            <circle cx="9" cy="3" r="1.5" fill="#C6C6C6"/>
+            <circle cx="3" cy="9" r="1.5" fill="#C6C6C6"/>
+            <circle cx="9" cy="9" r="1.5" fill="#C6C6C6"/>
+            <circle cx="3" cy="15" r="1.5" fill="#C6C6C6"/>
+            <circle cx="9" cy="15" r="1.5" fill="#C6C6C6"/>
+          </svg>
         </li>
       </ul>
 
@@ -94,16 +90,19 @@
     </div>
 
     <!-- 삭제 확인 다이얼로그 -->
-    <div v-if="pendingDelete" class="fixed inset-0 z-30 flex items-center justify-center px-5">
+    <div v-if="pendingDelete" class="fixed inset-0 z-30 flex items-center justify-center">
       <div class="fixed inset-0 bg-black/40" @click="pendingDelete = null" />
-      <div class="relative bg-white rounded-2xl px-6 pt-7 pb-6 w-full z-10">
-        <h3 class="text-body2 font-semibold text-grey-13 text-center mb-2">프로젝트를 삭제하시겠어요?</h3>
-        <p class="text-label2 font-normal text-grey-7 text-center mb-6 leading-[1.5]">
+      <div
+        class="relative bg-grey-1 rounded-2xl z-10 w-[300px] flex flex-col gap-[14px]"
+        style="padding: 16px 20px; box-shadow: 0px 0px 20px 0px rgba(0,0,0,0.10);"
+      >
+        <h3 class="text-body2 font-semibold text-grey-13 text-center">프로젝트를 삭제하시겠어요?</h3>
+        <p class="text-label2 font-normal text-grey-8 text-center leading-[1.5]">
           프로젝트에 포함된 회고는 삭제되지 않으며,<br />전체보기에서 계속 확인할 수 있어요.
         </p>
         <div class="flex gap-3">
           <button
-            class="flex-1 h-[50px] rounded-xl bg-grey-4 text-label1 font-semibold text-grey-13 transition-none"
+            class="flex-1 h-[50px] rounded-xl bg-grey-5 text-label1 font-semibold text-grey-8 transition-none"
             @click="pendingDelete = null"
           >취소</button>
           <button
@@ -206,12 +205,7 @@ async function saveProjects() {
     }
     const res = await $api.get<ApiResponse<Project[]>>('/api/v1/projects')
     projects.value = res.data.data
-    localProjects.value = projects.value.map(p => ({
-      id: p.id,
-      name: p.name,
-      isNew: false,
-      retrospectiveCount: p.retrospectiveCount,
-    }))
+    router.back()
   } catch {
   } finally {
     isSubmitting.value = false
