@@ -75,7 +75,7 @@
         :style="isDesktop ? 'box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 8px 16px rgba(0,0,0,0.06), 0 24px 48px rgba(0,0,0,0.08);' : ''"
       >
         <NuxtLayout>
-          <NuxtPage :transition="{ name: 'page', mode: 'out-in' }" />
+          <NuxtPage />
         </NuxtLayout>
       </div>
 
