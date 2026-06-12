@@ -2,9 +2,7 @@
   <div class="h-full bg-background flex flex-col">
 
     <!-- 헤더 -->
-    <div
-      class="flex items-center px-5 h-[50px] shrink-0"
-    >
+    <div class="flex items-center px-5 h-[50px] shrink-0">
       <button class="p-1 -ml-1" @click="navigateTo('/home')">
         <img src="/icons/back.svg" alt="뒤로" class="w-6 h-6" />
       </button>
@@ -21,7 +19,7 @@
 
     <!-- 빈 상태 -->
     <div
-      v-if="!isLoading && notifications.length === 0"
+      v-if="!isLoading && displayNotifications.length === 0"
       class="flex-1 flex items-center justify-center"
     >
       <p class="text-[14px] font-normal text-grey-9 leading-[1.6] tracking-[-0.02em]">새로운 알림이 없어요.</p>
@@ -31,20 +29,20 @@
     <div v-else class="flex-1 overflow-y-auto scrollbar-hide">
       <ul>
         <li
-          v-for="item in notifications"
+          v-for="item in displayNotifications"
           :key="item.id"
-          class="px-5 py-4 border-b border-grey-4"
+          class="px-5 py-[18px] border-b border-grey-5 bg-white"
         >
           <div class="flex items-start justify-between gap-2">
             <div class="flex items-start gap-2 flex-1 min-w-0">
-              <!-- 읽음 여부 점 -->
+              <!-- 미읽음 초록 점 -->
               <span
-                class="mt-[6px] w-[6px] h-[6px] rounded-full shrink-0 transition-colors"
+                class="mt-[5px] w-[6px] h-[6px] rounded-full shrink-0 transition-colors"
                 :class="item.isRead ? 'bg-transparent' : 'bg-primary'"
               />
               <div class="flex-1 min-w-0">
                 <p class="text-label1 font-semibold text-grey-13 leading-[1.4]">{{ item.title }}</p>
-                <p class="text-label1 font-normal text-grey-8 mt-[2px] leading-[1.4]">{{ item.body }}</p>
+                <p class="text-label1 font-normal text-grey-10 mt-[6px] leading-[1.5] whitespace-pre-line">{{ item.body }}</p>
               </div>
             </div>
             <span class="text-caption1 font-normal text-grey-7 shrink-0 mt-[2px]">{{ formatTime(item.createdAt) }}</span>
@@ -71,14 +69,50 @@ const { $api } = useNuxtApp()
 const isLoading = ref(true)
 const notifications = ref<NotificationHistory[]>([])
 
-const hasUnread = computed(() => notifications.value.some(n => !n.isRead))
+// 디자인 미리보기용 하드코딩 데이터
+const PREVIEW_NOTIFICATIONS: NotificationHistory[] = [
+  {
+    id: 'p1',
+    title: '회고 작성 알림',
+    body: '하루를 마무리하며 오늘의 회고를 기록해 보세요.',
+    isRead: false,
+    createdAt: new Date(Date.now() - 30000).toISOString(),
+  },
+  {
+    id: 'p2',
+    title: '다음 행동을 제안했어요',
+    body: '지난 회고를 바탕으로 추천하는 행동을 확인해 보세요.',
+    isRead: false,
+    createdAt: new Date(Date.now() - 3 * 3600000).toISOString(),
+  },
+  {
+    id: 'p3',
+    title: '추천하는 행동을 확인해 보세요',
+    body: '오늘 하루는 어땠나요?\n5분 회고로 오늘을 정리해 보세요.',
+    isRead: false,
+    createdAt: new Date(Date.now() - 24 * 3600000).toISOString(),
+  },
+  {
+    id: 'p4',
+    title: '오늘 하루는 어땠나요?',
+    body: '오늘 하루는 어땠나요?\n5분 회고로 오늘을 정리해 보세요.',
+    isRead: true,
+    createdAt: '2026-03-10T09:00:00.000Z',
+  },
+]
+
+const displayNotifications = computed(() =>
+  notifications.value.length > 0 ? notifications.value : PREVIEW_NOTIFICATIONS
+)
+
+const hasUnread = computed(() => displayNotifications.value.some(n => !n.isRead))
 
 onMounted(async () => {
   try {
     const res = await $api.get<ApiResponse<NotificationHistory[]>>('/api/v1/notification-histories')
     notifications.value = res.data.data
   } catch {
-    // 오류 처리
+    // 오류 시 PREVIEW_NOTIFICATIONS 표시
   } finally {
     isLoading.value = false
   }
