@@ -1,24 +1,24 @@
 <template>
-  <div class="h-full bg-background flex flex-col">
+  <div class="h-full bg-background flex flex-col relative">
 
     <!-- 헤더 -->
     <div class="relative flex items-center justify-end px-5 h-[50px] shrink-0">
       <div class="flex items-center gap-[10px]">
         <button @click="goToSearch">
-          <img src="/icons/search.svg" alt="검색" class="w-7 h-7" />
+          <img src="/icons/search.svg" alt="검색" class="w-6 h-6" />
         </button>
-        <button @click="toggleMoreMenu">
+        <button v-if="activeTab === 'list'" @click="toggleMoreMenu">
           <img src="/icons/more-vertical.svg" alt="더보기" class="w-6 h-6" />
         </button>
       </div>
 
       <!-- 더보기 팝업 배경 -->
-      <div v-if="showMoreMenu" class="fixed inset-0 z-[9]" @click="showMoreMenu = false" />
+      <div v-if="showMoreMenu" class="absolute inset-0 z-[9]" @click="showMoreMenu = false" />
 
       <!-- 더보기 팝업 -->
       <div
         v-if="showMoreMenu"
-        class="absolute top-[46px] right-5 bg-grey-1 border border-grey-4 rounded-xl z-10 overflow-hidden w-[180px] h-[55px] p-[6px] flex items-center"
+        class="absolute top-[50px] right-5 bg-grey-1 border border-grey-4 rounded-[8px] z-10 overflow-hidden w-[180px] h-[55px] p-[6px] flex items-center"
         style="box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.08);"
       >
         <button
@@ -45,26 +45,98 @@
     </div>
 
     <!-- 프로젝트 필터 칩 (리스트 탭에서만 노출) -->
-    <div v-if="activeTab === 'list'" class="flex items-center gap-[7px] px-5 pb-3 overflow-x-auto scrollbar-hide shrink-0">
-      <button
-        class="shrink-0 h-[34px] px-[11px] rounded-lg text-label1 font-semibold transition-none"
-        :class="selectedProjectId === null ? 'bg-grey-13 text-grey-1' : 'bg-white text-grey-7'"
-        @click="selectProject(null)"
-      >ALL</button>
-      <button
-        v-for="project in projects"
-        :key="project.id"
-        class="shrink-0 h-[34px] px-[11px] rounded-lg text-label1 font-medium transition-none whitespace-nowrap"
-        :class="selectedProjectId === project.id ? 'bg-grey-13 text-grey-1' : 'bg-white text-grey-7'"
-        @click="selectProject(project.id)"
-      >{{ project.name }}</button>
+    <div v-if="activeTab === 'list'" class="px-5 pb-3 shrink-0">
+      <div class="relative flex items-center">
+        <!-- 스크롤 가능한 칩 목록 -->
+        <div
+          ref="chipRowRef"
+          class="flex items-center gap-[7px] overflow-x-auto scrollbar-hide w-full min-w-0 select-none"
+          :style="{ touchAction: 'pan-x', paddingRight: chipsOverflow ? '44px' : '0' }"
+          @mousedown="onChipDragStart"
+          @mousemove="onChipDragMove"
+          @mouseup="onChipDragEnd"
+          @mouseleave="onChipDragEnd"
+        >
+          <button
+            class="shrink-0 py-[8px] px-[11px] rounded-[8px] text-label1 font-semibold transition-none border"
+            :class="selectedProjectId === null ? 'bg-grey-13 text-grey-1 border-transparent' : 'bg-white text-grey-7 border-grey-5'"
+            @click.stop="!isChipDragging && selectProject(null)"
+          >ALL</button>
+          <button
+            v-for="project in projects"
+            :key="project.id"
+            class="shrink-0 py-[8px] px-[11px] rounded-[8px] text-label1 font-medium transition-none whitespace-nowrap border"
+            :class="selectedProjectId === project.id ? 'bg-grey-13 text-grey-1 border-transparent' : 'bg-white text-grey-7 border-grey-5'"
+            @click.stop="!isChipDragging && selectProject(project.id)"
+          >{{ project.name }}</button>
+          <button
+            class="shrink-0 py-[8px] px-[11px] rounded-[8px] text-label1 font-medium text-grey-7 bg-white transition-none whitespace-nowrap border border-grey-5"
+            @click.stop="!isChipDragging && navigateTo('/projects')"
+          >+프로젝트 추가</button>
+        </div>
 
-      <!-- 프로젝트 추가 버튼 -->
-      <button
-        class="shrink-0 h-[34px] px-[11px] rounded-lg text-label1 font-medium text-grey-7 bg-white transition-none whitespace-nowrap"
-        @click="navigateTo('/projects')"
-      >+프로젝트 추가</button>
+        <!-- 칩 overflow 시에만 표시: 그라디언트 + 체브론 -->
+        <template v-if="chipsOverflow">
+          <div
+            class="absolute right-0 top-0 bottom-0 w-[52px] pointer-events-none"
+            style="background: linear-gradient(to right, rgba(246,246,246,0) 0%, #F6F6F6 55%);"
+          />
+          <button
+            class="absolute right-0 top-1/2 -translate-y-1/2 w-[30px] h-[30px] rounded-full flex items-center justify-center"
+            style="background: #F1F1F1; border: 1.5px solid #E6E6E6;"
+            @click="openProjectPicker"
+          >
+            <img src="/icons/chevron-down.svg" alt="" class="w-[18px] h-[18px]" />
+          </button>
+        </template>
+      </div>
     </div>
+
+    <!-- 프로젝트 픽커 팝업 (#app-container 기준 absolute) -->
+    <Teleport to="#app-container">
+      <Transition name="picker-fade">
+        <div
+          v-if="showProjectPicker"
+          class="absolute inset-0 z-20 bg-black/40"
+          @click="closeProjectPicker"
+        />
+      </Transition>
+      <Transition name="picker-slide">
+        <div
+          v-if="showProjectPicker"
+          class="absolute left-5 right-5 z-30"
+          style="bottom: 30px;"
+          @touchstart.passive="onDragStart"
+          @touchend.passive="onDragEnd"
+          @mousedown="onDragStart"
+          @mouseup="onDragEnd"
+          @click.stop
+        >
+          <div
+            class="relative w-full bg-grey-1 rounded-[36px] overflow-hidden"
+            style="padding: 32px 10px 20px;"
+          >
+            <!-- 드래그 핸들 -->
+            <div class="absolute top-[14px] left-1/2 -translate-x-1/2 w-[50px] h-1 rounded-full bg-grey-5" />
+
+            <!-- 타이틀 -->
+            <h2 class="text-body2 font-semibold text-grey-13 text-center mb-6">모든 프로젝트</h2>
+
+            <!-- 프로젝트 목록 -->
+            <div class="flex flex-col max-h-[220px] overflow-y-auto scrollbar-hide">
+              <button
+                v-for="project in projects"
+                :key="project.id"
+                class="w-full rounded-[8px] flex items-center text-grey-13 transition-none text-left active:bg-grey-3"
+                style="padding: 11px 14px; font-size: 15px; font-weight: 500; line-height: 150%; letter-spacing: -0.3px;"
+                :class="selectedProjectId === project.id ? 'bg-grey-3' : ''"
+                @click="selectProject(project.id); closeProjectPicker()"
+              >{{ project.name }}</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- 리스트 탭 -->
     <template v-if="activeTab === 'list'">
@@ -165,13 +237,30 @@ const activeTab = ref<'list' | 'calendar'>('list')
 const isLoading = ref(retrospects.value.length === 0)
 const selectedProjectId = ref<string | null>(null)
 const showMoreMenu = ref(false)
+const showProjectPicker = ref(false)
 
 const keyword = computed(() => route.query.keyword as string | undefined)
 
 watch(keyword, () => fetchRetrospects(), { immediate: true })
 
+const chipsOverflow = ref(false)
+
+function updateChipOverflow() {
+  if (chipRowRef.value) {
+    chipsOverflow.value = chipRowRef.value.scrollWidth > chipRowRef.value.clientWidth
+  }
+}
+
+watch(projects, () => nextTick(updateChipOverflow))
+
 onMounted(() => {
   if (projects.value.length === 0) fetchProjects()
+  nextTick(updateChipOverflow)
+  window.addEventListener('resize', updateChipOverflow)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateChipOverflow)
 })
 
 async function fetchProjects() {
@@ -284,4 +373,62 @@ function selectDate(date: number) {
 function goToSearch() {
   navigateTo('/retrospects/search')
 }
+
+// 프로젝트 픽커 팝업 제어
+const dragStartY = ref(0)
+
+function openProjectPicker() {
+  showProjectPicker.value = true
+}
+
+function closeProjectPicker() {
+  showProjectPicker.value = false
+}
+
+function onDragStart(e: TouchEvent | MouseEvent) {
+  dragStartY.value = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY
+}
+
+function onDragEnd(e: TouchEvent | MouseEvent) {
+  const endY = 'changedTouches' in e ? e.changedTouches[0].clientY : (e as MouseEvent).clientY
+  if (endY - dragStartY.value > 60) closeProjectPicker()
+}
+
+// 칩 목록 마우스 드래그 스크롤
+const chipRowRef = ref<HTMLElement | null>(null)
+const isChipDragging = ref(false)
+const chipDragStartX = ref(0)
+const chipScrollStartLeft = ref(0)
+
+function onChipDragStart(e: MouseEvent) {
+  isChipDragging.value = false
+  chipDragStartX.value = e.clientX
+  chipScrollStartLeft.value = chipRowRef.value?.scrollLeft ?? 0
+  ;(e.currentTarget as HTMLElement).style.cursor = 'grabbing'
+}
+
+function onChipDragMove(e: MouseEvent) {
+  if (!(e.buttons & 1)) return
+  const dx = e.clientX - chipDragStartX.value
+  if (Math.abs(dx) > 4) isChipDragging.value = true
+  if (chipRowRef.value) chipRowRef.value.scrollLeft = chipScrollStartLeft.value - dx
+}
+
+function onChipDragEnd(e: MouseEvent) {
+  ;(e.currentTarget as HTMLElement).style.cursor = ''
+  setTimeout(() => { isChipDragging.value = false }, 0)
+}
+
 </script>
+
+<style scoped>
+.picker-fade-enter-active { transition: opacity 0.25s ease; }
+.picker-fade-leave-active { transition: opacity 0.2s ease; }
+.picker-fade-enter-from,
+.picker-fade-leave-to    { opacity: 0; }
+
+.picker-slide-enter-active { transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease; }
+.picker-slide-leave-active { transition: transform 0.22s ease-in, opacity 0.22s ease; }
+.picker-slide-enter-from,
+.picker-slide-leave-to    { transform: translateY(120%); opacity: 0; }
+</style>

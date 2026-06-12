@@ -5,7 +5,6 @@
     :disabled="disabled || loading"
     v-bind="$attrs"
   >
-    <span v-if="loading" class="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
     <slot />
   </button>
 </template>
