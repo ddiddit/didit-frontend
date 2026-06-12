@@ -45,7 +45,7 @@
     </div>
 
     <!-- 프로젝트 필터 칩 -->
-    <div class="flex items-center gap-1 px-5 pb-3 overflow-x-auto scrollbar-hide shrink-0">
+    <div class="flex items-center gap-[7px] px-5 pb-3 overflow-x-auto scrollbar-hide shrink-0">
       <button
         class="shrink-0 h-[34px] px-[11px] rounded-lg text-label1 font-semibold transition-none"
         :class="selectedProjectId === null ? 'bg-grey-13 text-grey-1' : 'bg-white text-grey-7'"
