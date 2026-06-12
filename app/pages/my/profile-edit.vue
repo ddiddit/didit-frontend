@@ -22,42 +22,31 @@
 
       <!-- 닉네임 -->
       <div class="mb-7">
-        <div class="flex items-center gap-1 mb-3">
-          <span class="text-label1 font-semibold text-grey-13">닉네임</span>
-          <img v-if="isNicknameValid" src="/icons/check.svg" alt="확인" class="w-4 h-4" />
-        </div>
-        <div
-          class="flex items-center h-[56px] bg-grey-3 rounded-xl px-4 gap-2"
-          :class="nicknameError ? 'border border-red-400' : ''"
-        >
-          <input
-            v-model="nickname"
-            type="text"
-            :maxlength="10"
-            class="flex-1 bg-transparent text-body2 font-medium text-grey-13 placeholder:text-grey-7 outline-none"
-            @input="onNicknameInput"
-          />
-          <span class="text-label1 font-normal text-grey-7 shrink-0">{{ nickname.length }}/10</span>
-        </div>
-        <p v-if="nicknameError" class="text-caption1 font-normal text-red-400 mt-1">{{ nicknameError }}</p>
-        <p v-else class="text-caption1 font-normal text-grey-7 mt-1">한글 또는 영문 2~10자</p>
+        <UiTextInput
+          v-model="nickname"
+          label="닉네임"
+          hint="한글 또는 영문 2~10자"
+          :error="nicknameError"
+          :success="isNicknameValid"
+          :maxlength="10"
+          :show-count="true"
+          @input="onNicknameInput"
+        />
       </div>
 
       <!-- 직무 선택 -->
       <div>
-        <span class="text-label1 font-semibold text-grey-13 block mb-3">직무 선택</span>
-        <div class="flex gap-2">
-          <button
+        <label class="text-label1 font-medium text-grey-13 mb-3 block">직무 선택</label>
+        <div class="grid grid-cols-3 gap-[10px]">
+          <UiButton
             v-for="chip in jobChips"
             :key="chip.value"
-            class="h-[44px] px-5 rounded-xl text-body2 font-semibold border transition-colors duration-150"
-            :class="selectedJob === chip.value
-              ? 'bg-primary border-primary text-grey-13'
-              : 'bg-white border-grey-5 text-grey-13'"
+            variant="chip"
+            size="md"
+            :active="selectedJob === chip.value"
+            :muted="selectedJob !== null && selectedJob !== chip.value"
             @click="selectedJob = chip.value"
-          >
-            {{ chip.label }}
-          </button>
+          >{{ chip.label }}</UiButton>
         </div>
       </div>
 

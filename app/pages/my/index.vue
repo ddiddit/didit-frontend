@@ -1,9 +1,9 @@
 <template>
   <div class="h-full bg-grey-3 flex flex-col overflow-y-auto">
 
-    <!-- 프로필 카드 -->
+    <!-- 프로필 섹션 -->
     <button
-      class="mx-5 mb-3 bg-white rounded-2xl px-4 py-[18px] flex items-center gap-3 text-left"
+      class="px-5 py-[18px] flex items-center gap-3 text-left"
       @click="navigateTo('/my/profile-edit')"
     >
       <img src="/icons/avatar-default.svg" alt="프로필" class="w-12 h-12 rounded-full shrink-0" />
