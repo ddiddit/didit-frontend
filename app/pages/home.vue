@@ -59,9 +59,9 @@
       <!-- TODO: 회고 카드 목록 -->
     </div>
 
-    <!-- FAB + 툴팁 -->
+    <!-- FAB + 툴팁: 회고 있을 때만 표시 -->
     <div
-      v-if="!isLoading"
+      v-if="!isLoading && recentRetrospectives.length > 0"
       class="absolute right-5 flex items-center gap-[14px]"
       style="bottom: 16px;"
     >
@@ -109,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ApiResponse, HomeResponse } from '~/types/api'
+import type { ApiResponse, HomeResponse, NotificationHistory } from '~/types/api'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -134,10 +134,14 @@ const greetingMessage = computed(() =>
 
 onMounted(async () => {
   try {
-    const res = await $api.get<ApiResponse<HomeResponse>>('/api/v1/home')
-    nickname.value = res.data.data.nickname
-    recentRetrospectives.value = res.data.data.recentRetrospectives
-    todayRetrospectiveCount.value = res.data.data.todayRetrospectiveCount
+    const [homeRes, notifRes] = await Promise.all([
+      $api.get<ApiResponse<HomeResponse>>('/api/v1/home'),
+      $api.get<ApiResponse<NotificationHistory[]>>('/api/v1/notification-histories'),
+    ])
+    nickname.value = homeRes.data.data.nickname
+    recentRetrospectives.value = homeRes.data.data.recentRetrospectives
+    todayRetrospectiveCount.value = homeRes.data.data.todayRetrospectiveCount
+    hasUnread.value = notifRes.data.data.some(n => !n.isRead)
   } catch {
     // 401/403은 axios 인터셉터가 처리
   } finally {
