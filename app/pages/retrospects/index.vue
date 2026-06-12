@@ -4,7 +4,6 @@
     <!-- 헤더: 검색 아이콘만 우측 -->
     <div
       class="flex items-center justify-end px-5 h-[50px] shrink-0"
-      style="margin-top: max(54px, env(safe-area-inset-top, 54px));"
     >
       <button class="p-1" @click="goToSearch">
         <img src="/icons/search.svg" alt="검색" class="w-6 h-6" />
@@ -33,7 +32,7 @@
         v-if="!isLoading && retrospects.length === 0"
         class="flex-1 flex flex-col items-center justify-center gap-[6px]"
       >
-        <img src="/icons/empty-retrospects.svg" alt="" class="w-[52px] h-[52px] mb-[6px]" />
+        <img src="/icons/empty-retrospects.svg" alt="" class="w-[70px] h-[70px] mb-[6px]" />
         <p class="text-heading2 font-semibold text-grey-13">
           {{ keyword ? '검색 결과가 없어요' : '아직 기록된 회고가 없어요' }}
         </p>

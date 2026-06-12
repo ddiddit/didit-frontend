@@ -4,7 +4,6 @@
     <!-- ── 백 버튼: H:50, Y:54(상태바 높이), 좌측 패딩 20 ── -->
     <div
       class="flex items-center shrink-0 h-[50px] px-5"
-      style="margin-top: max(54px, env(safe-area-inset-top, 54px));"
     >
       <button class="p-1 -ml-1" @click="handleBack">
         <img src="/icons/back.svg" alt="뒤로" class="w-6 h-6" />
@@ -165,16 +164,17 @@
 
   <!-- ── 약관 상세 모달 ── -->
   <Teleport to="#app-container">
-    <div
-      v-if="activeTermModal"
-      class="absolute inset-0 z-50 flex flex-col"
-      style="background: rgba(0,0,0,0.4);"
-    >
+    <Transition name="bottom-sheet">
+      <div
+        v-if="activeTermModal"
+        class="absolute inset-0 z-50 flex flex-col"
+        style="background: rgba(0,0,0,0.4);"
+      >
       <!-- 상단 70px: 클릭 시 닫기 -->
       <div class="shrink-0" style="height:70px;" @click="activeTermModal = null" />
       <!-- 흰 카드: 나머지 공간 전체 -->
       <div
-        class="flex-1 bg-white flex flex-col overflow-hidden"
+        class="sheet-panel flex-1 bg-white flex flex-col overflow-hidden"
         style="border-radius: 20px 20px 0 0;"
       >
         <!-- X 버튼 -->
@@ -218,6 +218,7 @@
         </div>
       </div>
     </div>
+    </Transition>
   </Teleport>
 </template>
 
@@ -289,16 +290,11 @@ const debouncedCheckNickname = useDebounceFn(async () => {
   await checkNickname()
 }, 200)
 
-// 실시간 형식 검사 + 디바운스 중복 체크
+// 실시간 중복 체크 (문자 타입 검사는 디바운스 후 수행 — IME 조합 중 오류 방지)
 watch(nickname, (value) => {
   nicknameMessage.value = ''
   if (value.length === 0) {
     nicknameStatus.value = 'idle'
-    return
-  }
-  if (/[^가-힣a-zA-Z]/.test(value)) {
-    nicknameStatus.value = 'invalid'
-    nicknameMessage.value = '공백, 숫자, 특수문자는 사용할 수 없어요'
     return
   }
   nicknameStatus.value = 'idle'
@@ -317,6 +313,12 @@ async function onNicknameEnter() {
 
 async function checkNickname() {
   const value = nickname.value.trim()
+  if (value.length < 2) return
+  if (/[^가-힣a-zA-Z]/.test(value)) {
+    nicknameStatus.value = 'invalid'
+    nicknameMessage.value = '공백, 숫자, 특수문자는 사용할 수 없어요'
+    return
+  }
   nicknameStatus.value = 'checking'
   try {
     const res = await $api.get<ApiResponse<NicknameCheckResponse>>(
@@ -637,6 +639,11 @@ const MARKETING_TERMS = `디딧(didit) 마케팅 정보 수신 동의
 제5조 (동의 철회)
 앱 내 설정 메뉴 또는 고객센터를 통해 언제든지 철회할 수 있습니다.`
 
+// ── 약관 모달 닫기 ─────────────────────────────────────────────────
+function closeTermModal() {
+  activeTermModal.value = null
+}
+
 const NIGHT_PUSH_TERMS = `디딧(didit) 야간 마케팅 정보 수신 동의
 
 본 동의는 선택 사항이며, 동의하지 않아도 서비스 이용에 제한이 없습니다.
@@ -657,3 +664,31 @@ const NIGHT_PUSH_TERMS = `디딧(didit) 야간 마케팅 정보 수신 동의
 제4조 (동의 철회)
 앱 내 마이페이지 → 알림 설정에서 야간 알림 수신을 해제할 수 있습니다.`
 </script>
+
+<style>
+/* 바텀시트 오버레이 fade */
+.bottom-sheet-enter-active {
+  transition: opacity 0.3s ease;
+}
+.bottom-sheet-leave-active {
+  transition: opacity 0.25s ease;
+}
+.bottom-sheet-enter-from,
+.bottom-sheet-leave-to {
+  opacity: 0;
+}
+
+/* 흰 패널 slide-up / slide-down */
+.bottom-sheet-enter-active .sheet-panel {
+  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.bottom-sheet-leave-active .sheet-panel {
+  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.bottom-sheet-enter-from .sheet-panel {
+  transform: translateY(100%);
+}
+.bottom-sheet-leave-to .sheet-panel {
+  transform: translateY(100%);
+}
+</style>

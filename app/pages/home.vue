@@ -4,15 +4,13 @@
     <!-- 헤더: H:50, 벨 아이콘만 우측 -->
     <header
       class="flex items-center justify-end px-5 h-[50px] shrink-0"
-      style="margin-top: max(54px, env(safe-area-inset-top, 54px));"
     >
-      <button class="relative p-1" @click="goToNotifications">
+      <button @click="goToNotifications">
         <img
-          :src="hasUnread ? '/icons/bell-on.png' : '/icons/bell-off.png'"
+          :src="hasUnread ? '/icons/bell-on.svg' : '/icons/bell-off.svg'"
           alt="알림"
           class="w-6 h-6"
         />
-        <span v-if="hasUnread" class="absolute top-1 right-1 w-[6px] h-[6px] bg-primary rounded-full" />
       </button>
     </header>
 
@@ -48,7 +46,7 @@
 
       <!-- 회고 시작하기 버튼: H:42, radius:12, gap:4 / 텍스트↔버튼 40px (gap-3 12px + mt-7 28px) -->
       <button
-        class="flex items-center gap-1 mt-7 px-[18px] h-[42px] bg-primary rounded-xl"
+        class="flex items-center gap-1 mt-7 pl-[12px] pr-[18px] py-[9px] bg-primary rounded-xl"
         @click="startRetrospect"
       >
         <img src="/icons/add.png" alt="" class="w-6 h-6" />

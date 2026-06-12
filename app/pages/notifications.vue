@@ -4,7 +4,6 @@
     <!-- 헤더 -->
     <div
       class="flex items-center px-5 h-[50px] shrink-0"
-      style="margin-top: max(54px, env(safe-area-inset-top, 54px));"
     >
       <button class="p-1 -ml-1" @click="navigateTo('/home')">
         <img src="/icons/back.svg" alt="뒤로" class="w-6 h-6" />

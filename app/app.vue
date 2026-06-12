@@ -68,14 +68,14 @@
         </div>
       </aside>
 
-      <!-- 앱 영역: 모바일=흰 배경 전체화면, 데스크탑=390px 흰 패널+그림자 -->
+      <!-- 앱 영역: 모바일/태블릿=전체 너비, 데스크탑=390px 패널+그림자 -->
       <div
         id="app-container"
-        class="w-full max-w-[390px] mx-auto desktop:max-w-none desktop:mx-0 desktop:w-[390px] desktop:flex-shrink-0 h-dvh overflow-hidden flex flex-col bg-background relative"
-        style="box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 8px 16px rgba(0,0,0,0.06), 0 24px 48px rgba(0,0,0,0.08);"
+        class="w-full desktop:w-[390px] desktop:flex-shrink-0 h-dvh overflow-hidden flex flex-col bg-background relative"
+        :style="isDesktop ? 'box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 8px 16px rgba(0,0,0,0.06), 0 24px 48px rgba(0,0,0,0.08);' : ''"
       >
         <NuxtLayout>
-          <NuxtPage :transition="{ name: 'page', mode: 'out-in' }" />
+          <NuxtPage />
         </NuxtLayout>
       </div>
 
@@ -84,6 +84,9 @@
 </template>
 
 <script setup lang="ts">
+const { width } = useWindowSize()
+const isDesktop = computed(() => width.value >= 980)
+
 const features = [
   'AI 심화 질문으로 더 깊은 성찰',
   '프로젝트·태그로 체계적인 회고 관리',
