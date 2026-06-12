@@ -3,13 +3,13 @@
 
     <!-- 프로필 섹션 -->
     <button
-      class="px-5 py-[18px] flex items-center gap-3 text-left"
+      class="px-5 py-[18px] flex items-center gap-4 text-left"
       @click="navigateTo('/my/profile-edit')"
     >
       <img src="/icons/avatar-default.svg" alt="프로필" class="w-12 h-12 rounded-full shrink-0" />
       <div class="flex-1 min-w-0">
-        <p class="text-caption1 font-medium text-primary leading-[1.4]">{{ jobLabel }}</p>
-        <p class="text-body2 font-semibold text-grey-13">{{ profile?.nickname ?? '' }}</p>
+        <p class="text-label2 font-semibold text-primary">{{ jobLabel }}</p>
+        <p class="text-heading2 font-semibold text-grey-13">{{ profile?.nickname ?? '' }}</p>
       </div>
       <img src="/icons/chevron-right.svg" alt="" class="w-5 h-5 shrink-0" />
     </button>
