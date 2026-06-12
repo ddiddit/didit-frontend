@@ -11,7 +11,7 @@
 
     <!-- 빈 상태 -->
     <div
-      v-if="!isLoading && projects.length === 0"
+      v-if="!isLoading && localProjects.length === 0"
       class="flex-1 flex flex-col items-center justify-center gap-[6px]"
     >
       <img src="/icons/empty-projects.svg" alt="" class="w-[70px] h-[70px] mb-[6px]" />
@@ -21,66 +21,97 @@
       </p>
       <button
         class="flex items-center gap-1 mt-[34px] pl-[12px] pr-[18px] py-[9px] bg-primary rounded-xl"
-        @click="showAddSheet = true"
+        @click="addNewProject"
       >
         <img src="/icons/add.svg" alt="" class="w-6 h-6" />
         <span class="text-body2 font-semibold text-grey-13">프로젝트 추가</span>
       </button>
     </div>
 
-    <!-- 프로젝트 목록 -->
-    <div v-else-if="!isLoading" class="flex-1 overflow-y-auto scrollbar-hide">
+    <!-- 프로젝트 리스트 -->
+    <div v-else-if="!isLoading" class="flex-1 overflow-y-auto scrollbar-hide bg-white">
       <ul>
         <li
-          v-for="project in projects"
-          :key="project.id"
-          class="flex items-center px-5 py-4 border-b border-grey-4"
+          v-for="(project, index) in localProjects"
+          :key="index"
+          class="flex items-center px-5 h-[54px] border-b border-grey-4"
         >
-          <span class="flex-1 text-label1 font-medium text-grey-13">{{ project.name }}</span>
-          <span class="text-caption1 text-grey-7 mr-4">{{ project.retrospectiveCount }}개</span>
-          <button class="p-1" @click="confirmDelete(project)">
-            <img src="/icons/delete.svg" alt="삭제" class="w-5 h-5" />
+          <!-- 삭제 버튼 -->
+          <button class="shrink-0 mr-3" @click="requestDelete(project)">
+            <img src="/icons/delete.svg" alt="삭제" class="w-6 h-6" />
           </button>
+
+          <!-- 프로젝트명 -->
+          <input
+            v-if="project.isNew"
+            v-model="project.name"
+            type="text"
+            maxlength="15"
+            placeholder="프로젝트 이름을 입력하세요"
+            class="flex-1 bg-transparent text-label1 text-grey-13 placeholder:text-grey-6 outline-none border-b border-transparent focus:border-grey-13 py-1 transition-colors"
+          />
+          <span v-else class="flex-1 text-label1 text-grey-13">{{ project.name }}</span>
+
+          <!-- 드래그 핸들 -->
+          <div class="shrink-0 flex gap-[3px] ml-3 cursor-grab">
+            <div class="flex flex-col gap-[3px]">
+              <div class="w-[3px] h-[3px] rounded-full bg-grey-6" />
+              <div class="w-[3px] h-[3px] rounded-full bg-grey-6" />
+              <div class="w-[3px] h-[3px] rounded-full bg-grey-6" />
+            </div>
+            <div class="flex flex-col gap-[3px]">
+              <div class="w-[3px] h-[3px] rounded-full bg-grey-6" />
+              <div class="w-[3px] h-[3px] rounded-full bg-grey-6" />
+              <div class="w-[3px] h-[3px] rounded-full bg-grey-6" />
+            </div>
+          </div>
         </li>
       </ul>
-      <div class="flex justify-center py-6">
+
+      <!-- + 추가 버튼 -->
+      <div class="flex justify-center py-5">
         <button
-          class="flex items-center gap-1 pl-[12px] pr-[18px] py-[9px] bg-primary rounded-xl"
-          @click="showAddSheet = true"
+          class="w-8 h-8 rounded-full bg-grey-5 flex items-center justify-center"
+          :disabled="!canAdd"
+          @click="addNewProject"
         >
-          <img src="/icons/add.svg" alt="" class="w-6 h-6" />
-          <span class="text-body2 font-semibold text-grey-13">프로젝트 추가</span>
+          <span class="text-grey-9 text-xl leading-none">+</span>
         </button>
       </div>
     </div>
 
-    <!-- 프로젝트 추가 바텀시트 -->
-    <Transition name="bottom-sheet">
-      <div
-        v-if="showAddSheet"
-        class="fixed inset-0 z-20 flex flex-col justify-end"
-      >
-        <div class="fixed inset-0 bg-black/40" @click="closeAddSheet" />
-        <div class="sheet-panel relative bg-white rounded-t-2xl px-5 pt-6 pb-10 z-10">
-          <p class="text-heading2 font-semibold text-grey-13 mb-5">프로젝트 추가</p>
-          <input
-            v-model="newProjectName"
-            type="text"
-            maxlength="15"
-            placeholder="프로젝트 이름 (최대 15자)"
-            class="w-full h-[48px] px-4 rounded-xl border border-grey-4 bg-grey-1 text-label1 text-grey-13 placeholder:text-grey-6 outline-none focus:border-grey-8 transition-colors"
-            @keyup.enter="submitAdd"
-          />
-          <p class="text-right text-caption1 text-grey-6 mt-1">{{ newProjectName.length }}/15</p>
+    <!-- 하단 저장 영역 -->
+    <div v-if="!isLoading && localProjects.length > 0" class="shrink-0 px-5 pt-3 pb-8 bg-background">
+      <p class="text-center text-caption1 text-grey-7 mb-3">프로젝트는 최대 10개까지 생성 가능합니다</p>
+      <button
+        class="w-full h-[50px] rounded-xl text-label1 font-semibold transition-none"
+        :class="hasNewProjects ? 'bg-grey-13 text-white' : 'bg-grey-4 text-grey-7'"
+        :disabled="!hasNewProjects || isSubmitting"
+        @click="saveProjects"
+      >저장</button>
+    </div>
+
+    <!-- 삭제 확인 다이얼로그 -->
+    <div v-if="pendingDelete" class="fixed inset-0 z-30 flex items-center justify-center px-5">
+      <div class="fixed inset-0 bg-black/40" @click="pendingDelete = null" />
+      <div class="relative bg-white rounded-2xl px-6 pt-7 pb-6 w-full z-10">
+        <h3 class="text-body2 font-semibold text-grey-13 text-center mb-2">프로젝트를 삭제하시겠어요?</h3>
+        <p class="text-label2 font-normal text-grey-7 text-center mb-6 leading-[1.5]">
+          프로젝트에 포함된 회고는 삭제되지 않으며,<br />전체보기에서 계속 확인할 수 있어요.
+        </p>
+        <div class="flex gap-3">
           <button
-            class="w-full h-[50px] rounded-xl mt-4 text-label1 font-semibold transition-none"
-            :class="newProjectName.trim().length > 0 ? 'bg-grey-13 text-white' : 'bg-grey-3 text-grey-6'"
-            :disabled="newProjectName.trim().length === 0 || isSubmitting"
-            @click="submitAdd"
-          >추가하기</button>
+            class="flex-1 h-[50px] rounded-xl bg-grey-4 text-label1 font-semibold text-grey-13 transition-none"
+            @click="pendingDelete = null"
+          >취소</button>
+          <button
+            class="flex-1 h-[50px] rounded-xl bg-[#FF3B30] text-label1 font-semibold text-white transition-none"
+            :disabled="isDeleting"
+            @click="doDelete"
+          >삭제</button>
         </div>
       </div>
-    </Transition>
+    </div>
 
   </div>
 </template>
@@ -93,62 +124,95 @@ definePageMeta({ middleware: 'auth', layout: false })
 const { $api } = useNuxtApp()
 const router = useRouter()
 
+interface LocalProject {
+  id?: string
+  name: string
+  isNew: boolean
+  retrospectiveCount: number
+}
+
 const projects = useState<Project[]>('projects:list', () => [])
 const isLoading = ref(false)
-const showAddSheet = ref(false)
-const newProjectName = ref('')
+const localProjects = ref<LocalProject[]>([])
+const pendingDelete = ref<LocalProject | null>(null)
 const isSubmitting = ref(false)
+const isDeleting = ref(false)
+
+const MAX_PROJECTS = 10
+const canAdd = computed(() => localProjects.value.length < MAX_PROJECTS)
+const hasNewProjects = computed(() =>
+  localProjects.value.some(p => p.isNew && p.name.trim().length > 0)
+)
 
 onMounted(async () => {
   isLoading.value = true
   try {
     const res = await $api.get<ApiResponse<Project[]>>('/api/v1/projects')
     projects.value = res.data.data
+    localProjects.value = projects.value.map(p => ({
+      id: p.id,
+      name: p.name,
+      isNew: false,
+      retrospectiveCount: p.retrospectiveCount,
+    }))
   } catch {
-    projects.value = []
+    localProjects.value = []
   } finally {
     isLoading.value = false
   }
 })
 
-function closeAddSheet() {
-  showAddSheet.value = false
-  newProjectName.value = ''
+function addNewProject() {
+  if (!canAdd.value) return
+  localProjects.value.push({ name: '', isNew: true, retrospectiveCount: 0 })
+  nextTick(() => {
+    const inputs = document.querySelectorAll<HTMLInputElement>('input[type="text"]')
+    inputs[inputs.length - 1]?.focus()
+  })
 }
 
-async function submitAdd() {
-  const name = newProjectName.value.trim()
-  if (!name || isSubmitting.value) return
+function requestDelete(project: LocalProject) {
+  if (project.isNew) {
+    localProjects.value = localProjects.value.filter(p => p !== project)
+    return
+  }
+  pendingDelete.value = project
+}
+
+async function doDelete() {
+  if (!pendingDelete.value?.id || isDeleting.value) return
+  isDeleting.value = true
+  try {
+    await $api.delete(`/api/v1/projects/${pendingDelete.value.id}`)
+    const deletedId = pendingDelete.value.id
+    localProjects.value = localProjects.value.filter(p => p.id !== deletedId)
+    projects.value = projects.value.filter(p => p.id !== deletedId)
+    pendingDelete.value = null
+  } catch {
+  } finally {
+    isDeleting.value = false
+  }
+}
+
+async function saveProjects() {
+  if (!hasNewProjects.value || isSubmitting.value) return
   isSubmitting.value = true
   try {
-    await $api.post('/api/v1/projects', { name })
-    // 목록 갱신
+    const newOnes = localProjects.value.filter(p => p.isNew && p.name.trim())
+    for (const p of newOnes) {
+      await $api.post('/api/v1/projects', { name: p.name.trim() })
+    }
     const res = await $api.get<ApiResponse<Project[]>>('/api/v1/projects')
     projects.value = res.data.data
-    closeAddSheet()
+    localProjects.value = projects.value.map(p => ({
+      id: p.id,
+      name: p.name,
+      isNew: false,
+      retrospectiveCount: p.retrospectiveCount,
+    }))
   } catch {
-    // 에러 처리 (추후 토스트 추가)
   } finally {
     isSubmitting.value = false
   }
 }
-
-async function confirmDelete(project: Project) {
-  if (!confirm(`"${project.name}" 프로젝트를 삭제할까요?`)) return
-  try {
-    await $api.delete(`/api/v1/projects/${project.id}`)
-    projects.value = projects.value.filter(p => p.id !== project.id)
-  } catch {
-    // 에러 처리
-  }
-}
 </script>
-
-<style>
-.bottom-sheet-enter-active { transition: opacity 0.3s ease; }
-.bottom-sheet-leave-active { transition: opacity 0.25s ease; }
-.bottom-sheet-enter-from, .bottom-sheet-leave-to { opacity: 0; }
-.bottom-sheet-enter-active .sheet-panel { transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1); }
-.bottom-sheet-leave-active .sheet-panel { transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1); }
-.bottom-sheet-enter-from .sheet-panel, .bottom-sheet-leave-to .sheet-panel { transform: translateY(100%); }
-</style>
