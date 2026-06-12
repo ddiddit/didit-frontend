@@ -11,7 +11,7 @@
         <p class="text-label2 font-semibold text-primary">{{ jobLabel }}</p>
         <p class="text-heading2 font-semibold text-grey-13">{{ profile?.nickname ?? '' }}</p>
       </div>
-      <img src="/icons/chevron-right.svg" alt="" class="w-5 h-5 shrink-0" />
+      <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6 shrink-0" />
     </button>
 
     <!-- 설정 그룹 -->
@@ -21,11 +21,11 @@
         @click="navigateTo('/my/notification-settings')"
       >
         <span class="text-body2 font-medium text-grey-10">알림 설정</span>
-        <img src="/icons/chevron-right.svg" alt="" class="w-5 h-5" />
+        <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6" />
       </button>
       <button class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3">
         <span class="text-body2 font-medium text-grey-10">계정 관리</span>
-        <img src="/icons/chevron-right.svg" alt="" class="w-5 h-5" />
+        <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6" />
       </button>
       <div class="h-[48px] px-3 flex items-center justify-between">
         <span class="text-body2 font-medium text-grey-10">앱 버전</span>
@@ -36,34 +36,49 @@
     <!-- 고객지원 -->
     <div class="mx-5 mb-3 bg-white rounded-2xl p-2">
       <p class="text-label1 font-semibold text-grey-7 px-3 h-[44px] flex items-center">고객지원</p>
-      <button class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3">
+      <button
+        class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3"
+        @click="navigateTo('/my/notices')"
+      >
         <span class="text-body2 font-medium text-grey-10">공지사항</span>
-        <img src="/icons/chevron-right.svg" alt="" class="w-5 h-5" />
+        <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6" />
       </button>
       <button class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3">
         <span class="text-body2 font-medium text-grey-10">문의하기</span>
-        <img src="/icons/chevron-right.svg" alt="" class="w-5 h-5" />
+        <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6" />
       </button>
     </div>
 
     <!-- 이용약관 -->
     <div class="mx-5 mb-6 bg-white rounded-2xl p-2">
       <p class="text-label1 font-semibold text-grey-7 px-3 h-[44px] flex items-center">이용약관</p>
-      <button class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3">
+      <button
+        class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3"
+        @click="navigateTo('/my/terms/service')"
+      >
         <span class="text-body2 font-medium text-grey-10">서비스 이용약관</span>
-        <img src="/icons/chevron-right.svg" alt="" class="w-5 h-5" />
+        <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6" />
       </button>
-      <button class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3">
+      <button
+        class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3"
+        @click="navigateTo('/my/terms/privacy')"
+      >
         <span class="text-body2 font-medium text-grey-10">개인정보 처리방침</span>
-        <img src="/icons/chevron-right.svg" alt="" class="w-5 h-5" />
+        <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6" />
       </button>
-      <button class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3">
+      <button
+        class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3"
+        @click="navigateTo('/my/terms/marketing')"
+      >
         <span class="text-body2 font-medium text-grey-10">마케팅 정보 수신 동의 안내</span>
-        <img src="/icons/chevron-right.svg" alt="" class="w-5 h-5" />
+        <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6" />
       </button>
-      <button class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3">
+      <button
+        class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3"
+        @click="navigateTo('/my/terms/night-push')"
+      >
         <span class="text-body2 font-medium text-grey-10">야간 푸시 알림 동의 안내</span>
-        <img src="/icons/chevron-right.svg" alt="" class="w-5 h-5" />
+        <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6" />
       </button>
     </div>
 
