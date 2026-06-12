@@ -290,16 +290,11 @@ const debouncedCheckNickname = useDebounceFn(async () => {
   await checkNickname()
 }, 200)
 
-// 실시간 형식 검사 + 디바운스 중복 체크
+// 실시간 중복 체크 (문자 타입 검사는 디바운스 후 수행 — IME 조합 중 오류 방지)
 watch(nickname, (value) => {
   nicknameMessage.value = ''
   if (value.length === 0) {
     nicknameStatus.value = 'idle'
-    return
-  }
-  if (/[^가-힣a-zA-Z]/.test(value)) {
-    nicknameStatus.value = 'invalid'
-    nicknameMessage.value = '공백, 숫자, 특수문자는 사용할 수 없어요'
     return
   }
   nicknameStatus.value = 'idle'
@@ -318,6 +313,12 @@ async function onNicknameEnter() {
 
 async function checkNickname() {
   const value = nickname.value.trim()
+  if (value.length < 2) return
+  if (/[^가-힣a-zA-Z]/.test(value)) {
+    nicknameStatus.value = 'invalid'
+    nicknameMessage.value = '공백, 숫자, 특수문자는 사용할 수 없어요'
+    return
+  }
   nicknameStatus.value = 'checking'
   try {
     const res = await $api.get<ApiResponse<NicknameCheckResponse>>(
