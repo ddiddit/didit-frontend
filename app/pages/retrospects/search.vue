@@ -72,7 +72,7 @@
             backgroundColor: tagColors[index % tagColors.length].bg,
             color: tagColors[index % tagColors.length].text,
           }"
-          @click="goSearch(tag.name)"
+          @click="goSearchByTag(tag.name)"
         >#{{ tag.name }}</button>
       </div>
     </div>
@@ -162,6 +162,11 @@ function onEnter(event: KeyboardEvent) {
 function goSearch(keyword: string) {
   saveRecent(keyword)
   navigateTo(`/retrospects?keyword=${encodeURIComponent(keyword)}`)
+}
+
+// 태그 클릭은 최근 검색어에 추가하지 않음
+function goSearchByTag(tagName: string) {
+  navigateTo(`/retrospects?keyword=${encodeURIComponent(tagName)}`)
 }
 
 function clearQuery() {
