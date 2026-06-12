@@ -1,13 +1,33 @@
 <template>
   <div class="h-full bg-background flex flex-col">
 
-    <!-- 헤더: 검색 아이콘만 우측 -->
-    <div
-      class="flex items-center justify-end px-5 h-[50px] shrink-0"
-    >
-      <button @click="goToSearch">
-        <img src="/icons/search.svg" alt="검색" class="w-7 h-7" />
-      </button>
+    <!-- 헤더 -->
+    <div class="relative flex items-center justify-end px-5 h-[50px] shrink-0">
+      <div class="flex items-center gap-[10px]">
+        <button @click="goToSearch">
+          <img src="/icons/search.svg" alt="검색" class="w-7 h-7" />
+        </button>
+        <button @click="toggleMoreMenu">
+          <img src="/icons/more-vertical.png" alt="더보기" class="w-6 h-6" />
+        </button>
+      </div>
+
+      <!-- 더보기 팝업 배경 -->
+      <div v-if="showMoreMenu" class="fixed inset-0 z-[9]" @click="showMoreMenu = false" />
+
+      <!-- 더보기 팝업 -->
+      <div
+        v-if="showMoreMenu"
+        class="absolute top-[46px] right-5 bg-grey-1 border border-grey-4 rounded-xl z-10 overflow-hidden"
+        style="box-shadow: 0px 4px 16px rgba(0,0,0,0.10);"
+      >
+        <button
+          class="flex items-center px-[14px] py-[10px] text-label1 font-medium text-grey-13 w-full text-left whitespace-nowrap"
+          @click="goToProjectEdit"
+        >
+          프로젝트 편집
+        </button>
+      </div>
     </div>
 
     <!-- 탭 선택: 리스트 / 캘린더 -->
@@ -22,6 +42,22 @@
         :class="activeTab === 'calendar' ? 'font-bold text-grey-12' : 'font-medium text-grey-6'"
         @click="activeTab = 'calendar'"
       >캘린더</button>
+    </div>
+
+    <!-- 프로젝트 필터 칩 -->
+    <div class="flex items-center gap-1 px-5 pb-3 overflow-x-auto scrollbar-hide shrink-0">
+      <button
+        class="shrink-0 h-[34px] px-[11px] rounded-lg text-label1 font-semibold transition-none"
+        :class="selectedProjectId === null ? 'bg-grey-13 text-grey-1' : 'bg-white text-grey-7'"
+        @click="selectProject(null)"
+      >ALL</button>
+      <button
+        v-for="project in projects"
+        :key="project.id"
+        class="shrink-0 h-[34px] px-[11px] rounded-lg text-label1 font-medium transition-none whitespace-nowrap"
+        :class="selectedProjectId === project.id ? 'bg-grey-13 text-grey-1' : 'bg-white text-grey-7'"
+        @click="selectProject(project.id)"
+      >{{ project.name }}</button>
     </div>
 
     <!-- 리스트 탭 -->
@@ -109,7 +145,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ApiResponse, Retrospective } from '~/types/api'
+import type { ApiResponse, Project, Retrospective } from '~/types/api'
 
 definePageMeta({ middleware: 'auth', layout: 'default' })
 
@@ -118,21 +154,39 @@ const route = useRoute()
 
 // 페이지 재방문 시 깜빡임 없도록 SPA 전체에서 상태 유지
 const retrospects = useState<Retrospective[]>('retrospects:list', () => [])
+const projects = useState<Project[]>('projects:list', () => [])
 const activeTab = ref<'list' | 'calendar'>('list')
 const isLoading = ref(retrospects.value.length === 0)
+const selectedProjectId = ref<string | null>(null)
+const showMoreMenu = ref(false)
 
 const keyword = computed(() => route.query.keyword as string | undefined)
 
 watch(keyword, () => fetchRetrospects(), { immediate: true })
 
+onMounted(() => {
+  if (projects.value.length === 0) fetchProjects()
+})
+
+async function fetchProjects() {
+  try {
+    const res = await $api.get<ApiResponse<Project[]>>('/api/v1/projects')
+    projects.value = res.data.data
+  } catch {
+    projects.value = []
+  }
+}
+
 async function fetchRetrospects() {
-  // 키워드 검색이거나 캐시가 없을 때만 로딩 표시
   if (keyword.value || retrospects.value.length === 0) isLoading.value = true
   try {
-    const params = keyword.value
-      ? `?keyword=${encodeURIComponent(keyword.value)}`
-      : ''
-    const res = await $api.get<ApiResponse<Retrospective[]>>(`/api/v1/retrospectives${params}`)
+    let res
+    if (selectedProjectId.value) {
+      res = await $api.get<ApiResponse<Retrospective[]>>(`/api/v1/projects/${selectedProjectId.value}`)
+    } else {
+      const params = keyword.value ? `?keyword=${encodeURIComponent(keyword.value)}` : ''
+      res = await $api.get<ApiResponse<Retrospective[]>>(`/api/v1/retrospectives${params}`)
+    }
     retrospects.value = res.data.data
   } catch {
     retrospects.value = []
@@ -141,9 +195,24 @@ async function fetchRetrospects() {
   }
 }
 
+async function selectProject(id: string | null) {
+  selectedProjectId.value = id
+  isLoading.value = true
+  await fetchRetrospects()
+}
+
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr)
   return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
+}
+
+function toggleMoreMenu() {
+  showMoreMenu.value = !showMoreMenu.value
+}
+
+function goToProjectEdit() {
+  showMoreMenu.value = false
+  navigateTo('/projects')
 }
 
 // 캘린더 상태
@@ -170,7 +239,6 @@ function isToday(date: number) {
   )
 }
 
-// 해당 날짜의 요일 반환 (0=일, 6=토)
 function getDayOfWeek(date: number): number {
   return (firstDayOfMonth.value + date - 1) % 7
 }
@@ -205,7 +273,6 @@ function nextMonth() {
 
 function selectDate(date: number) {
   selectedDate.value = date
-  // TODO: 날짜별 회고 조회
 }
 
 function goToSearch() {
