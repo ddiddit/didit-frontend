@@ -23,7 +23,10 @@
         <span class="text-body2 font-medium text-grey-10">알림 설정</span>
         <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6" />
       </button>
-      <button class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3">
+      <button
+        class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3"
+        @click="navigateTo('/my/account')"
+      >
         <span class="text-body2 font-medium text-grey-10">계정 관리</span>
         <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6" />
       </button>
@@ -43,7 +46,10 @@
         <span class="text-body2 font-medium text-grey-10">공지사항</span>
         <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6" />
       </button>
-      <button class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3">
+      <button
+        class="w-full h-[48px] px-3 flex items-center justify-between rounded-[10px] active:bg-grey-3"
+        @click="navigateTo('/my/inquiry')"
+      >
         <span class="text-body2 font-medium text-grey-10">문의하기</span>
         <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6" />
       </button>

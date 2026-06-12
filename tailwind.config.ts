@@ -82,6 +82,7 @@ export default {
           '900': '#111827',
         },
 
+        error: '#F73838',
         surface: '#FFFFFF',
         background: '#F6F6F6',
       },

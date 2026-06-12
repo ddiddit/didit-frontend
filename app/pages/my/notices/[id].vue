@@ -9,18 +9,18 @@
     </div>
 
     <!-- 본문 -->
-    <div v-if="notice" class="flex-1 overflow-y-auto px-5 pb-10">
+    <div v-if="notice" class="flex-1 overflow-y-auto px-5 pt-4 pb-10">
       <!-- 날짜 + 제목 -->
       <div class="flex flex-col gap-2 mb-5">
         <p class="text-caption1 font-normal text-grey-7">{{ notice.date }}</p>
-        <h1 class="text-heading2 font-bold text-grey-13 leading-[1.4]">{{ notice.title }}</h1>
+        <h1 class="text-heading1 font-bold text-grey-13">{{ notice.title }}</h1>
       </div>
 
       <!-- 구분선 -->
-      <hr class="border-t border-grey-5 mb-5" />
+      <div class="h-px bg-grey-5 mb-5" />
 
       <!-- 내용 -->
-      <p class="text-[15px] font-normal text-grey-10 leading-[1.6] tracking-[-0.02em]">{{ notice.body }}</p>
+      <p class="text-body3-reading font-normal text-grey-10">{{ notice.body }}</p>
     </div>
 
   </div>

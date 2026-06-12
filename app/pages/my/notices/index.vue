@@ -11,16 +11,17 @@
     </div>
 
     <!-- 목록 -->
-    <div class="flex-1 overflow-y-auto">
-      <button
-        v-for="notice in notices"
-        :key="notice.id"
-        class="w-full px-5 py-5 flex items-center justify-between border-b border-grey-4 text-left"
-        @click="navigateTo(`/my/notices/${notice.id}`)"
-      >
-        <span class="text-body2 font-medium text-grey-10 flex-1 pr-3">{{ notice.title }}</span>
-        <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6 shrink-0" />
-      </button>
+    <div class="flex-1 overflow-y-auto scrollbar-hide">
+      <div v-for="notice in notices" :key="notice.id">
+        <button
+          class="w-full px-5 py-5 flex items-center justify-between text-left active:bg-grey-3"
+          @click="navigateTo(`/my/notices/${notice.id}`)"
+        >
+          <span class="text-body2 font-medium text-grey-10 flex-1 pr-3">{{ notice.title }}</span>
+          <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6 shrink-0" />
+        </button>
+        <div class="mx-5 h-px bg-grey-4" />
+      </div>
     </div>
 
   </div>
