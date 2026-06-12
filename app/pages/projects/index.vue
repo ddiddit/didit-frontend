@@ -72,11 +72,13 @@
       <!-- + 추가 버튼 -->
       <div class="flex justify-center py-5">
         <button
-          class="w-[30px] h-[30px] rounded-[6px] bg-grey-4 flex items-center justify-center"
+          class="w-[30px] h-[30px] rounded-[6px] bg-grey-4 flex items-center justify-center text-grey-9"
           :disabled="!canAdd"
           @click="addNewProject"
         >
-          <span class="text-grey-9 text-xl leading-none">+</span>
+          <svg width="24" height="24" viewBox="0 0 30 30" fill="none">
+            <path d="M13.75 16.25H6.25V13.75H13.75V6.25H16.25V13.75H23.75V16.25H16.25V23.75H13.75V16.25Z" fill="currentColor"/>
+          </svg>
         </button>
       </div>
     </div>
