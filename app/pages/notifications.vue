@@ -31,7 +31,7 @@
         <li
           v-for="item in displayNotifications"
           :key="item.id"
-          class="px-5 py-[18px] border-b border-grey-5 bg-white"
+          class="px-5 py-[18px] border-b border-grey-5"
         >
           <div class="flex items-start justify-between gap-2">
             <div class="flex items-start gap-2 flex-1 min-w-0">
@@ -66,7 +66,7 @@ definePageMeta({ middleware: 'auth', layout: 'default' })
 
 const { $api } = useNuxtApp()
 
-const isLoading = ref(true)
+const isLoading = ref(false)
 const notifications = ref<NotificationHistory[]>([])
 
 // 디자인 미리보기용 하드코딩 데이터
