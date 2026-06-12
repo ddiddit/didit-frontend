@@ -72,7 +72,7 @@
       <!-- + 추가 버튼 -->
       <div class="flex justify-center py-5">
         <button
-          class="w-8 h-8 rounded-full bg-grey-5 flex items-center justify-center"
+          class="w-[30px] h-[30px] rounded-[6px] bg-grey-4 flex items-center justify-center"
           :disabled="!canAdd"
           @click="addNewProject"
         >
