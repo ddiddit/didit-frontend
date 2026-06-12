@@ -49,7 +49,7 @@
         class="flex items-center gap-1 mt-7 pl-[12px] pr-[18px] py-[9px] bg-primary rounded-xl"
         @click="startRetrospect"
       >
-        <img src="/icons/add.png" alt="" class="w-6 h-6" />
+        <img src="/icons/add.svg" alt="" class="w-6 h-6" />
         <span class="text-body2 font-semibold text-grey-13">회고 시작하기</span>
       </button>
     </div>
