@@ -46,7 +46,7 @@
 
       <!-- 회고 시작하기 버튼: H:42, radius:12, gap:4 / 텍스트↔버튼 40px (gap-3 12px + mt-7 28px) -->
       <button
-        class="flex items-center gap-1 mt-7 px-[18px] h-[42px] bg-primary rounded-xl"
+        class="flex items-center gap-1 mt-7 pl-[12px] pr-[18px] py-[9px] bg-primary rounded-xl"
         @click="startRetrospect"
       >
         <img src="/icons/add.png" alt="" class="w-6 h-6" />
@@ -67,7 +67,7 @@
     >
       <!-- 툴팁 버블 -->
       <div
-        class="relative flex items-center pl-[12px] pr-[18px] py-[9px] rounded-xl"
+        class="relative flex items-center h-[38px] px-[8px] rounded-xl"
         :class="isCompleted ? 'bg-grey-5' : 'bg-grey-10'"
         style="box-shadow: 0 2px 8px rgba(0,0,0,0.12);"
       >
