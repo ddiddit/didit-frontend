@@ -5,7 +5,7 @@
     <header
       class="flex items-center justify-end px-5 h-[50px] shrink-0"
     >
-      <button class="p-1" @click="goToNotifications">
+      <button @click="goToNotifications">
         <img
           :src="hasUnread ? '/icons/bell-on.svg' : '/icons/bell-off.svg'"
           alt="알림"
