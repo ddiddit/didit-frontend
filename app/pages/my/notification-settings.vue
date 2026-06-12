@@ -67,13 +67,16 @@
       <div class="mx-5 h-px bg-grey-5" />
 
       <!-- 회고 알림 시간 -->
-      <div class="flex items-start justify-between px-5 pt-4 pb-4 gap-4">
+      <button class="w-full flex items-center justify-between px-5 pt-4 pb-4 gap-4 text-left">
         <div class="flex flex-col gap-[6px]">
           <span class="text-body2 font-normal text-grey-13">회고 알림 시간</span>
           <span class="text-label1 font-normal text-grey-7">설정한 시간에 회고 알림을 보내드립니다.</span>
         </div>
-        <span class="text-body2 font-normal text-grey-7 shrink-0">{{ reminderTimeLabel }}</span>
-      </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <span class="text-body2 font-normal text-grey-7">{{ reminderTimeLabel }}</span>
+          <img src="/icons/chevron-right-sm.svg" alt="" class="w-4 h-4" />
+        </div>
+      </button>
 
     </div>
 

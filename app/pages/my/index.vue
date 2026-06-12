@@ -1,11 +1,6 @@
 <template>
   <div class="h-full bg-grey-3 flex flex-col overflow-y-auto">
 
-    <!-- 헤더 -->
-    <div class="flex items-center px-5 h-[50px] shrink-0">
-      <span class="text-body2 font-semibold text-grey-13">마이</span>
-    </div>
-
     <!-- 프로필 카드 -->
     <button
       class="mx-5 mb-3 bg-white rounded-2xl px-4 py-[18px] flex items-center gap-3 text-left"
