@@ -20,7 +20,7 @@
         새 프로젝트를 만들어<br />회고를 정리해 보세요!
       </p>
       <button
-        class="flex items-center gap-1 mt-7 pl-[12px] pr-[18px] py-[9px] bg-primary rounded-xl"
+        class="flex items-center gap-1 mt-[34px] pl-[12px] pr-[18px] py-[9px] bg-primary rounded-xl"
         @click="showAddSheet = true"
       >
         <img src="/icons/add.svg" alt="" class="w-6 h-6" />

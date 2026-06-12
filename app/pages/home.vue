@@ -44,9 +44,9 @@
         </p>
       </div>
 
-      <!-- 회고 시작하기 버튼: H:42, radius:12, gap:4 / 텍스트↔버튼 40px (gap-3 12px + mt-7 28px) -->
+      <!-- 회고 시작하기 버튼: gap-[6px] + mt-[34px] = 40px -->
       <button
-        class="flex items-center gap-1 mt-7 pl-[12px] pr-[18px] py-[9px] bg-primary rounded-xl"
+        class="flex items-center gap-1 mt-[34px] pl-[12px] pr-[18px] py-[9px] bg-primary rounded-xl"
         @click="startRetrospect"
       >
         <img src="/icons/add.svg" alt="" class="w-6 h-6" />
