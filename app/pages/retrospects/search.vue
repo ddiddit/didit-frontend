@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-white flex flex-col">
+  <div class="h-full bg-white flex flex-col overflow-y-auto">
 
     <!-- 헤더 -->
     <div
@@ -57,9 +57,29 @@
       </div>
     </div>
 
+    <!-- 태그 섹션 (실제 API 데이터 + 하드코딩 미리보기 병합) -->
+    <div v-if="displayTags.length > 0" class="px-5 mt-[30px] shrink-0">
+      <span class="text-label1 font-semibold text-grey-13 block mb-3">태그</span>
+      <div class="flex flex-wrap gap-2">
+        <button
+          v-for="(tag, index) in displayTags"
+          :key="tag.id"
+          class="py-[4px] px-[6px] rounded-[6px] font-semibold whitespace-nowrap"
+          :style="{
+            fontSize: '11px',
+            lineHeight: '130%',
+            letterSpacing: '-0.02em',
+            backgroundColor: tagColors[index % tagColors.length].bg,
+            color: tagColors[index % tagColors.length].text,
+          }"
+          @click="goSearch(tag.name)"
+        >#{{ tag.name }}</button>
+      </div>
+    </div>
+
     <!-- 빈 상태 -->
     <div
-      v-if="recentSearches.length === 0"
+      v-if="recentSearches.length === 0 && displayTags.length === 0"
       class="flex-1 flex items-center justify-center pb-20"
     >
       <p class="text-[14px] font-normal text-grey-9 text-center leading-[1.6] tracking-[-0.02em]">
@@ -67,24 +87,64 @@
       </p>
     </div>
 
+    <div class="pb-6 shrink-0" />
+
   </div>
 </template>
 
 <script setup lang="ts">
+import type { Tag } from '~/types/api'
+
 definePageMeta({ middleware: 'auth', layout: 'default' })
 
+const { $api } = useNuxtApp()
 const inputRef = ref<HTMLInputElement | null>(null)
 const searchQuery = ref('')
 
 const RECENT_KEY = 'recentSearches'
 const MAX_RECENT = 10
 const recentSearches = ref<string[]>([])
+const tags = ref<Tag[]>([])
 
-onMounted(() => {
+// 태그 색상은 프론트에서 순환 할당 (백엔드에 color 필드 없음)
+const PREVIEW_TAGS: Tag[] = [
+  { id: 'p1', name: '디자인' },
+  { id: 'p2', name: '개발' },
+  { id: 'p3', name: '회의' },
+  { id: 'p4', name: '기획' },
+  { id: 'p5', name: '리뷰' },
+]
+
+const displayTags = computed(() => tags.value.length > 0 ? tags.value : PREVIEW_TAGS)
+
+const tagColors = [
+  { bg: '#E2FAF0', text: '#37C58A' },
+  { bg: '#FAEBFA', text: '#E079E0' },
+  { bg: '#E6EEFC', text: '#5A8DEE' },
+  { bg: '#FDEDE7', text: '#F08A5D' },
+  { bg: '#EEEBFD', text: '#8C7CF0' },
+  { bg: '#FAF3E1', text: '#DEAD3A' },
+  { bg: '#FDECEC', text: '#F06C6C' },
+  { bg: '#EBF7E8', text: '#77C767' },
+  { bg: '#E8F2FA', text: '#65ABE0' },
+  { bg: '#F7EEE7', text: '#C78B5C' },
+]
+
+onMounted(async () => {
   const saved = localStorage.getItem(RECENT_KEY)
   recentSearches.value = saved ? JSON.parse(saved) : []
   nextTick(() => inputRef.value?.focus())
+  await fetchTags()
 })
+
+async function fetchTags() {
+  try {
+    const res = await $api.get<{ data: Tag[] }>('/api/v1/tags')
+    tags.value = res.data.data
+  } catch {
+    tags.value = []
+  }
+}
 
 const isComposing = ref(false)
 
@@ -93,7 +153,6 @@ function onCompositionEnd() {
 }
 
 function onEnter(event: KeyboardEvent) {
-  // 한국어 IME 조합 중 엔터 무시
   if (event.isComposing || isComposing.value) return
   const keyword = searchQuery.value.trim()
   if (!keyword) return
