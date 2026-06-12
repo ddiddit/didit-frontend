@@ -44,8 +44,8 @@
       >캘린더</button>
     </div>
 
-    <!-- 프로젝트 필터 칩 -->
-    <div class="flex items-center gap-[7px] px-5 pb-3 overflow-x-auto scrollbar-hide shrink-0">
+    <!-- 프로젝트 필터 칩 (리스트 탭에서만 노출) -->
+    <div v-if="activeTab === 'list'" class="flex items-center gap-[7px] px-5 pb-3 overflow-x-auto scrollbar-hide shrink-0">
       <button
         class="shrink-0 h-[34px] px-[11px] rounded-lg text-label1 font-semibold transition-none"
         :class="selectedProjectId === null ? 'bg-grey-13 text-grey-1' : 'bg-white text-grey-7'"
@@ -62,38 +62,9 @@
       <!-- 프로젝트 추가 버튼 -->
       <button
         class="shrink-0 h-[34px] px-[11px] rounded-lg text-label1 font-medium text-grey-7 bg-white transition-none whitespace-nowrap"
-        @click="showAddProject = true"
+        @click="navigateTo('/projects')"
       >+프로젝트 추가</button>
     </div>
-
-    <!-- 프로젝트 추가 바텀시트 -->
-    <Transition name="bottom-sheet">
-      <div
-        v-if="showAddProject"
-        class="fixed inset-0 z-20 flex flex-col justify-end"
-        @click.self="closeAddProject"
-      >
-        <div class="fixed inset-0 bg-black/40" @click="closeAddProject" />
-        <div class="sheet-panel relative bg-white rounded-t-2xl px-5 pt-6 pb-10 z-10">
-          <p class="text-heading2 font-semibold text-grey-13 mb-5">프로젝트 추가</p>
-          <input
-            v-model="newProjectName"
-            type="text"
-            maxlength="15"
-            placeholder="프로젝트 이름 (최대 15자)"
-            class="w-full h-[48px] px-4 rounded-xl border border-grey-4 bg-grey-1 text-label1 text-grey-13 placeholder:text-grey-6 outline-none focus:border-grey-8 transition-colors"
-            @keyup.enter="submitAddProject"
-          />
-          <p class="text-right text-caption1 text-grey-6 mt-1">{{ newProjectName.length }}/15</p>
-          <button
-            class="w-full h-[50px] rounded-xl mt-4 text-label1 font-semibold transition-none"
-            :class="newProjectName.trim().length > 0 ? 'bg-grey-13 text-white' : 'bg-grey-3 text-grey-6'"
-            :disabled="newProjectName.trim().length === 0 || isSubmitting"
-            @click="submitAddProject"
-          >추가하기</button>
-        </div>
-      </div>
-    </Transition>
 
     <!-- 리스트 탭 -->
     <template v-if="activeTab === 'list'">
