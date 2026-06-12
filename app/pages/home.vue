@@ -67,7 +67,7 @@
     >
       <!-- 툴팁 버블 -->
       <div
-        class="relative flex items-center h-[38px] px-[8px] rounded-xl"
+        class="relative flex items-center pl-[12px] pr-[18px] py-[9px] rounded-xl"
         :class="isCompleted ? 'bg-grey-5' : 'bg-grey-10'"
         style="box-shadow: 0 2px 8px rgba(0,0,0,0.12);"
       >
