@@ -4,7 +4,6 @@
     <!-- 헤더: H:50, 벨 아이콘만 우측 -->
     <header
       class="flex items-center justify-end px-5 h-[50px] shrink-0"
-      style="margin-top: max(54px, env(safe-area-inset-top, 54px));"
     >
       <button class="p-1" @click="goToNotifications">
         <img

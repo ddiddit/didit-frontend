@@ -4,7 +4,6 @@
     <!-- ── 백 버튼: H:50, Y:54(상태바 높이), 좌측 패딩 20 ── -->
     <div
       class="flex items-center shrink-0 h-[50px] px-5"
-      style="margin-top: max(54px, env(safe-area-inset-top, 54px));"
     >
       <button class="p-1 -ml-1" @click="handleBack">
         <img src="/icons/back.svg" alt="뒤로" class="w-6 h-6" />
