@@ -18,7 +18,7 @@
       <!-- 더보기 팝업 -->
       <div
         v-if="showMoreMenu"
-        class="absolute top-[46px] right-5 bg-grey-1 border border-grey-4 rounded-xl z-10 overflow-hidden w-[180px] h-[55px] p-[6px] flex items-center"
+        class="absolute top-[46px] right-5 bg-grey-1 border border-grey-4 rounded-[8px] z-10 overflow-hidden w-[180px] h-[55px] p-[6px] flex items-center"
         style="box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.08);"
       >
         <button
@@ -57,19 +57,19 @@
         @mouseleave="onChipDragEnd"
       >
         <button
-          class="shrink-0 h-[34px] px-[11px] rounded-lg text-label1 font-semibold transition-none border"
+          class="shrink-0 py-[8px] px-[11px] rounded-[8px] text-label1 font-semibold transition-none border"
           :class="selectedProjectId === null ? 'bg-grey-13 text-grey-1 border-transparent' : 'bg-white text-grey-7 border-grey-5'"
           @click.stop="!isChipDragging && selectProject(null)"
         >ALL</button>
         <button
           v-for="project in projects"
           :key="project.id"
-          class="shrink-0 h-[34px] px-[11px] rounded-lg text-label1 font-medium transition-none whitespace-nowrap border"
+          class="shrink-0 py-[8px] px-[11px] rounded-[8px] text-label1 font-medium transition-none whitespace-nowrap border"
           :class="selectedProjectId === project.id ? 'bg-grey-13 text-grey-1 border-transparent' : 'bg-white text-grey-7 border-grey-5'"
           @click.stop="!isChipDragging && selectProject(project.id)"
         >{{ project.name }}</button>
         <button
-          class="shrink-0 h-[34px] px-[11px] rounded-lg text-label1 font-medium text-grey-7 bg-white transition-none whitespace-nowrap border border-grey-5"
+          class="shrink-0 py-[8px] px-[11px] rounded-[8px] text-label1 font-medium text-grey-7 bg-white transition-none whitespace-nowrap border border-grey-5"
           @click.stop="!isChipDragging && navigateTo('/projects')"
         >+프로젝트 추가</button>
       </div>
@@ -88,7 +88,7 @@
     <Transition name="picker-fade">
       <div
         v-if="showProjectPicker"
-        class="absolute inset-0 z-20 bg-black/40"
+        class="fixed inset-0 z-20 bg-black/40"
         @click="closeProjectPicker"
       />
     </Transition>
@@ -349,19 +349,14 @@ function goToSearch() {
 }
 
 // 프로젝트 픽커 팝업 제어
-const hideTabBar = useState('hideTabBar', () => false)
 const dragStartY = ref(0)
 
 function openProjectPicker() {
-  hideTabBar.value = true
   showProjectPicker.value = true
 }
 
 function closeProjectPicker() {
   showProjectPicker.value = false
-  setTimeout(() => {
-    hideTabBar.value = false
-  }, 280)
 }
 
 function onDragStart(e: TouchEvent | MouseEvent) {
