@@ -5,8 +5,8 @@
     <div
       class="flex items-center justify-end px-5 h-[50px] shrink-0"
     >
-      <button class="p-1" @click="goToSearch">
-        <img src="/icons/search.svg" alt="검색" class="w-6 h-6" />
+      <button @click="goToSearch">
+        <img src="/icons/search.svg" alt="검색" class="w-7 h-7" />
       </button>
     </div>
 
