@@ -47,7 +47,7 @@
       >
         <div class="flex flex-col gap-[6px]">
           <span class="text-body2 font-medium text-grey-10">회고 알림 시간</span>
-          <span class="text-label1 font-normal text-grey-7">설정한 시간에 회고 알림을 보내드립니다.</span>
+          <span class="text-[12px] font-medium leading-[136%] tracking-[-0.02em] text-grey-7">설정한 시간에 회고 알림을 보내드립니다.</span>
         </div>
         <div class="flex items-center gap-1 shrink-0">
           <span class="text-body2 font-semibold" :class="enabled ? 'text-[#37C58A]' : 'text-grey-6'">{{ reminderTimeLabel }}</span>
@@ -78,45 +78,53 @@
             <div class="absolute top-[14px] left-1/2 -translate-x-1/2 w-[50px] h-1 rounded-full bg-grey-5" />
 
             <!-- 타이틀 -->
-            <h2 class="text-body2 font-semibold text-grey-13 text-center mb-6">푸시 알림 시간</h2>
+            <h2 class="text-[17px] font-semibold leading-[140%] tracking-[-0.02em] text-grey-13 text-center mb-6">푸시 알림 시간</h2>
 
-            <!-- 드럼롤 피커 -->
-            <div class="flex items-center justify-center gap-6 mb-6">
+            <!-- 드럼롤 피커 (디자인 기준 62px 고정폭 컬럼, 가운데 정렬) -->
+            <div class="flex items-center justify-center mb-6">
               <UiScrollPicker
+                :key="`p-${pickerKey}`"
                 :model-value="pickerPeriod"
                 :items="periodItems"
-                :row-h="40"
+                :row-h="29.2"
                 :visible-rows="5"
-                :width="72"
+                :width="62"
                 @update:model-value="pickerPeriod = $event as string"
               />
-              <div class="flex items-center gap-2">
-                <UiScrollPicker
-                  :model-value="pickerHour"
-                  :items="hourItems"
-                  :row-h="40"
-                  :visible-rows="5"
-                  :width="56"
-                  @update:model-value="pickerHour = $event as number"
-                />
-                <span class="text-[20px] font-bold text-grey-13 leading-none">:</span>
-                <UiScrollPicker
-                  :model-value="pickerMinute"
-                  :items="minuteItems"
-                  :row-h="40"
-                  :visible-rows="5"
-                  :width="56"
-                  :loop="true"
-                  @update:model-value="pickerMinute = $event as number"
-                />
-              </div>
+              <UiScrollPicker
+                :key="`h-${pickerKey}`"
+                :model-value="pickerHour"
+                :items="hourItems"
+                :row-h="29.2"
+                :visible-rows="5"
+                :width="62"
+                @update:model-value="pickerHour = $event as number"
+              />
+              <span class="shrink-0 w-4 text-center text-[20px] font-bold text-grey-13 leading-none">:</span>
+              <UiScrollPicker
+                :key="`m-${pickerKey}`"
+                :model-value="pickerMinute"
+                :items="minuteItems"
+                :row-h="29.2"
+                :visible-rows="5"
+                :width="62"
+                :loop="true"
+                @update:model-value="pickerMinute = $event as number"
+              />
             </div>
 
-            <!-- 야간 안내 (동의 전에는 야간 시간이 피커에 노출되지 않음) -->
-            <p v-if="!nightPushConsent" class="text-label1 font-normal text-grey-7 text-center mb-4">
-              밤 9시~오전 8시 알림은<br />
-              <button class="text-primary" @click="navigateTo('/my/terms/night-push')">야간 푸시 알림 동의</button> 후 설정할 수 있어요
-            </p>
+            <!-- 야간 경고 (높이를 부드럽게 펼쳐 버튼이 튀지 않게) -->
+            <div
+              class="grid transition-[grid-template-rows] duration-200 ease-out"
+              :class="(isNightHours && !nightPushConsent) ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'"
+            >
+              <div class="overflow-hidden">
+                <p class="text-[13px] font-medium leading-[140%] tracking-[-0.02em] text-grey-7 text-center pb-4">
+                  오후 9시~오전 8시 사이에 알림을 받으시려면<br />
+                  <button class="text-[#37C58A]" @click="navigateTo('/my/terms/night-push')">야간 푸시 알림 동의</button>가 필요해요
+                </p>
+              </div>
+            </div>
 
             <!-- 저장 버튼 -->
             <UiButton :disabled="!canSaveTime" @click="saveTime">저장</UiButton>
@@ -144,6 +152,7 @@ const reminderTime = ref<string | null>(null)
 
 // 시간 피커 상태
 const showTimePicker = ref(false)
+const pickerKey = ref(0) // 열 때마다 증가시켜 피커를 강제 재마운트(항상 저장값에서 시작)
 const pickerPeriod = ref<string>('pm')
 const pickerHour = ref<number>(8)
 const pickerMinute = ref<number>(0)
@@ -152,28 +161,14 @@ const periodItems = [
   { value: 'am', label: '오전' },
   { value: 'pm', label: '오후' },
 ]
-// 야간 푸시 동의가 없으면 낮 시간(오전 8시~오후 8시)만 노출한다.
-const hourItems = computed(() => {
-  const all = Array.from({ length: 12 }, (_, i) => i + 1)
-  const allowed = nightPushConsent.value
-    ? all
-    : all.filter((h12) => {
-        const h24 = pickerPeriod.value === 'am' ? (h12 === 12 ? 0 : h12) : (h12 === 12 ? 12 : h12 + 12)
-        return h24 >= 8 && h24 <= 20
-      })
-  return allowed.map(h => ({ value: h, label: String(h).padStart(2, '0') }))
-})
+const hourItems = Array.from({ length: 12 }, (_, i) => ({
+  value: i + 1,
+  label: String(i + 1).padStart(2, '0'),
+}))
 const minuteItems = [0, 10, 20, 30, 40, 50].map(m => ({
   value: m,
   label: String(m).padStart(2, '0'),
 }))
-
-// 노출 가능한 시(hour) 목록이 바뀌면 현재 선택값이 사라졌는지 확인해 가장 가까운 값으로 보정한다.
-watch(hourItems, (items) => {
-  if (!items.some(i => i.value === pickerHour.value)) {
-    pickerHour.value = items[0]?.value ?? 12
-  }
-})
 
 const isNightHours = computed(() => {
   let h = pickerHour.value
@@ -216,10 +211,7 @@ function openTimePicker() {
   // 회고 작성 알림 동의가 꺼져 있으면 시간 설정 불가
   if (!enabled.value) return
   parseReminderTime(reminderTime.value ?? '20:00')
-  // 야간 동의가 없는데 저장된 값이 야간이면 노출 가능한 시간으로 보정
-  if (!hourItems.value.some(i => i.value === pickerHour.value)) {
-    pickerHour.value = hourItems.value[0]?.value ?? 12
-  }
+  pickerKey.value++ // 피커 강제 재마운트 → 항상 현재 저장값에서 시작
   showTimePicker.value = true
 }
 
@@ -260,11 +252,36 @@ async function toggleMarketing(val: boolean) {
   } catch { marketingAgreed.value = prev }
 }
 
+// HH:mm 문자열이 야간(밤 9시~오전 8시)인지 판별
+function isNightTime(time: string): boolean {
+  const h = Number(time.split(':')[0])
+  return h >= 21 || h < 8
+}
+
+// 야간 시간을 가장 가까운 낮 시간으로 보정 (밤 → 오후 8시대, 새벽 → 오전 8시대)
+function clampToDayTime(time: string): string {
+  const [h, m] = time.split(':')
+  const hh = Number(h)
+  if (hh >= 21) return `20:${m}`
+  if (hh < 8) return `08:${m}`
+  return time
+}
+
 async function toggleNightPush(val: boolean) {
   const prev = nightPushConsent.value
   nightPushConsent.value = val
   try {
     await $api.put('/api/v1/notification-settings/night-push-consent', { consent: val })
+    // 야간 동의를 끄면, 야간으로 저장된 회고 알림 시간을 낮 시간으로 보정한다.
+    // (받지 못하는 시간이 그대로 표시돼 오해를 주지 않도록)
+    if (!val && reminderTime.value && isNightTime(reminderTime.value)) {
+      const dayTime = clampToDayTime(reminderTime.value)
+      reminderTime.value = dayTime
+      await $api.put('/api/v1/notification-settings', {
+        enabled: enabled.value,
+        reminderTime: dayTime,
+      })
+    }
   } catch { nightPushConsent.value = prev }
 }
 
