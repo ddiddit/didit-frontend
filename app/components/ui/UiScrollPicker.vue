@@ -1,9 +1,9 @@
 <template>
   <div class="relative shrink-0" :style="`height:${totalH}px;width:${width}px`">
-    <!-- 스크롤 영역 (위·아래로 자연스럽게 흐려지는 그라데이션 페이드, 선택 구분선 없음) -->
+    <!-- 위·아래 그라데이션 페이드 (박스 안에서 흐려짐, 바깥으로 넘치지 않음) -->
     <div
       class="h-full"
-      style="mask-image:linear-gradient(to bottom,transparent 0%,black 20%,black 80%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,transparent 0%,black 20%,black 80%,transparent 100%);"
+      style="mask-image:linear-gradient(to bottom,transparent 0%,black 26%,black 74%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,transparent 0%,black 26%,black 74%,transparent 100%);"
     >
       <div
         ref="el"
@@ -15,13 +15,10 @@
         <div
           v-for="(item, i) in extItems"
           :key="`${i}-${item.value}`"
-          :style="`height:${rowH}px;scroll-snap-align:center;scroll-snap-stop:always`"
           class="flex items-center justify-center"
+          :style="rowStyle(i)"
         >
-          <span
-            class="inline-block font-semibold text-[20px] leading-none transition-colors duration-150"
-            :class="activeExtIdx === i ? 'text-grey-13' : Math.abs(activeExtIdx - i) === 1 ? 'text-grey-6' : 'text-grey-4'"
-          >{{ item.label }}</span>
+          <span class="inline-block font-semibold text-[20px] leading-none text-grey-13">{{ item.label }}</span>
         </div>
         <div :style="`height:${padH}px`" />
       </div>
@@ -39,13 +36,13 @@ const props = withDefaults(defineProps<{
   visibleRows?: number
   width?: number
   loop?: boolean
-}>(), { rowH: 40, visibleRows: 5, width: 72, loop: false })
+}>(), { rowH: 27, visibleRows: 7, width: 72, loop: false })
 
 const emit = defineEmits<{ 'update:modelValue': [v: string | number] }>()
 
 const el = ref<HTMLElement | null>(null)
-const sel = ref(0)           // 실제 인덱스 (0 ~ items.length-1)
-const activeExtIdx = ref(0)  // 현재 스크롤 위치 (확장 인덱스)
+const sel = ref(0) // 실제 인덱스 (0 ~ items.length-1)
+const scrollTop = ref(0) // 현재 스크롤 위치 (곡면 계산용, 매 프레임 갱신)
 
 const padH = computed(() => props.rowH * Math.floor(props.visibleRows / 2))
 const totalH = computed(() => props.rowH * props.visibleRows)
@@ -53,18 +50,43 @@ const totalH = computed(() => props.rowH * props.visibleRows)
 const extItems = computed(() =>
   props.loop
     ? [...props.items, ...props.items, ...props.items]
-    : props.items
+    : props.items,
 )
 
 function getExtIdx(realIdx: number): number {
   return props.loop ? realIdx + props.items.length : realIdx
 }
 
+// 각 줄을 가운데에서 떨어진 거리(줄 단위)에 따라 가운데로 모으고(translateY) 높이를 눌러(scaleY)
+// 원통형 곡면처럼 보이게 한다. (스크롤에 따라 연속적으로 갱신)
+const UNIT_ANGLE = 20 // 줄당 회전각(도)
+function rowStyle(i: number) {
+  const rowCenter = padH.value + i * props.rowH + props.rowH / 2
+  const viewCenter = scrollTop.value + totalH.value / 2
+  const dist = (rowCenter - viewCenter) / props.rowH
+  const delta = (UNIT_ANGLE * Math.PI) / 180
+  const theta = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, dist * delta))
+  const radius = props.rowH / delta
+  const translateY = radius * Math.sin(theta) - dist * props.rowH
+  const scaleY = Math.max(0.05, Math.cos(theta))
+  const opacity = Math.abs(dist) > 3.5 ? 0 : 1 / (1 + Math.abs(dist) * 3)
+  return {
+    height: `${props.rowH}px`,
+    scrollSnapAlign: 'center',
+    scrollSnapStop: 'always',
+    transform: `translateY(${translateY}px) scaleY(${scaleY})`,
+    opacity,
+    willChange: 'transform, opacity',
+  }
+}
+
 let timer: ReturnType<typeof setTimeout> | null = null
 let isScrolling = false
+let rafId: number | null = null
 
 function goTo(extIdx: number) {
   el.value?.scrollTo({ top: extIdx * props.rowH, behavior: 'instant' })
+  scrollTop.value = extIdx * props.rowH
 }
 
 watch(() => props.modelValue, (v) => {
@@ -72,9 +94,7 @@ watch(() => props.modelValue, (v) => {
   const i = props.items.findIndex(x => x.value === v)
   if (i >= 0 && i !== sel.value) {
     sel.value = i
-    const ei = getExtIdx(i)
-    activeExtIdx.value = ei
-    nextTick(() => goTo(ei))
+    nextTick(() => goTo(getExtIdx(i)))
   }
 }, { immediate: true })
 
@@ -82,15 +102,19 @@ onMounted(() => {
   const i = props.items.findIndex(x => x.value === props.modelValue)
   if (i >= 0) {
     sel.value = i
-    const ei = getExtIdx(i)
-    activeExtIdx.value = ei
-    setTimeout(() => goTo(ei), 16)
+    setTimeout(() => goTo(getExtIdx(i)), 16)
   }
 })
 
 function onScroll() {
   if (!el.value) return
   isScrolling = true
+  if (rafId == null) {
+    rafId = requestAnimationFrame(() => {
+      rafId = null
+      if (el.value) scrollTop.value = el.value.scrollTop
+    })
+  }
   if (timer) clearTimeout(timer)
   timer = setTimeout(() => {
     isScrolling = false
@@ -106,13 +130,10 @@ function onScroll() {
       sel.value = realIdx
       emit('update:modelValue', props.items[realIdx].value)
     }
-    // 무한 루프: 가장자리 복제본에 닿으면 같은 값이 가운데 오도록 가운데 복제본으로 조용히 재배치해 끝이 없도록 한다.
+    // 무한 루프: 가장자리 복제본에 닿으면 같은 값이 가운데 오도록 가운데 복제본으로 조용히 재배치한다.
     if (props.loop) {
       const middleExt = realIdx + props.items.length
-      activeExtIdx.value = middleExt
       if (extIdx !== middleExt) nextTick(() => goTo(middleExt))
-    } else {
-      activeExtIdx.value = extIdx
     }
   }, 80)
 }

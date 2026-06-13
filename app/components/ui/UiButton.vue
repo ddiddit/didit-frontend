@@ -39,7 +39,7 @@ const sizeClasses = computed(() => {
 
 const variantClasses = computed(() => {
   if (props.disabled || props.loading) {
-    return 'font-normal bg-grey-4 text-grey-6 cursor-not-allowed'
+    return 'font-semibold bg-grey-5 text-grey-6 cursor-not-allowed'
   }
   if (props.variant === 'primary') {
     return 'font-semibold bg-primary text-grey-13 active:bg-green-active'
