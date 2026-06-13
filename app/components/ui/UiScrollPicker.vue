@@ -62,7 +62,7 @@ function getExtIdx(realIdx: number): number {
 
 // 각 줄을 가운데에서 떨어진 거리(줄 단위)에 따라 가운데로 모으고(translateY) 높이를 눌러(scaleY)
 // 원통형 곡면처럼 보이게 한다. (스크롤에 따라 연속적으로 갱신)
-const UNIT_ANGLE = 20 // 줄당 회전각(도)
+const UNIT_ANGLE = 23 // 줄당 회전각(도)
 // 가운데에서 떨어진 거리(줄 단위) — 색상/곡면 계산 공용
 function rowDist(i: number): number {
   const rowCenter = padH.value + i * props.rowH + props.rowH / 2
@@ -71,17 +71,21 @@ function rowDist(i: number): number {
 }
 function rowStyle(i: number) {
   const dist = rowDist(i)
+  const ad = Math.abs(dist)
   const delta = (UNIT_ANGLE * Math.PI) / 180
   const theta = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, dist * delta))
   const radius = props.rowH / delta
   const translateY = radius * Math.sin(theta) - dist * props.rowH
   const scaleY = Math.max(0.05, Math.cos(theta))
+  // 가운데에서 멀어질수록 더 연하게 (부드러운 그라데이션)
+  const opacity = 1 / (1 + ad * 0.6)
   return {
     height: `${props.rowH}px`,
     scrollSnapAlign: 'center',
     scrollSnapStop: 'always',
     transform: `translateY(${translateY}px) scaleY(${scaleY})`,
-    willChange: 'transform',
+    opacity,
+    willChange: 'transform, opacity',
   }
 }
 
