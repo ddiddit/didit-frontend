@@ -3,7 +3,7 @@
     <!-- 위·아래 그라데이션 페이드 (박스 안에서 흐려짐, 바깥으로 넘치지 않음) -->
     <div
       class="h-full"
-      style="mask-image:linear-gradient(to bottom,transparent 0%,black 26%,black 74%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,transparent 0%,black 26%,black 74%,transparent 100%);"
+      style="mask-image:linear-gradient(to bottom,transparent 0%,black 60%,black 30%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,transparent 0%,black 26%,black 74%,transparent 100%);"
     >
       <div
         ref="el"
@@ -62,7 +62,7 @@ function getExtIdx(realIdx: number): number {
 
 // 각 줄을 가운데에서 떨어진 거리(줄 단위)에 따라 가운데로 모으고(translateY) 높이를 눌러(scaleY)
 // 원통형 곡면처럼 보이게 한다. (스크롤에 따라 연속적으로 갱신)
-const UNIT_ANGLE = 23 // 줄당 회전각(도)
+const UNIT_ANGLE = 26 // 줄당 회전각(도)
 // 가운데에서 떨어진 거리(줄 단위) — 색상/곡면 계산 공용
 function rowDist(i: number): number {
   const rowCenter = padH.value + i * props.rowH + props.rowH / 2
@@ -92,6 +92,7 @@ function rowStyle(i: number) {
 let timer: ReturnType<typeof setTimeout> | null = null
 let isScrolling = false
 let rafId: number | null = null
+let ready = false // 초기 위치가 잡히기 전까지 emit 차단(전환 중 0으로 덮어쓰는 것 방지)
 
 function goTo(extIdx: number) {
   el.value?.scrollTo({ top: extIdx * props.rowH, behavior: 'instant' })
@@ -109,10 +110,25 @@ watch(() => props.modelValue, (v) => {
 
 onMounted(() => {
   const i = props.items.findIndex(x => x.value === props.modelValue)
-  if (i >= 0) {
-    sel.value = i
-    setTimeout(() => goTo(getExtIdx(i)), 16)
+  if (i < 0) {
+    ready = true
+    return
   }
+  sel.value = i
+  const target = getExtIdx(i)
+  // 바텀시트 슬라이드 전환 중에는 스크롤이 바로 안 잡힐 수 있어, 실제 위치가 목표에 닿을 때까지 재시도한다.
+  let tries = 0
+  const place = () => {
+    if (!el.value) return
+    goTo(target)
+    tries += 1
+    if (Math.abs(el.value.scrollTop - target * props.rowH) > 1 && tries < 30) {
+      requestAnimationFrame(place)
+    } else {
+      ready = true
+    }
+  }
+  requestAnimationFrame(() => requestAnimationFrame(place))
 })
 
 function onScroll() {
@@ -127,7 +143,7 @@ function onScroll() {
   if (timer) clearTimeout(timer)
   timer = setTimeout(() => {
     isScrolling = false
-    if (!el.value) return
+    if (!el.value || !ready) return
     const extIdx = Math.max(
       0,
       Math.min(Math.round(el.value.scrollTop / props.rowH), extItems.value.length - 1),
