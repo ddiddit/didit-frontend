@@ -82,10 +82,11 @@
             <div class="absolute top-[14px] left-1/2 -translate-x-1/2 w-[50px] h-1 rounded-full bg-grey-5" />
             <!-- 아래로 드래그해서 닫기 (상단 핸들·타이틀 영역만, 피커 스크롤과 분리) -->
             <div
-              class="absolute top-0 left-0 right-0 h-16 z-10 touch-none"
-              @touchstart="onDragStart"
-              @touchmove="onDragMove"
-              @touchend="onDragEnd"
+              class="absolute top-0 left-0 right-0 h-16 z-10 touch-none cursor-grab active:cursor-grabbing"
+              @pointerdown="onDragStart"
+              @pointermove="onDragMove"
+              @pointerup="onDragEnd"
+              @pointercancel="onDragEnd"
             />
 
             <!-- 타이틀 -->
@@ -179,13 +180,15 @@ const dragStyle = computed(() => {
   }
 })
 
-function onDragStart(e: TouchEvent) {
+function onDragStart(e: PointerEvent) {
   dragging.value = true
-  dragStartY = e.touches[0]?.clientY ?? 0
+  dragStartY = e.clientY
+  // 포인터를 캡처해 영역을 벗어나도 move/up 이벤트가 계속 들어오게 (마우스·터치 공통)
+  ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
 }
-function onDragMove(e: TouchEvent) {
+function onDragMove(e: PointerEvent) {
   if (!dragging.value) return
-  dragY.value = Math.max(0, (e.touches[0]?.clientY ?? 0) - dragStartY)
+  dragY.value = Math.max(0, e.clientY - dragStartY)
 }
 function onDragEnd() {
   if (!dragging.value) return
