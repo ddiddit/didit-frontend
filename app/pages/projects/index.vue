@@ -31,11 +31,11 @@
 
     <!-- 프로젝트 리스트 -->
     <div v-else-if="!isLoading" class="flex-1 overflow-y-auto scrollbar-hide bg-white" @touchstart.passive="onContainerTouch">
-      <ul>
+      <ul ref="listEl">
         <li
           v-for="(project, index) in localProjects"
-          :key="index"
-          class="flex items-center px-5 h-[54px]"
+          :key="project.id ?? `new-${index}`"
+          class="flex items-center px-5 h-[54px] bg-white"
         >
           <!-- 삭제 버튼 -->
           <button class="shrink-0 mr-3" @click="requestDelete(project)">
@@ -70,7 +70,7 @@
           </div>
 
           <!-- 드래그 핸들 -->
-          <img src="/icons/drag-handle.svg" alt="" class="shrink-0 ml-3 w-6 h-6 cursor-grab" />
+          <img src="/icons/drag-handle.svg" alt="" class="drag-handle shrink-0 ml-3 w-6 h-6 cursor-grab touch-none" />
         </li>
       </ul>
 
@@ -127,6 +127,7 @@
 </template>
 
 <script setup lang="ts">
+import { useSortable } from '@vueuse/integrations/useSortable'
 import type { ApiResponse, Project } from '~/types/api'
 
 definePageMeta({ middleware: 'auth', layout: false })
@@ -150,6 +151,32 @@ const pendingDelete = ref<LocalProject | null>(null)
 const isSubmitting = ref(false)
 const isDeleting = ref(false)
 const focusedIndex = ref<number | null>(null)
+
+// 드래그 순서변경 (sortablejs)
+const listEl = ref<HTMLElement | null>(null)
+useSortable(listEl, localProjects, {
+  handle: '.drag-handle',
+  animation: 150,
+  // onEnd는 기본 onUpdate(배열 이동)를 덮어쓰지 않음. 이동 반영 후(nextTick) 순서 저장
+  onEnd: () => {
+    nextTick(persistOrder)
+  },
+})
+
+// 현재 순서를 백엔드에 저장 (저장된 프로젝트만 대상)
+async function persistOrder() {
+  const ids = localProjects.value
+    .filter(p => p.id)
+    .map(p => p.id as string)
+  if (ids.length < 2) return
+  try {
+    await $api.patch('/api/v1/projects/order', { projectIds: ids })
+    // 전역 projects 상태도 동일 순서로 동기화
+    projects.value = ids
+      .map(id => projects.value.find(p => p.id === id))
+      .filter((p): p is Project => !!p)
+  } catch { /* 오류 처리 */ }
+}
 
 // input ref 맵 (포커스 제어용)
 const inputRefs = ref<Record<number, HTMLInputElement | null>>({})
