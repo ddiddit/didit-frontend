@@ -27,11 +27,8 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ middleware: 'auth', layout: 'default' })
+definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
-const hideTabBar = useState('hideTabBar', () => false)
-onMounted(() => { hideTabBar.value = true })
-onUnmounted(() => { hideTabBar.value = false })
 
 const route = useRoute()
 
