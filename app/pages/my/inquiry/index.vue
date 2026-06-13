@@ -39,7 +39,7 @@
       <div class="flex flex-col gap-2">
         <label class="text-label1 font-medium text-grey-13">이메일</label>
         <div class="h-[56px] px-4 rounded-xl bg-grey-4 flex items-center">
-          <span class="text-[15px] font-normal leading-[150%] tracking-[-0.02em] text-grey-6">{{ userEmail }}</span>
+          <span class="text-[15px] font-normal leading-[150%] tracking-[-0.02em] text-grey-6 no-underline [&_a]:!no-underline [&_a]:!text-grey-6">{{ userEmail }}</span>
         </div>
       </div>
 

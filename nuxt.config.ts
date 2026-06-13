@@ -41,6 +41,8 @@ export default defineNuxtConfig({
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' },
         { name: 'theme-color', content: '#ffffff' },
+        // 모바일 브라우저가 이메일·전화번호 등을 자동 링크(밑줄)로 인식하지 않도록
+        { name: 'format-detection', content: 'telephone=no, email=no, address=no' },
       ],
       link: [
         { rel: 'preload', as: 'image', href: '/icon.png' },
