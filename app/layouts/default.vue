@@ -8,5 +8,7 @@
 </template>
 
 <script setup lang="ts">
-const hideTabBar = useState('hideTabBar', () => false)
+// 탭바 노출 여부는 각 페이지의 route meta(hideTabBar)로 제어 (전환 시 race 없이 동기 평가)
+const route = useRoute()
+const hideTabBar = computed(() => route.meta.hideTabBar === true)
 </script>

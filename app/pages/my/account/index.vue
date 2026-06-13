@@ -12,9 +12,9 @@
 
     <!-- 이메일 영역 -->
     <div class="px-5 pt-6 pb-3 flex flex-col gap-2">
-      <p class="text-body2 font-medium text-grey-10">이메일</p>
-      <div class="h-[48px] px-4 rounded-xl bg-grey-3 flex items-center">
-        <span class="text-body2 font-normal text-grey-7">{{ profile?.email ?? '' }}</span>
+      <p class="text-label1 font-medium text-grey-13">이메일</p>
+      <div class="h-[56px] px-4 rounded-xl bg-grey-4 flex items-center">
+        <span class="text-body2 font-normal text-grey-6">{{ profile?.email ?? '' }}</span>
       </div>
       <p class="text-label1 font-normal text-grey-6">{{ loginMethodLabel }}</p>
     </div>
@@ -56,11 +56,8 @@
 <script setup lang="ts">
 import type { ApiResponse, UserProfile } from '~/types/api'
 
-definePageMeta({ middleware: 'auth', layout: 'default' })
+definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
-const hideTabBar = useState('hideTabBar', () => false)
-onMounted(() => { hideTabBar.value = true })
-onUnmounted(() => { hideTabBar.value = false })
 
 const { $api } = useNuxtApp()
 const authStore = useAuthStore()

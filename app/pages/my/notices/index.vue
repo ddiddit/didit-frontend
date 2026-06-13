@@ -28,11 +28,8 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ middleware: 'auth', layout: 'default' })
+definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
-const hideTabBar = useState('hideTabBar', () => false)
-onMounted(() => { hideTabBar.value = true })
-onUnmounted(() => { hideTabBar.value = false })
 
 const notices = [
   { id: '1', title: '최신 업데이트와 서비스 운영 관련 안내사항', date: '2026.03.05', body: '디딧의 최신 업데이트와 서비스 운영 관련 안내사항을 확인하실 수 있습니다. 회고 저장, 기록 확인, AI 피드백 기능이 보다 안정적으로 동작하도록 개선했습니다. 일부 업데이트는 순차적으로 적용되어 사용자별 반영 시점이 다를 수 있습니다. 앞으로도 더 나은 회고 경험을 제공할 수 있도록 서비스를 지속적으로 개선해나가겠습니다.' },

@@ -6,13 +6,13 @@
           class="absolute inset-0 bg-black/40"
           @click="closeOnBackdrop && $emit('update:modelValue', false)"
         />
-        <div class="relative w-full max-w-[300px] mx-auto bg-grey-1 rounded-2xl pt-5 px-4 pb-4">
-          <!-- 텍스트 영역 -->
-          <div class="flex flex-col items-center gap-1 mb-[14px]">
-            <p class="w-full text-[17px] font-semibold text-grey-13 text-center" style="line-height:140%">{{ title }}</p>
+        <div class="relative w-full max-w-[300px] mx-auto bg-grey-1 rounded-2xl px-5 py-4 shadow-[0_4px_20px_0_rgba(0,0,0,0.1)] flex flex-col gap-[14px]">
+          <!-- 텍스트 영역 (콘텐츠 세로패딩 12, 간격 8) -->
+          <div class="flex flex-col items-center gap-2 py-3">
+            <p class="w-full text-[17px] font-semibold text-grey-13 text-center tracking-[-0.02em]" style="line-height:140%">{{ title }}</p>
             <p
               v-if="description"
-              class="w-full text-[14px] font-normal text-grey-8 text-center"
+              class="w-full text-[14px] font-medium text-grey-8 text-center tracking-[-0.02em] whitespace-pre-line"
               style="line-height:160%"
             >{{ description }}</p>
           </div>
@@ -20,12 +20,12 @@
           <div class="flex gap-2">
             <button
               v-if="showCancel !== false"
-              class="flex-1 h-[50px] rounded-xl border border-grey-5 bg-grey-1 text-[15px] font-normal text-grey-13 active:bg-grey-3 transition-colors"
+              class="flex-1 h-[50px] rounded-xl border border-grey-5 bg-grey-1 text-[15px] font-semibold text-grey-13 tracking-[-0.02em] leading-[150%] active:bg-grey-3 transition-colors"
               @click="$emit('update:modelValue', false); $emit('cancel')"
             >{{ cancelText ?? '취소' }}</button>
             <button
-              class="flex-1 h-[50px] rounded-xl text-[15px] font-normal transition-opacity active:opacity-80 disabled:opacity-60"
-              :class="variant === 'destructive' ? 'bg-error text-grey-1' : 'bg-primary text-grey-13'"
+              class="flex-1 h-[50px] rounded-xl text-[15px] font-semibold tracking-[-0.02em] leading-[150%] transition-opacity active:opacity-80 disabled:opacity-60"
+              :class="variant === 'destructive' ? 'bg-[#FF5C5C] text-grey-1' : 'bg-primary text-grey-13'"
               :disabled="loading"
               @click="$emit('confirm')"
             >{{ confirmText ?? '확인' }}</button>
