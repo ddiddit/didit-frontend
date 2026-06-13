@@ -94,7 +94,7 @@
       <!-- 아코디언 목록 -->
       <div v-else class="flex flex-col">
         <template v-for="inq in inquiries" :key="inq.id">
-          <div>
+          <div :id="`inquiry-${inq.id}`">
             <!-- 항목 헤더 -->
             <button
               class="w-full px-5 py-3 flex items-center justify-between text-left gap-3"
@@ -292,11 +292,29 @@ async function loadInquiries() {
   }
 }
 
+const route = useRoute()
+
+// 문의 답변 알림에서 진입한 경우 가장 최근 답변된 문의를 펼치고 해당 위치로 스크롤한다.
+function expandLatestAnswered() {
+  const target = inquiries.value.find(i => i.answered)
+  if (!target) return
+  expandedIds.value.add(target.id)
+  nextTick(() => {
+    document.getElementById(`inquiry-${target.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  })
+}
+
 onMounted(async () => {
+  const fromNotification = route.query.from === 'notification'
+  if (fromNotification) activeTab.value = 'history'
+
   try {
     const res = await $api.get<ApiResponse<UserProfile>>('/api/v2/users/profile')
     userEmail.value = res.data.data.email ?? ''
   } catch { /* 오류 처리 */ }
-  loadInquiries()
+
+  await loadInquiries()
+
+  if (fromNotification) expandLatestAnswered()
 })
 </script>
