@@ -154,13 +154,18 @@ const focusedIndex = ref<number | null>(null)
 
 // 드래그 순서변경 (sortablejs)
 const listEl = ref<HTMLElement | null>(null)
-useSortable(listEl, localProjects, {
+const { start: startSortable, stop: stopSortable } = useSortable(listEl, localProjects, {
   handle: '.drag-handle',
   animation: 150,
   // onEnd는 기본 onUpdate(배열 이동)를 덮어쓰지 않음. 이동 반영 후(nextTick) 순서 저장
   onEnd: () => {
     nextTick(persistOrder)
   },
+})
+// 리스트는 로딩 후 조건부 렌더라 마운트 시점엔 없음 → 엘리먼트가 생기거나 교체될 때 (재)초기화
+watch(listEl, (el) => {
+  stopSortable()
+  if (el) startSortable()
 })
 
 // 현재 순서를 백엔드에 저장 (저장된 프로젝트만 대상)
