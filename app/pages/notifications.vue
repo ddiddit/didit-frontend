@@ -37,6 +37,8 @@
           v-for="item in notifications"
           :key="item.id"
           class="px-5 pt-[18px]"
+          :class="!item.isRead ? 'cursor-pointer' : ''"
+          @click="markRead(item)"
         >
           <div class="pb-[18px] border-b border-grey-5 flex items-start justify-between gap-2">
             <div class="flex items-start gap-2 flex-1 min-w-0">
@@ -86,6 +88,17 @@ onMounted(async () => {
     isLoading.value = false
   }
 })
+
+// 알림 항목 클릭 시 개별 읽음 처리
+async function markRead(item: NotificationHistory) {
+  if (item.isRead) return
+  item.isRead = true // 낙관적 업데이트
+  try {
+    await $api.put(`/api/v1/notification-histories/${item.id}/read`)
+  } catch {
+    item.isRead = false
+  }
+}
 
 async function markAllRead() {
   try {
