@@ -73,9 +73,20 @@
           style="bottom: 30px;"
           @click.stop
         >
-          <div class="relative w-full bg-grey-1 rounded-[36px] overflow-hidden" style="padding: 32px 20px 20px;">
+          <div
+            class="relative w-full bg-grey-1 rounded-[36px] overflow-hidden pt-8 px-5 pb-5"
+            :style="dragStyle"
+            @transitionend="onSheetTransitionEnd"
+          >
             <!-- 드래그 핸들 -->
             <div class="absolute top-[14px] left-1/2 -translate-x-1/2 w-[50px] h-1 rounded-full bg-grey-5" />
+            <!-- 아래로 드래그해서 닫기 (상단 핸들·타이틀 영역만, 피커 스크롤과 분리) -->
+            <div
+              class="absolute top-0 left-0 right-0 h-16 z-10 touch-none"
+              @touchstart="onDragStart"
+              @touchmove="onDragMove"
+              @touchend="onDragEnd"
+            />
 
             <!-- 타이틀 -->
             <h2 class="text-[17px] font-semibold leading-[140%] tracking-[-0.02em] text-grey-13 text-center mb-6">푸시 알림 시간</h2>
@@ -153,6 +164,46 @@ const reminderTime = ref<string | null>(null)
 // 시간 피커 상태
 const showTimePicker = ref(false)
 const pickerKey = ref(0) // 열 때마다 증가시켜 피커를 강제 재마운트(항상 저장값에서 시작)
+
+// 바텀시트 아래로 드래그해서 닫기
+const dragY = ref(0)
+const dragging = ref(false)
+let dragStartY = 0
+let closingByDrag = false
+
+const dragStyle = computed(() => {
+  if (!dragging.value && dragY.value === 0) return {}
+  return {
+    transform: `translateY(${dragY.value}px)`,
+    transition: dragging.value ? 'none' : 'transform 0.25s ease',
+  }
+})
+
+function onDragStart(e: TouchEvent) {
+  dragging.value = true
+  dragStartY = e.touches[0]?.clientY ?? 0
+}
+function onDragMove(e: TouchEvent) {
+  if (!dragging.value) return
+  dragY.value = Math.max(0, (e.touches[0]?.clientY ?? 0) - dragStartY)
+}
+function onDragEnd() {
+  if (!dragging.value) return
+  dragging.value = false
+  if (dragY.value > 90) {
+    closingByDrag = true
+    dragY.value = 700 // 아래로 슬라이드아웃 후 닫기
+  } else {
+    dragY.value = 0 // 충분히 안 내렸으면 제자리로
+  }
+}
+function onSheetTransitionEnd(e: TransitionEvent) {
+  if (e.propertyName !== 'transform') return
+  if (closingByDrag) {
+    closingByDrag = false
+    showTimePicker.value = false
+  }
+}
 const pickerPeriod = ref<string>('pm')
 const pickerHour = ref<number>(8)
 const pickerMinute = ref<number>(0)
@@ -211,6 +262,7 @@ function openTimePicker() {
   // 회고 작성 알림 동의가 꺼져 있으면 시간 설정 불가
   if (!enabled.value) return
   parseReminderTime(reminderTime.value ?? '20:00')
+  dragY.value = 0 // 드래그 위치 초기화
   pickerKey.value++ // 피커 강제 재마운트 → 항상 현재 저장값에서 시작
   showTimePicker.value = true
 }
