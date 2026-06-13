@@ -23,25 +23,26 @@
         <span class="text-body2 font-medium text-grey-10">마케팅 정보 수신 동의</span>
         <UiToggle :model-value="marketingAgreed" @update:model-value="toggleMarketing" />
       </div>
-      <div class="mx-5 h-px bg-grey-5" />
+      <div class="mx-5 h-px bg-grey-4" />
 
       <!-- 야간 푸시 알림 동의 -->
       <div class="flex items-center justify-between px-5 h-[56px]">
         <span class="text-body2 font-medium text-grey-10">야간 푸시 알림 동의</span>
         <UiToggle :model-value="nightPushConsent" @update:model-value="toggleNightPush" />
       </div>
-      <div class="mx-5 h-px bg-grey-5" />
+      <div class="mx-5 h-px bg-grey-4" />
 
       <!-- 회고 작성 알림 동의 -->
       <div class="flex items-center justify-between px-5 h-[56px]">
         <span class="text-body2 font-medium text-grey-10">회고 작성 알림 동의</span>
         <UiToggle :model-value="enabled" @update:model-value="toggleEnabled" />
       </div>
-      <div class="mx-5 h-px bg-grey-5" />
+      <div class="mx-5 h-px bg-grey-4" />
 
-      <!-- 회고 알림 시간 -->
+      <!-- 회고 알림 시간 (회고 작성 알림 동의가 켜져 있을 때만 설정 가능) -->
       <button
         class="w-full flex items-center justify-between px-5 pt-4 pb-4 gap-4 text-left"
+        :disabled="!enabled"
         @click="openTimePicker"
       >
         <div class="flex flex-col gap-[6px]">
@@ -49,8 +50,8 @@
           <span class="text-label1 font-normal text-grey-7">설정한 시간에 회고 알림을 보내드립니다.</span>
         </div>
         <div class="flex items-center gap-1 shrink-0">
-          <span class="text-body2 font-medium text-[#37C58A]">{{ reminderTimeLabel }}</span>
-          <img src="/icons/chevron-right-sm.svg" alt="" class="w-4 h-4" />
+          <span class="text-body2 font-semibold" :class="enabled ? 'text-[#37C58A]' : 'text-grey-6'">{{ reminderTimeLabel }}</span>
+          <img src="/icons/chevron-right-sm.svg" alt="" class="w-6 h-6" />
         </div>
       </button>
 
@@ -111,10 +112,10 @@
               </div>
             </div>
 
-            <!-- 야간 경고 -->
-            <p v-if="isNightHours && !nightPushConsent" class="text-label1 font-normal text-grey-7 text-center mb-4">
-              오후 9시~오전 8시 사이에 알림을 받으시려면<br />
-              <button class="text-primary" @click="navigateTo('/my/terms/night-push')">야간 푸시 알림 동의</button>가 필요해요
+            <!-- 야간 안내 (동의 전에는 야간 시간이 피커에 노출되지 않음) -->
+            <p v-if="!nightPushConsent" class="text-label1 font-normal text-grey-7 text-center mb-4">
+              밤 9시~오전 8시 알림은<br />
+              <button class="text-primary" @click="navigateTo('/my/terms/night-push')">야간 푸시 알림 동의</button> 후 설정할 수 있어요
             </p>
 
             <!-- 저장 버튼 -->
@@ -151,14 +152,28 @@ const periodItems = [
   { value: 'am', label: '오전' },
   { value: 'pm', label: '오후' },
 ]
-const hourItems = Array.from({ length: 12 }, (_, i) => ({
-  value: i + 1,
-  label: String(i + 1).padStart(2, '0'),
-}))
+// 야간 푸시 동의가 없으면 낮 시간(오전 8시~오후 8시)만 노출한다.
+const hourItems = computed(() => {
+  const all = Array.from({ length: 12 }, (_, i) => i + 1)
+  const allowed = nightPushConsent.value
+    ? all
+    : all.filter((h12) => {
+        const h24 = pickerPeriod.value === 'am' ? (h12 === 12 ? 0 : h12) : (h12 === 12 ? 12 : h12 + 12)
+        return h24 >= 8 && h24 <= 20
+      })
+  return allowed.map(h => ({ value: h, label: String(h).padStart(2, '0') }))
+})
 const minuteItems = [0, 10, 20, 30, 40, 50].map(m => ({
   value: m,
   label: String(m).padStart(2, '0'),
 }))
+
+// 노출 가능한 시(hour) 목록이 바뀌면 현재 선택값이 사라졌는지 확인해 가장 가까운 값으로 보정한다.
+watch(hourItems, (items) => {
+  if (!items.some(i => i.value === pickerHour.value)) {
+    pickerHour.value = items[0]?.value ?? 12
+  }
+})
 
 const isNightHours = computed(() => {
   let h = pickerHour.value
@@ -198,7 +213,13 @@ function buildReminderTime(): string {
 }
 
 function openTimePicker() {
+  // 회고 작성 알림 동의가 꺼져 있으면 시간 설정 불가
+  if (!enabled.value) return
   parseReminderTime(reminderTime.value ?? '20:00')
+  // 야간 동의가 없는데 저장된 값이 야간이면 노출 가능한 시간으로 보정
+  if (!hourItems.value.some(i => i.value === pickerHour.value)) {
+    pickerHour.value = hourItems.value[0]?.value ?? 12
+  }
   showTimePicker.value = true
 }
 

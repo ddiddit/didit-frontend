@@ -2,7 +2,7 @@
   <button
     type="button"
     class="relative inline-flex shrink-0 items-center w-10 h-6 rounded-full transition-colors duration-200"
-    :class="modelValue ? 'bg-primary' : 'bg-grey-5'"
+    :class="modelValue ? 'bg-primary' : 'bg-grey-4'"
     @click="$emit('update:modelValue', !modelValue)"
   >
     <span
