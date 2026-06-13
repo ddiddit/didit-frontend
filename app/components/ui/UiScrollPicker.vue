@@ -1,14 +1,9 @@
 <template>
   <div class="relative shrink-0" :style="`height:${totalH}px;width:${width}px`">
-    <!-- 선택 영역 상하 구분선 -->
-    <div class="absolute inset-x-0 h-px bg-grey-4 pointer-events-none z-10"
-         :style="`top:${padH}px`" />
-    <div class="absolute inset-x-0 h-px bg-grey-4 pointer-events-none z-10"
-         :style="`bottom:${padH}px`" />
-    <!-- 스크롤 영역 (fade 마스크) -->
+    <!-- 스크롤 영역 (위·아래로 자연스럽게 흐려지는 그라데이션 페이드, 선택 구분선 없음) -->
     <div
       class="h-full"
-      style="mask-image:linear-gradient(to bottom,transparent 0%,black 28%,black 72%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,transparent 0%,black 28%,black 72%,transparent 100%);"
+      style="mask-image:linear-gradient(to bottom,transparent 0%,black 20%,black 80%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,transparent 0%,black 20%,black 80%,transparent 100%);"
     >
       <div
         ref="el"
@@ -111,13 +106,20 @@ function onScroll() {
       0,
       Math.min(Math.round(el.value.scrollTop / props.rowH), extItems.value.length - 1),
     )
-    activeExtIdx.value = extIdx
     const realIdx = props.loop
       ? ((extIdx % props.items.length) + props.items.length) % props.items.length
       : Math.max(0, Math.min(extIdx, props.items.length - 1))
     if (realIdx !== sel.value) {
       sel.value = realIdx
       emit('update:modelValue', props.items[realIdx].value)
+    }
+    // 무한 루프: 가장자리 복제본에 닿으면 같은 값이 가운데 오도록 가운데 복제본으로 조용히 재배치해 끝이 없도록 한다.
+    if (props.loop) {
+      const middleExt = realIdx + props.items.length
+      activeExtIdx.value = middleExt
+      if (extIdx !== middleExt) nextTick(() => goTo(middleExt))
+    } else {
+      activeExtIdx.value = extIdx
     }
   }, 80)
 }
