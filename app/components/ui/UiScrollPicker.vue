@@ -3,7 +3,7 @@
     <!-- 위·아래 그라데이션 페이드 (박스 안에서 흐려짐, 바깥으로 넘치지 않음) -->
     <div
       class="h-full"
-      style="mask-image:linear-gradient(to bottom,transparent 0%,black 60%,black 30%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,transparent 0%,black 26%,black 74%,transparent 100%);"
+      style="mask-image:linear-gradient(to bottom,transparent 0%,black 26%,black 74%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,transparent 0%,black 26%,black 74%,transparent 100%);"
     >
       <div
         ref="el"
@@ -78,7 +78,7 @@ function rowStyle(i: number) {
   const translateY = radius * Math.sin(theta) - dist * props.rowH
   const scaleY = Math.max(0.05, Math.cos(theta))
   // 가운데에서 멀어질수록 더 연하게 (부드러운 그라데이션)
-  const opacity = 1 / (1 + ad * 0.6)
+  const opacity = 1 / (1 + ad * 0.2)
   return {
     height: `${props.rowH}px`,
     scrollSnapAlign: 'center',

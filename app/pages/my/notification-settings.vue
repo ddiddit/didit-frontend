@@ -100,7 +100,7 @@
                 :width="62"
                 @update:model-value="pickerHour = $event as number"
               />
-              <span class="shrink-0 w-4 mb-[2px] text-center text-[20px] font-bold text-grey-13 leading-none">:</span>
+              <span class="shrink-0 w-4 mb-[3px] text-center text-[20px] font-bold text-grey-13 leading-none">:</span>
               <UiScrollPicker
                 :key="`m-${pickerKey}`"
                 :model-value="pickerMinute"
