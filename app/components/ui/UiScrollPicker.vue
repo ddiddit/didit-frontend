@@ -19,15 +19,8 @@
           class="flex items-center justify-center"
         >
           <span
-            class="inline-block font-semibold text-[20px] leading-none transition-all duration-150"
+            class="inline-block font-semibold text-[20px] leading-none transition-colors duration-150"
             :class="activeExtIdx === i ? 'text-grey-13' : Math.abs(activeExtIdx - i) === 1 ? 'text-grey-6' : 'text-grey-4'"
-            :style="{
-              transform: activeExtIdx === i
-                ? 'scale(1)'
-                : Math.abs(activeExtIdx - i) === 1
-                  ? 'scale(0.75)'
-                  : 'scale(0.60)',
-            }"
           >{{ item.label }}</span>
         </div>
         <div :style="`height:${padH}px`" />
