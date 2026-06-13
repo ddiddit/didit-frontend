@@ -18,7 +18,10 @@
           class="flex items-center justify-center"
           :style="rowStyle(i)"
         >
-          <span class="inline-block font-semibold text-[20px] leading-none text-grey-13">{{ item.label }}</span>
+          <span
+            class="inline-block font-semibold text-[20px] leading-none transition-colors duration-100"
+            :class="Math.abs(rowDist(i)) < 0.5 ? 'text-grey-13' : 'text-grey-6'"
+          >{{ item.label }}</span>
         </div>
         <div :style="`height:${padH}px`" />
       </div>
@@ -60,23 +63,25 @@ function getExtIdx(realIdx: number): number {
 // 각 줄을 가운데에서 떨어진 거리(줄 단위)에 따라 가운데로 모으고(translateY) 높이를 눌러(scaleY)
 // 원통형 곡면처럼 보이게 한다. (스크롤에 따라 연속적으로 갱신)
 const UNIT_ANGLE = 20 // 줄당 회전각(도)
-function rowStyle(i: number) {
+// 가운데에서 떨어진 거리(줄 단위) — 색상/곡면 계산 공용
+function rowDist(i: number): number {
   const rowCenter = padH.value + i * props.rowH + props.rowH / 2
   const viewCenter = scrollTop.value + totalH.value / 2
-  const dist = (rowCenter - viewCenter) / props.rowH
+  return (rowCenter - viewCenter) / props.rowH
+}
+function rowStyle(i: number) {
+  const dist = rowDist(i)
   const delta = (UNIT_ANGLE * Math.PI) / 180
   const theta = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, dist * delta))
   const radius = props.rowH / delta
   const translateY = radius * Math.sin(theta) - dist * props.rowH
   const scaleY = Math.max(0.05, Math.cos(theta))
-  const opacity = Math.abs(dist) > 3.5 ? 0 : 1 / (1 + Math.abs(dist) * 3)
   return {
     height: `${props.rowH}px`,
     scrollSnapAlign: 'center',
     scrollSnapStop: 'always',
     transform: `translateY(${translateY}px) scaleY(${scaleY})`,
-    opacity,
-    willChange: 'transform, opacity',
+    willChange: 'transform',
   }
 }
 
