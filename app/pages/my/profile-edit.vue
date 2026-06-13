@@ -48,19 +48,46 @@
         </div>
       </div>
 
+      <!-- 나이대 -->
+      <div>
+        <label class="text-label1 font-medium text-grey-13 mb-3 block">나이대</label>
+        <div class="grid grid-cols-3 gap-[10px]">
+          <UiButton
+            v-for="age in ages"
+            :key="age.value"
+            variant="chip"
+            size="md"
+            :active="selectedAge === age.value"
+            @click="selectedAge = age.value"
+          >{{ age.label }}</UiButton>
+        </div>
+      </div>
+
+      <!-- 연차 -->
+      <div>
+        <label class="text-label1 font-medium text-grey-13 mb-3 block">연차</label>
+        <div class="grid grid-cols-3 gap-[10px]">
+          <UiButton
+            v-for="exp in experiences"
+            :key="exp.value"
+            variant="chip"
+            size="md"
+            :active="selectedExperience === exp.value"
+            @click="selectedExperience = exp.value"
+          >{{ exp.label }}</UiButton>
+        </div>
+      </div>
+
     </div>
 
   </div>
 </template>
 
 <script setup lang="ts">
-import type { ApiResponse, UserProfile, JobType, NicknameCheckResponse } from '~/types/api'
+import type { ApiResponse, UserProfile, JobType, AgeType, ExperienceType, NicknameCheckResponse } from '~/types/api'
 
-definePageMeta({ middleware: 'auth', layout: 'default' })
+definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
-const hideTabBar = useState('hideTabBar', () => false)
-onMounted(() => { hideTabBar.value = true })
-onUnmounted(() => { hideTabBar.value = false })
 
 const { $api } = useNuxtApp()
 
@@ -68,6 +95,8 @@ const nickname = ref('')
 const nicknameStatus = ref<'idle' | 'checking' | 'available' | 'duplicate' | 'invalid'>('idle')
 const nicknameMessage = ref('')
 const selectedJob = ref<JobType | null>(null)
+const selectedAge = ref<AgeType | null>(null)
+const selectedExperience = ref<ExperienceType | null>(null)
 const isSaving = ref(false)
 const originalNickname = ref('')
 
@@ -77,9 +106,25 @@ const jobs: { label: string; value: JobType }[] = [
   { label: '디자인', value: 'DESIGNER' },
 ]
 
+const ages: { label: string; value: AgeType }[] = [
+  { label: '20대', value: 'AGE_20' },
+  { label: '30대', value: 'AGE_30' },
+  { label: '40대 이상', value: 'AGE_40_PLUS' },
+]
+
+const experiences: { label: string; value: ExperienceType }[] = [
+  { label: '1년 미만', value: 'LESS_THAN_1_YEAR' },
+  { label: '1~2년', value: 'YEARS_1_TO_2' },
+  { label: '3~5년', value: 'YEARS_3_TO_5' },
+  { label: '6~9년', value: 'YEARS_6_TO_9' },
+  { label: '10년 이상', value: 'YEARS_10_PLUS' },
+]
+
 const canSave = computed(() =>
   (nicknameStatus.value === 'available' || nickname.value === originalNickname.value)
   && selectedJob.value !== null
+  && selectedAge.value !== null
+  && selectedExperience.value !== null
   && nickname.value.length >= 2,
 )
 
@@ -145,6 +190,8 @@ onMounted(async () => {
     const data = res.data.data
     nickname.value = data.nickname ?? ''
     selectedJob.value = data.job ?? null
+    selectedAge.value = data.age ?? null
+    selectedExperience.value = data.experience ?? null
     originalNickname.value = nickname.value
     // 저장된 닉네임은 이미 유효함
     nicknameStatus.value = 'available'
@@ -160,6 +207,8 @@ async function onSave() {
     await $api.patch('/api/v2/users/profile', {
       nickname: nickname.value,
       job: selectedJob.value,
+      age: selectedAge.value,
+      experience: selectedExperience.value,
     })
     navigateTo('/my')
   } catch {
