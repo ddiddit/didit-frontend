@@ -19,7 +19,7 @@
           :style="rowStyle(i)"
         >
           <span
-            class="inline-block font-semibold text-[20px] leading-none transition-colors duration-100"
+            class="inline-block font-semibold text-[20px] leading-none"
             :class="Math.abs(rowDist(i)) < 0.5 ? 'text-grey-13' : 'text-grey-6'"
           >{{ item.label }}</span>
         </div>
@@ -63,6 +63,8 @@ function getExtIdx(realIdx: number): number {
 // 각 줄을 가운데에서 떨어진 거리(줄 단위)에 따라 가운데로 모으고(translateY) 높이를 눌러(scaleY)
 // 원통형 곡면처럼 보이게 한다. (스크롤에 따라 연속적으로 갱신)
 const UNIT_ANGLE = 26 // 줄당 회전각(도)
+const DELTA = (UNIT_ANGLE * Math.PI) / 180 // 상수 (매 프레임 재계산 방지)
+const radius = computed(() => props.rowH / DELTA)
 // 가운데에서 떨어진 거리(줄 단위) — 색상/곡면 계산 공용
 function rowDist(i: number): number {
   const rowCenter = padH.value + i * props.rowH + props.rowH / 2
@@ -71,20 +73,16 @@ function rowDist(i: number): number {
 }
 function rowStyle(i: number) {
   const dist = rowDist(i)
-  const delta = (UNIT_ANGLE * Math.PI) / 180
-  const theta = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, dist * delta))
-  const radius = props.rowH / delta
-  const translateY = radius * Math.sin(theta) - dist * props.rowH
-  const scaleY = Math.max(0.05, Math.cos(theta))
-  // 비선택 숫자는 100%(C6C6C6 단색), 위·아래 페이드는 마스크가 담당
-  const opacity = 1
+  const theta = Math.max(-1.5708, Math.min(1.5708, dist * DELTA))
+  // 값을 반올림해 글자 재래스터링(버벅임)을 줄인다
+  const translateY = (radius.value * Math.sin(theta) - dist * props.rowH).toFixed(1)
+  const scaleY = Math.max(0.05, Math.cos(theta)).toFixed(3)
   return {
     height: `${props.rowH}px`,
     scrollSnapAlign: 'center',
     scrollSnapStop: 'always',
     transform: `translateY(${translateY}px) scaleY(${scaleY})`,
-    opacity,
-    willChange: 'transform, opacity',
+    willChange: 'transform',
   }
 }
 
