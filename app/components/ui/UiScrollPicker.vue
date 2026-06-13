@@ -71,14 +71,13 @@ function rowDist(i: number): number {
 }
 function rowStyle(i: number) {
   const dist = rowDist(i)
-  const ad = Math.abs(dist)
   const delta = (UNIT_ANGLE * Math.PI) / 180
   const theta = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, dist * delta))
   const radius = props.rowH / delta
   const translateY = radius * Math.sin(theta) - dist * props.rowH
   const scaleY = Math.max(0.05, Math.cos(theta))
-  // 가운데에서 멀어질수록 더 연하게 (부드러운 그라데이션)
-  const opacity = 1 / (1 + ad * 0.2)
+  // 비선택 숫자는 100%(C6C6C6 단색), 위·아래 페이드는 마스크가 담당
+  const opacity = 1
   return {
     height: `${props.rowH}px`,
     scrollSnapAlign: 'center',
