@@ -74,14 +74,14 @@ function rowDist(i: number): number {
 function rowStyle(i: number) {
   const dist = rowDist(i)
   const theta = Math.max(-1.5708, Math.min(1.5708, dist * DELTA))
-  // 값을 반올림해 글자 재래스터링(버벅임)을 줄인다
   const translateY = (radius.value * Math.sin(theta) - dist * props.rowH).toFixed(1)
-  const scaleY = Math.max(0.05, Math.cos(theta)).toFixed(3)
+  // scaleY(글자 재래스터링 → 버벅임) 대신 rotateX(3D, GPU 합성)로 곡면 표현
+  const angle = (theta * 57.2958).toFixed(1) // rad → deg
   return {
     height: `${props.rowH}px`,
     scrollSnapAlign: 'center',
     scrollSnapStop: 'always',
-    transform: `translateY(${translateY}px) scaleY(${scaleY})`,
+    transform: `perspective(600px) translateY(${translateY}px) rotateX(${angle}deg)`,
     willChange: 'transform',
   }
 }
