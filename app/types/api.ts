@@ -37,6 +37,7 @@ export interface UserProfile {
   age: AgeType | null
   experience: ExperienceType | null
   provider: 'KAKAO' | 'GOOGLE' | 'APPLE'
+  level?: number
 }
 
 export interface NicknameCheckResponse {
