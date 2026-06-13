@@ -163,8 +163,11 @@ export interface Badge {
 }
 
 // Notification
+export type NotificationType = 'DAILY_REMINDER' | 'INQUIRY_ANSWERED'
+
 export interface NotificationHistory {
   id: string
+  type: NotificationType
   title: string
   body: string
   isRead: boolean
