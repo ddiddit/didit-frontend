@@ -37,6 +37,8 @@
           v-for="item in notifications"
           :key="item.id"
           class="px-5 pt-[18px]"
+          :class="(!item.isRead || item.type === 'INQUIRY_ANSWERED') ? 'cursor-pointer' : ''"
+          @click="onNotificationClick(item)"
         >
           <div class="pb-[18px] border-b border-grey-5 flex items-start justify-between gap-2">
             <div class="flex items-start gap-2 flex-1 min-w-0">
@@ -86,6 +88,25 @@ onMounted(async () => {
     isLoading.value = false
   }
 })
+
+// 알림 항목 클릭: 읽음 처리 + 문의 답변 알림이면 문의내역으로 이동
+function onNotificationClick(item: NotificationHistory) {
+  markRead(item)
+  if (item.type === 'INQUIRY_ANSWERED') {
+    navigateTo('/my/inquiry?from=notification')
+  }
+}
+
+// 개별 읽음 처리
+async function markRead(item: NotificationHistory) {
+  if (item.isRead) return
+  item.isRead = true // 낙관적 업데이트
+  try {
+    await $api.put(`/api/v1/notification-histories/${item.id}/read`)
+  } catch {
+    item.isRead = false
+  }
+}
 
 async function markAllRead() {
   try {
