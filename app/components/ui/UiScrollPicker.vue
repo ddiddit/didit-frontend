@@ -7,8 +7,8 @@
     >
       <div
         ref="el"
-        class="h-full overflow-y-scroll scrollbar-hide"
-        style="scroll-snap-type:y mandatory;will-change:scroll-position;"
+        class="h-full overflow-y-scroll scrollbar-hide select-none"
+        style="scroll-snap-type:y mandatory;will-change:scroll-position;touch-action:pan-y;overscroll-behavior:contain;"
         @scroll="onScroll"
         @scrollend="onScrollEnd"
       >
