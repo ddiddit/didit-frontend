@@ -17,7 +17,7 @@ onMounted(async () => {
   const code = route.query.code as string | undefined
 
   if (!code) {
-    navigateTo('/auth/login', { replace: true })
+    navigateTo('/login', { replace: true })
     return
   }
 
@@ -39,7 +39,7 @@ onMounted(async () => {
     const tokenData = await tokenRes.json()
 
     if (!tokenData.access_token) {
-      navigateTo('/auth/login', { replace: true })
+      navigateTo('/login', { replace: true })
       return
     }
 
@@ -56,7 +56,7 @@ onMounted(async () => {
     const dest = data.data.isNewUser || !data.data.isOnboardingCompleted ? '/onboarding' : '/home'
     navigateTo(dest, { replace: true })
   } catch {
-    navigateTo('/auth/login', { replace: true })
+    navigateTo('/login', { replace: true })
   }
 })
 </script>

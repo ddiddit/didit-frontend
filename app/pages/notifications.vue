@@ -9,7 +9,7 @@
       <div class="flex-1" />
       <button
         class="text-body2 font-semibold"
-        :class="hasUnread ? 'text-primary' : 'text-grey-6'"
+        :class="hasUnread ? 'text-green-hover' : 'text-grey-6'"
         :disabled="!hasUnread"
         @click="markAllRead"
       >
@@ -41,15 +41,15 @@
           @click="onNotificationClick(item)"
         >
           <div class="pb-[18px] border-b border-grey-5 flex items-start justify-between gap-2">
-            <div class="flex items-start gap-2 flex-1 min-w-0">
+            <div class="flex items-start gap-[10px] flex-1 min-w-0">
               <!-- 미읽음 초록 점 (읽은 항목은 DOM에서 제거) -->
               <span
                 v-if="!item.isRead"
-                class="mt-[7px] w-[6px] h-[6px] rounded-full shrink-0 bg-primary"
+                class="mt-[7px] w-[7px] h-[7px] rounded-full shrink-0 bg-primary"
               />
               <div class="flex-1 min-w-0">
                 <p class="text-body2 font-semibold text-grey-13">{{ item.title }}</p>
-                <p class="text-label1 font-normal text-grey-10 mt-[6px] leading-[1.5] whitespace-pre-line">{{ item.body }}</p>
+                <p class="text-label1 font-normal text-grey-10 mt-[6px] leading-[1.6] whitespace-pre-line">{{ item.body }}</p>
               </div>
             </div>
             <span class="text-caption1 font-normal text-grey-7 shrink-0 mt-[2px]">{{ formatTime(item.createdAt) }}</span>

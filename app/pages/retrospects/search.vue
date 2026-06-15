@@ -19,7 +19,7 @@
           v-model="searchQuery"
           type="text"
           placeholder="키워드로 검색해 보세요."
-          class="flex-1 bg-transparent text-body3 font-medium text-grey-13 placeholder:text-grey-7 outline-none"
+          class="flex-1 bg-transparent text-body3 font-medium text-grey-13 placeholder:text-grey-7 placeholder:font-normal outline-none"
           @keydown.enter="onEnter"
           @compositionstart="isComposing = true"
           @compositionend="onCompositionEnd"
@@ -28,10 +28,7 @@
           <img src="/icons/search.svg" alt="검색" class="w-6 h-6 block" />
         </button>
         <button v-else class="flex items-center shrink-0" @click="clearQuery">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="12" fill="#6A6A6A"/>
-            <path d="M8.5 8.5L15.5 15.5M15.5 8.5L8.5 15.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
-          </svg>
+          <img src="/icons/delete-circle-dark.svg" alt="지우기" class="w-6 h-6 block" />
         </button>
       </div>
     </div>
@@ -46,10 +43,10 @@
         <button
           v-for="item in recentSearches"
           :key="item"
-          class="flex items-center gap-2 h-[36px] pl-[14px] pr-[9px] bg-white border border-grey-4 rounded-full overflow-hidden"
+          class="flex items-center gap-2 py-[9px] pl-[14px] pr-3 bg-white border border-grey-4 rounded-full"
           @click="goSearch(item)"
         >
-          <span class="text-label2 font-medium text-grey-13 truncate">{{ item }}</span>
+          <span class="text-label2 font-medium text-grey-13">{{ item }}</span>
           <span class="flex items-center shrink-0" @click.stop="removeRecent(item)">
             <img src="/icons/close.svg" class="w-4 h-4 block" style="filter: brightness(0) invert(1) brightness(0.776)" />
           </span>

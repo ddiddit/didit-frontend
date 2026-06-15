@@ -39,7 +39,7 @@
               <path d="M12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3ZM12 10.9551L9.04492 8L8 9.04492L10.9551 12L8 14.9551L9.04492 16L12 13.0449L14.9551 16L16 14.9551L13.0449 12L16 9.04492L14.9551 8L12 10.9551Z" fill="#C6C6C6"/>
             </svg>
         </button>
-        <span v-if="showCount && maxlength !== undefined" class="text-caption1 font-medium text-grey-7 tabular-nums">
+        <span v-if="showCount && maxlength !== undefined" class="text-caption1 font-medium text-grey-7 tabular-nums mt-px">
           {{ modelValue.length }}/{{ maxlength }}
         </span>
       </div>
@@ -105,7 +105,14 @@ const rightPadding = computed(() => {
 })
 
 function onInput(e: Event) {
-  emit('update:modelValue', (e.target as HTMLInputElement).value)
+  const el = e.target as HTMLInputElement
+  let value = el.value
+  // 한글 IME 조합 중에는 maxlength가 브라우저에서 적용되지 않으므로 직접 자름
+  if (props.maxlength !== undefined && value.length > props.maxlength) {
+    value = value.slice(0, props.maxlength)
+    el.value = value
+  }
+  emit('update:modelValue', value)
 }
 
 function onBlur() {

@@ -33,7 +33,7 @@ onMounted(async () => {
     ])
 
     if (!configResult) {
-      navigateTo('/auth/login', { replace: true })
+      navigateTo('/login', { replace: true })
       return
     }
 
@@ -47,7 +47,7 @@ onMounted(async () => {
 
     const accessToken = localStorage.getItem('accessToken')
     if (!accessToken) {
-      navigateTo('/auth/login', { replace: true })
+      navigateTo('/login', { replace: true })
       return
     }
 
@@ -55,7 +55,7 @@ onMounted(async () => {
     const isOnboardingCompleted = localStorage.getItem('isOnboardingCompleted')
     navigateTo(isOnboardingCompleted === 'true' ? '/home' : '/onboarding', { replace: true })
   } catch {
-    navigateTo('/auth/login', { replace: true })
+    navigateTo('/login', { replace: true })
   }
 })
 </script>
