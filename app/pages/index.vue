@@ -15,6 +15,11 @@ onMounted(async () => {
   // 이미 로그인된 경우 스플래시 없이 즉시 이동
   if (localStorage.getItem('accessToken') && localStorage.getItem('refreshToken')) {
     const isOnboardingCompleted = localStorage.getItem('isOnboardingCompleted')
+    if (isOnboardingCompleted === null) {
+      localStorage.clear()
+      navigateTo('/login', { replace: true })
+      return
+    }
     navigateTo(isOnboardingCompleted === 'true' ? '/home' : '/onboarding', { replace: true })
     return
   }
@@ -53,6 +58,11 @@ onMounted(async () => {
 
     // 온보딩 미완료 시 온보딩으로 이동
     const isOnboardingCompleted = localStorage.getItem('isOnboardingCompleted')
+    if (isOnboardingCompleted === null) {
+      localStorage.clear()
+      navigateTo('/login', { replace: true })
+      return
+    }
     navigateTo(isOnboardingCompleted === 'true' ? '/home' : '/onboarding', { replace: true })
   } catch {
     navigateTo('/login', { replace: true })
