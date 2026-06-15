@@ -141,7 +141,6 @@ interface LocalProject {
   originalName: string
   isNew: boolean
   isEditing: boolean
-  retrospectiveCount: number
 }
 
 const projects = useState<Project[]>('projects:list', () => [])
@@ -206,7 +205,6 @@ onMounted(async () => {
       originalName: p.name,
       isNew: false,
       isEditing: false,
-      retrospectiveCount: p.retrospectiveCount,
     }))
   } catch {
     localProjects.value = []
@@ -223,7 +221,7 @@ function onContainerTouch(e: TouchEvent) {
 
 function addNewProject() {
   if (!canAdd.value) return
-  localProjects.value.push({ name: '', originalName: '', isNew: true, isEditing: false, retrospectiveCount: 0 })
+  localProjects.value.push({ name: '', originalName: '', isNew: true, isEditing: false })
   const newIndex = localProjects.value.length - 1
   nextTick(() => {
     inputRefs.value[newIndex]?.focus()
