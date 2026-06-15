@@ -90,13 +90,12 @@
 </template>
 
 <script setup lang="ts">
-import type { ApiResponse, UserProfile } from '~/types/api'
-
 definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
 
 const { $api } = useNuxtApp()
 const authStore = useAuthStore()
+const { load: loadProfile } = useProfile()
 
 const nickname = ref('')
 const reasons = [
@@ -116,10 +115,8 @@ const isWithdrawing = ref(false)
 const canSubmit = computed(() => !!selectedReason.value && agreed.value)
 
 onMounted(async () => {
-  try {
-    const res = await $api.get<ApiResponse<UserProfile>>('/api/v2/users/profile')
-    nickname.value = res.data.data.nickname ?? ''
-  } catch { /* 오류 처리 */ }
+  const p = await loadProfile()
+  nickname.value = p?.nickname ?? ''
 })
 
 async function handleWithdraw() {

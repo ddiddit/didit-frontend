@@ -158,12 +158,13 @@
 </template>
 
 <script setup lang="ts">
-import type { ApiResponse, UserProfile } from '~/types/api'
+import type { ApiResponse } from '~/types/api'
 
 definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
 
 const { $api } = useNuxtApp()
+const { load: loadProfile } = useProfile()
 
 const userEmail = ref('')
 
@@ -308,10 +309,8 @@ onMounted(async () => {
   const fromNotification = route.query.from === 'notification'
   if (fromNotification) activeTab.value = 'history'
 
-  try {
-    const res = await $api.get<ApiResponse<UserProfile>>('/api/v2/users/profile')
-    userEmail.value = res.data.data.email ?? ''
-  } catch { /* 오류 처리 */ }
+  const p = await loadProfile()
+  userEmail.value = p?.email ?? ''
 
   await loadInquiries()
 

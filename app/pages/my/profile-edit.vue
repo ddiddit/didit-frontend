@@ -84,12 +84,13 @@
 </template>
 
 <script setup lang="ts">
-import type { ApiResponse, UserProfile, JobType, AgeType, ExperienceType, NicknameCheckResponse } from '~/types/api'
+import type { ApiResponse, JobType, AgeType, ExperienceType, NicknameCheckResponse } from '~/types/api'
 
 definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
 
 const { $api } = useNuxtApp()
+const { profile, load: loadProfile, setProfile } = useProfile()
 
 const nickname = ref('')
 const nicknameStatus = ref<'idle' | 'checking' | 'available' | 'duplicate' | 'invalid'>('idle')
@@ -185,19 +186,15 @@ async function checkNickname() {
 }
 
 onMounted(async () => {
-  try {
-    const res = await $api.get<ApiResponse<UserProfile>>('/api/v2/users/profile')
-    const data = res.data.data
-    nickname.value = data.nickname ?? ''
-    selectedJob.value = data.job ?? null
-    selectedAge.value = data.age ?? null
-    selectedExperience.value = data.experience ?? null
-    originalNickname.value = nickname.value
-    // 저장된 닉네임은 이미 유효함
-    nicknameStatus.value = 'available'
-  } catch {
-    // 오류 처리
-  }
+  const data = await loadProfile()
+  if (!data) return
+  nickname.value = data.nickname ?? ''
+  selectedJob.value = data.job ?? null
+  selectedAge.value = data.age ?? null
+  selectedExperience.value = data.experience ?? null
+  originalNickname.value = nickname.value
+  // 저장된 닉네임은 이미 유효함
+  nicknameStatus.value = 'available'
 })
 
 async function onSave() {
@@ -210,6 +207,16 @@ async function onSave() {
       age: selectedAge.value,
       experience: selectedExperience.value,
     })
+    // 캐시 갱신 → 마이페이지 등이 재요청 없이 최신값 표시
+    if (profile.value) {
+      setProfile({
+        ...profile.value,
+        nickname: nickname.value,
+        job: selectedJob.value,
+        age: selectedAge.value,
+        experience: selectedExperience.value,
+      })
+    }
     navigateTo('/my')
   } catch {
     // 오류 처리

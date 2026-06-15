@@ -54,15 +54,12 @@
 </template>
 
 <script setup lang="ts">
-import type { ApiResponse, UserProfile } from '~/types/api'
-
 definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
 
-const { $api } = useNuxtApp()
 const authStore = useAuthStore()
+const { profile, load: loadProfile } = useProfile()
 
-const profile = ref<UserProfile | null>(null)
 const showLogoutModal = ref(false)
 
 const loginMethodLabel = computed(() => {
@@ -73,11 +70,8 @@ const loginMethodLabel = computed(() => {
   return ''
 })
 
-onMounted(async () => {
-  try {
-    const res = await $api.get<ApiResponse<UserProfile>>('/api/v2/users/profile')
-    profile.value = res.data.data
-  } catch { /* 오류 처리 */ }
+onMounted(() => {
+  loadProfile()
 })
 
 async function handleLogout() {

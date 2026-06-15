@@ -118,12 +118,11 @@
 </template>
 
 <script setup lang="ts">
-import type { ApiResponse, UserProfile, JobType } from '~/types/api'
+import type { JobType } from '~/types/api'
 
 definePageMeta({ middleware: 'auth', layout: 'default' })
 
-const { $api } = useNuxtApp()
-const profile = ref<UserProfile | null>(null)
+const { profile, load: loadProfile } = useProfile()
 
 const jobLabels: Record<JobType, string> = {
   PLANNER: '기획자',
@@ -145,13 +144,8 @@ const acquiredBadges = computed(() =>
     }),
 )
 
-onMounted(async () => {
-  try {
-    const res = await $api.get<ApiResponse<UserProfile>>('/api/v2/users/profile')
-    profile.value = res.data.data
-  } catch {
-    // 오류 처리
-  }
+onMounted(() => {
+  loadProfile()
   loadBadges()
 })
 </script>
