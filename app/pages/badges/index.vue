@@ -68,37 +68,43 @@
           style="bottom: 30px;"
           @click.stop
         >
-          <div class="relative w-full h-[316px] bg-grey-1 rounded-[36px] overflow-hidden" style="padding: 32px 20px 20px;">
+          <div class="relative w-full h-[316px] bg-grey-1 rounded-[36px] overflow-hidden flex flex-col items-center pt-[50px]">
             <!-- 드래그 핸들 -->
-            <div class="absolute top-[14px] left-1/2 -translate-x-1/2 w-[50px] h-1 rounded-full bg-grey-5" />
-            <!-- 라벨 -->
-            <p class="absolute top-[14px] left-5 text-[13px] font-medium text-grey-7">활동배지 선택</p>
+            <div class="absolute top-[10px] left-1/2 -translate-x-1/2 w-[50px] h-[5px] rounded-full bg-grey-5" />
 
-            <div class="h-full flex flex-col items-center justify-center">
-              <!-- 획득: 이미지 / 미획득: 잠금 박스 -->
-              <div v-if="selected.acquired" class="h-[120px] flex items-center justify-center">
-                <img :src="selected.image" :alt="selected.name" class="max-h-[120px] object-contain" />
+            <!-- 배지 이미지 영역 (획득: 배지이미지 / 미획득: 잠금 박스) -->
+            <div class="w-full flex justify-center items-center h-[144px]">
+              <img
+                v-if="selected.acquired"
+                :src="selected.image"
+                :alt="selected.name"
+                class="h-full object-contain"
+              />
+              <div
+                v-else
+                class="w-[168px] h-[108px] rounded-[14px] border-[1.4px] border-dashed border-grey-6 bg-white flex items-center justify-center"
+              >
+                <img src="/icons/lock.svg" alt="잠금" class="w-[21px] h-[21px]" />
               </div>
-              <div v-else class="w-[180px] h-[110px] rounded-[14px] border-[1.4px] border-dashed border-grey-6 flex items-center justify-center">
-                <img src="/icons/lock.svg" alt="잠금" class="w-7 h-7" />
-              </div>
+            </div>
 
-              <!-- 텍스트 영역 (간격 6) -->
-              <div class="flex flex-col items-center gap-1.5 mt-6">
-                <!-- 이름 + 진행 칩 (간격 8) -->
-                <div class="flex items-center gap-2">
-                  <p class="text-[17px] font-semibold leading-[140%] tracking-[-0.02em] text-grey-13">{{ selected.name }}</p>
-                  <!-- 회고 개수 표기 (10회/30회 미획득 시) -->
-                  <span
-                    v-if="selected.countable && !selected.acquired"
-                    class="flex items-center gap-px rounded-[5px] bg-grey-4 px-[5px] py-px"
-                  >
-                    <span class="text-[12px] font-semibold leading-[136%] tracking-[-0.02em] text-grey-12">{{ selected.current }}</span>
-                    <span class="text-[12px] font-semibold leading-[136%] tracking-[-0.02em] text-grey-7">/{{ selected.goal }}</span>
-                  </span>
-                </div>
-                <p class="text-[13px] font-normal leading-[150%] tracking-[-0.02em] text-grey-8">{{ selected.unlockText }}</p>
+            <!-- 텍스트 영역 -->
+            <div class="flex flex-col items-center gap-1.5 mt-6">
+              <!-- 이름 + 진행 칩 (미획득·countable일 때) -->
+              <div class="flex items-center gap-2">
+                <p class="text-[17px] font-semibold leading-[140%] tracking-[-0.02em] text-grey-13">{{ selected.name }}</p>
+                <span
+                  v-if="selected.countable && !selected.acquired"
+                  class="flex items-center gap-px rounded-[5px] bg-grey-4 px-[5px] py-px"
+                >
+                  <span class="text-[12px] font-semibold leading-[136%] tracking-[-0.02em] text-grey-12">{{ selected.current }}</span>
+                  <span class="text-[12px] font-semibold leading-[136%] tracking-[-0.02em] text-grey-7">/{{ selected.goal }}</span>
+                </span>
               </div>
+              <!-- 획득 날짜 또는 안내 문구 -->
+              <p class="text-[13px] font-medium leading-[140%] tracking-[-0.02em] text-grey-8 text-center">
+                {{ selected.acquired ? formatAcquiredDate(selected.acquiredAt) : selected.unlockText }}
+              </p>
             </div>
           </div>
         </div>
@@ -119,6 +125,15 @@ const selected = ref<BadgeView | null>(null)
 
 function openSheet(badge: BadgeView) {
   selected.value = badge
+}
+
+function formatAcquiredDate(date: string | null): string {
+  if (!date) return ''
+  const d = new Date(date)
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}.${mm}.${dd} 획득`
 }
 
 onMounted(() => {
