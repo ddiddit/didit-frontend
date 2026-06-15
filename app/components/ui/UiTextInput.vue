@@ -49,7 +49,7 @@
     <p
       v-if="error || hint"
       class="mt-2 text-caption1 font-medium"
-      :class="error ? 'text-red-500' : 'text-grey-7'"
+      :class="error ? 'text-danger-50' : 'text-grey-7'"
     >
       {{ error || hint }}
     </p>
@@ -90,7 +90,7 @@ const focused = ref(false)
 // 컨테이너 배경·보더 (인풋 자체는 bg-transparent)
 const containerClasses = computed(() => {
   if (props.disabled) return 'bg-grey-4 border-transparent'
-  if (props.error) return 'bg-grey-3 border-red-500'
+  if (props.error) return 'bg-grey-3 border-error'
   if (focused.value) return 'bg-grey-3 border-primary'
   return 'bg-grey-3 border-transparent'
 })
