@@ -9,7 +9,7 @@
       <span class="flex-1 text-center text-body2 font-semibold text-grey-13">프로필 수정</span>
       <button
         class="text-body2 font-semibold"
-        :class="canSave ? 'text-primary' : 'text-grey-5'"
+        :class="canSave ? 'text-primary' : 'text-grey-6'"
         :disabled="!canSave || isSaving"
         @click="onSave"
       >

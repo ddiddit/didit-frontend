@@ -13,7 +13,7 @@
       <!-- 날짜 + 제목 -->
       <div class="flex flex-col gap-2 mb-5">
         <p class="text-caption1 font-normal text-grey-7">{{ notice.date }}</p>
-        <h1 class="text-heading1 font-bold text-grey-13">{{ notice.title }}</h1>
+        <h1 class="text-heading2 font-semibold text-grey-13">{{ notice.title }}</h1>
       </div>
 
       <!-- 구분선 -->

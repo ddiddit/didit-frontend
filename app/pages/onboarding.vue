@@ -26,7 +26,7 @@
 
     <!-- ── 제목: Y:136 = 상태바54 + 백버튼50 + 프로그레스4 + 간격28 ── -->
     <div class="px-5 shrink-0" style="padding-top:28px;">
-      <h1 class="font-bold text-grey-13 whitespace-pre-line" style="font-size:22px;line-height:1.4;">{{ stepTitle }}</h1>
+      <h1 class="font-semibold text-grey-13 whitespace-pre-line" style="font-size:22px;line-height:1.4;">{{ stepTitle }}</h1>
       <p v-if="stepSubtitle" class="text-body3 font-normal text-grey-7 mt-2">{{ stepSubtitle }}</p>
     </div>
 
@@ -51,7 +51,7 @@
 
         <!-- 전체동의 ↔ 개별항목: 20px 간격 -->
         <!-- 개별항목 사이: 8px 간격 -->
-        <div class="mt-5 px-1 flex flex-col gap-2">
+        <div class="mt-5 flex flex-col gap-2">
           <div
             v-for="term in terms"
             :key="term.key"
@@ -175,7 +175,7 @@
       <!-- 흰 카드: 나머지 공간 전체 -->
       <div
         class="sheet-panel flex-1 bg-white flex flex-col overflow-hidden"
-        style="border-radius: 20px 20px 0 0;"
+        style="border-radius: 30px 30px 0 0;"
       >
         <!-- X 버튼 -->
         <div class="flex justify-end px-5 pt-6 shrink-0">
@@ -612,8 +612,8 @@ const PRIVACY_TERMS = `디딧(didit) 개인정보처리방침
 • 접속 로그 및 IP 정보: 3개월
 
 5. 개인정보 보호책임자
-담당자: 이예진
-이메일: lyjin4041@gmail.com`
+담당자: didit 개발팀
+이메일: support@didit.ai.kr`
 
 const MARKETING_TERMS = `디딧(didit) 마케팅 정보 수신 동의
 
