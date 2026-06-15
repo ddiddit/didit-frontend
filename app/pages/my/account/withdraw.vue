@@ -46,6 +46,16 @@
             <span class="text-body2 font-normal text-grey-10">{{ reason.label }}</span>
           </div>
         </div>
+
+        <!-- 기타 사유 직접 입력 -->
+        <textarea
+          v-if="selectedReason === 'OTHER'"
+          v-model="reasonDetail"
+          maxlength="200"
+          rows="3"
+          placeholder="탈퇴 사유를 입력해주세요."
+          class="w-full bg-grey-3 rounded-xl px-4 py-3 text-body2 font-normal text-grey-13 placeholder:text-grey-6 outline-none resize-none"
+        />
       </div>
 
     </div>
@@ -98,21 +108,28 @@ const authStore = useAuthStore()
 const { load: loadProfile } = useProfile()
 
 const nickname = ref('')
+// value는 백엔드 WithdrawalReason enum과 일치시킨다.
 const reasons = [
-  { value: 'NO_NEED', label: '회고 기능이 필요 없어졌어요' },
-  { value: 'MISSING_FEATURE', label: '기대했던 기능이 없어요' },
-  { value: 'SERVICE_ISSUE', label: '서비스 오류나 불편한 점이 있어요' },
-  { value: 'HARD_TO_USE', label: '사용 방법이 어렵거나 잘 모르겠어요' },
-  { value: 'OTHER_SERVICE', label: '다른 서비스를 이용할 예정이에요' },
+  { value: 'NO_LONGER_NEEDED', label: '회고 기능이 필요 없어졌어요' },
+  { value: 'MISSING_FEATURES', label: '기대했던 기능이 없어요' },
+  { value: 'SERVICE_ISSUES', label: '서비스 오류나 불편한 점이 있어요' },
+  { value: 'DIFFICULT_TO_USE', label: '사용 방법이 어렵거나 잘 모르겠어요' },
+  { value: 'SWITCHING_SERVICE', label: '다른 서비스를 이용할 예정이에요' },
   { value: 'OTHER', label: '기타 (직접 입력)' },
 ]
 
 const selectedReason = ref('')
+const reasonDetail = ref('') // 기타 사유 직접 입력
 const agreed = ref(false)
 const showConfirmModal = ref(false)
 const isWithdrawing = ref(false)
 
-const canSubmit = computed(() => !!selectedReason.value && agreed.value)
+// 기타 선택 시 상세 사유 필수 (백엔드가 OTHER일 때 reasonDetail 비어있으면 거부)
+const canSubmit = computed(() =>
+  !!selectedReason.value
+  && agreed.value
+  && (selectedReason.value !== 'OTHER' || reasonDetail.value.trim().length > 0),
+)
 
 onMounted(async () => {
   const p = await loadProfile()
@@ -123,7 +140,12 @@ async function handleWithdraw() {
   if (!canSubmit.value || isWithdrawing.value) return
   isWithdrawing.value = true
   try {
-    await $api.delete('/api/v1/users/me', { data: { reason: selectedReason.value } })
+    await $api.delete('/api/v1/auth/withdraw', {
+      data: {
+        reason: selectedReason.value,
+        reasonDetail: selectedReason.value === 'OTHER' ? reasonDetail.value.trim() : null,
+      },
+    })
     authStore.logout()
     await navigateTo('/login')
   } catch { /* 오류 처리 */ } finally {

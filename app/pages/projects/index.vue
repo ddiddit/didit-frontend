@@ -55,7 +55,7 @@
               :ref="el => setInputRef(el, index)"
               v-model="project.name"
               type="text"
-              maxlength="12"
+              maxlength="15"
               :placeholder="project.isNew ? '프로젝트 이름을 입력하세요' : ''"
               class="w-full bg-transparent text-label1 text-grey-13 placeholder:text-[15px] placeholder:font-normal placeholder:text-[#989898] outline-none py-1"
               @focus="focusedIndex = index"

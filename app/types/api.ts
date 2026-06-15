@@ -180,3 +180,16 @@ export interface NotificationSetting {
   nightPushConsent: boolean
   marketingAgreed: boolean
 }
+
+// Notice (공지사항)
+export interface NoticeListItem {
+  id: string
+  title: string
+}
+
+export interface NoticeDetail {
+  id: string
+  title: string
+  content: string
+  createdAt: string
+}
