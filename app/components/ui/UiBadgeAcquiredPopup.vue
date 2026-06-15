@@ -7,8 +7,8 @@
         @click="hide"
       >
         <div
-          class="w-[300px] bg-grey-1 rounded-2xl flex flex-col items-center"
-          style="padding: 30px 20px 36px;"
+          class="w-[300px] bg-white rounded-2xl overflow-hidden flex flex-col items-center"
+          style="padding: 30px 20px 36px; will-change: transform;"
           @click.stop
         >
           <!-- 배지 이미지 -->

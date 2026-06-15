@@ -22,17 +22,15 @@
         </div>
 
         <!-- 경고 카드 -->
-        <div class="bg-grey-3 rounded-2xl px-5 py-4 flex items-center gap-4">
-          <div class="w-5 h-5 rounded-full bg-grey-6 flex items-center justify-center shrink-0">
-            <span class="text-white text-[11px] font-bold leading-none">!</span>
-          </div>
-          <p class="text-label1 font-medium text-grey-9">탈퇴하면 계정 정보와 저장된 회고 데이터가 모두<br />삭제되며, 다시 복구할 수 없습니다.</p>
+        <div class="bg-grey-3 rounded-2xl px-5 py-4">
+          <p class="text-label1 font-normal text-grey-10 whitespace-pre-line">탈퇴하면 계정 정보와 저장된 회고 데이터가 모두
+삭제되며, 다시 복구할 수 없습니다.</p>
         </div>
       </div>
 
       <!-- 탈퇴 사유 -->
       <div class="flex flex-col gap-[15px]">
-        <p class="text-[22px] font-semibold text-grey-13 tracking-[-0.02em]" style="line-height:140%">탈퇴 사유를 알려주세요.</p>
+        <p class="text-[18px] font-semibold text-grey-13 tracking-[-0.02em]" style="line-height:140%">탈퇴 사유를 알려주세요.</p>
         <div class="flex flex-col gap-[13px]">
           <div
             v-for="reason in reasons"

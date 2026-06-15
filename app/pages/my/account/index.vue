@@ -16,7 +16,7 @@
       <div class="h-[56px] px-4 rounded-xl bg-grey-4 flex items-center">
         <span class="text-body2 font-normal text-grey-6">{{ profile?.email ?? '' }}</span>
       </div>
-      <p class="text-label1 font-normal text-grey-6">{{ loginMethodLabel }}</p>
+      <p class="text-label1 font-normal text-grey-7">{{ loginMethodLabel }}</p>
     </div>
 
     <div class="mx-5 h-px bg-grey-4" />
