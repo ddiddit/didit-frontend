@@ -14,14 +14,14 @@
       <!-- 안내 배너 (radius 16, padding 24/18) -->
       <div class="px-5 pt-3 pb-4">
         <div class="rounded-2xl bg-grey-3 px-6 py-[18px] flex items-center justify-center">
-          <span class="text-[14px] font-normal leading-[140%] tracking-[-0.02em] text-grey-13 text-center">미션을 달성하고 배지를 모아보세요!</span>
+          <span class="text-[14px] font-normal leading-[140%] tracking-[-0.02em] text-grey-13 text-center">나만의 회고 배지를 모아보세요!</span>
         </div>
       </div>
 
       <!-- 최근에 획득한 배지 (획득 배지가 있을 때만 구분선과 함께 표시) -->
       <template v-if="recentBadge">
         <div class="px-5 py-6 flex flex-col items-center gap-1">
-          <img :src="recentBadge.image" :alt="recentBadge.name" class="h-[110px] object-contain" />
+          <img :src="recentBadge.image" :alt="recentBadge.name" class="h-[131px] object-contain" />
           <p class="text-[13px] font-medium leading-[140%] tracking-[-0.02em] text-grey-7">최근에 획득한 배지</p>
           <p class="text-[17px] font-semibold leading-[140%] tracking-[-0.02em] text-grey-13">{{ recentBadge.name }}</p>
         </div>
@@ -30,7 +30,7 @@
       </template>
 
       <!-- 배지 그리드 (2열, 가로간격 22 / 세로간격 34) -->
-      <div class="px-5 pt-7 pb-10 grid grid-cols-2 gap-x-[22px] gap-y-[34px]">
+      <div class="px-5 pt-[30px] pb-10 grid grid-cols-2 gap-x-[22px] gap-y-[34px]">
         <button
           v-for="badge in badges"
           :key="badge.code"
@@ -46,7 +46,7 @@
               <img src="/icons/lock.svg" alt="잠금" class="w-[21px] h-[21px]" />
             </div>
           </div>
-          <p class="text-[15px] font-semibold leading-[140%] tracking-[-0.02em] text-grey-13 text-center">{{ badge.name }}</p>
+          <p class="text-[14px] font-semibold leading-[140%] tracking-[-0.02em] text-grey-13 text-center">{{ badge.name }}</p>
           <p class="text-[13px] font-normal leading-[150%] tracking-[-0.02em] text-grey-8 text-center">{{ badge.description }}</p>
         </button>
       </div>
