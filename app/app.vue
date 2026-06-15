@@ -77,6 +77,7 @@
         <NuxtLayout>
           <NuxtPage />
         </NuxtLayout>
+        <UiToast />
       </div>
 
     </div>
