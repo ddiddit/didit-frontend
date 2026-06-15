@@ -20,7 +20,7 @@
         <span class="inline-block w-24 h-6 bg-grey-4 rounded animate-pulse mb-1 block" />
         <span class="inline-block w-52 h-6 bg-grey-4 rounded animate-pulse block" />
       </template>
-      <h1 v-else class="text-title3 font-bold text-grey-13 leading-[1.4]">
+      <h1 v-else class="text-title3 font-semibold text-grey-13 leading-[1.4]">
         {{ nickname }}님,<br />
         {{ greetingMessage }}
       </h1>
@@ -29,24 +29,22 @@
     <!-- 빈 상태: 세로 중앙 정렬 -->
     <div
       v-if="!isLoading && recentRetrospectives.length === 0"
-      class="flex-1 flex flex-col items-center justify-center gap-3 pb-16"
+      class="flex-1 flex flex-col items-center justify-center gap-[40px] pb-16"
     >
-      <img src="/icons/empty-home.svg" alt="" class="w-[70px] h-[70px]" />
-
-      <div class="text-center flex flex-col items-center gap-[6px]">
-        <!-- Heading 2/SemiBold: 18px/140% -->
-        <p class="text-heading2 font-semibold text-grey-13">
-          아직 작성한 회고가 없어요
-        </p>
-        <!-- Regular 14px/160%, #575757 = grey-9 -->
-        <p class="text-label1-reading font-normal text-grey-9 text-center">
-          회고를 시작하고<br />오늘의 일을 기록해 보세요!
-        </p>
+      <!-- 아이콘 + 텍스트 그룹 -->
+      <div class="flex flex-col items-center gap-3">
+        <img src="/icons/empty-home.svg" alt="" class="w-[70px] h-[70px] rounded-[12px]" />
+        <div class="flex flex-col items-center gap-[6px]">
+          <p class="text-heading2 font-semibold text-grey-13">아직 작성한 회고가 없어요</p>
+          <p class="text-label1-reading font-normal text-grey-9 text-center">
+            회고를 시작하고<br />오늘의 일을 기록해 보세요!
+          </p>
+        </div>
       </div>
 
-      <!-- 회고 시작하기 버튼: gap-[6px] + mt-[34px] = 40px -->
+      <!-- 회고 시작하기 버튼 -->
       <button
-        class="flex items-center gap-1 mt-[34px] pl-[12px] pr-[18px] py-[9px] bg-primary rounded-xl"
+        class="flex items-center gap-1 pl-[12px] pr-[18px] py-[9px] bg-primary rounded-xl"
         @click="startRetrospect"
       >
         <img src="/icons/add.svg" alt="" class="w-6 h-6" />

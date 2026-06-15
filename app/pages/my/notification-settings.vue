@@ -17,44 +17,47 @@
 
     <!-- 설정 목록 -->
     <div v-else class="flex-1 overflow-y-auto">
+      <div class="flex flex-col gap-5 px-5 pt-6 pb-10">
 
-      <!-- 마케팅 정보 수신 동의 -->
-      <div class="flex items-center justify-between px-5 h-[56px]">
-        <span class="text-body2 font-medium text-grey-10">마케팅 정보 수신 동의</span>
-        <UiToggle :model-value="marketingAgreed" @update:model-value="toggleMarketing" />
-      </div>
-      <div class="mx-5 h-px bg-grey-4" />
-
-      <!-- 야간 푸시 알림 동의 -->
-      <div class="flex items-center justify-between px-5 h-[56px]">
-        <span class="text-body2 font-medium text-grey-10">야간 푸시 알림 동의</span>
-        <UiToggle :model-value="nightPushConsent" @update:model-value="toggleNightPush" />
-      </div>
-      <div class="mx-5 h-px bg-grey-4" />
-
-      <!-- 회고 작성 알림 동의 -->
-      <div class="flex items-center justify-between px-5 h-[56px]">
-        <span class="text-body2 font-medium text-grey-10">회고 작성 알림 동의</span>
-        <UiToggle :model-value="enabled" @update:model-value="toggleEnabled" />
-      </div>
-      <div class="mx-5 h-px bg-grey-4" />
-
-      <!-- 회고 알림 시간 (회고 작성 알림 동의가 켜져 있을 때만 설정 가능) -->
-      <button
-        class="w-full flex items-center justify-between px-5 pt-4 pb-4 gap-4 text-left"
-        :disabled="!enabled"
-        @click="openTimePicker"
-      >
-        <div class="flex flex-col gap-[6px]">
-          <span class="text-body2 font-medium text-grey-10">회고 알림 시간</span>
-          <span class="text-[12px] font-medium leading-[136%] tracking-[-0.02em] text-grey-7">설정한 시간에 회고 알림을 보내드립니다.</span>
+        <!-- 마케팅 정보 수신 동의 -->
+        <div class="flex items-center gap-4">
+          <span class="flex-1 text-body2 font-medium text-grey-10">마케팅 정보 수신 동의</span>
+          <UiToggle :model-value="marketingAgreed" @update:model-value="toggleMarketing" />
         </div>
-        <div class="flex items-center gap-1 shrink-0">
-          <span class="text-body2 font-semibold" :class="enabled ? 'text-[#37C58A]' : 'text-grey-6'">{{ reminderTimeLabel }}</span>
-          <img src="/icons/chevron-right-sm.svg" alt="" class="w-6 h-6" />
-        </div>
-      </button>
+        <div class="h-px bg-grey-4" />
 
+        <!-- 야간 푸시 알림 동의 -->
+        <div class="flex items-center gap-4">
+          <span class="flex-1 text-body2 font-medium text-grey-10">야간 푸시 알림 동의</span>
+          <UiToggle :model-value="nightPushConsent" @update:model-value="toggleNightPush" />
+        </div>
+        <div class="h-px bg-grey-4" />
+
+        <!-- 회고 작성 알림 동의 -->
+        <div class="flex items-center gap-4">
+          <span class="flex-1 text-body2 font-medium text-grey-10">회고 작성 알림 동의</span>
+          <UiToggle :model-value="enabled" @update:model-value="toggleEnabled" />
+        </div>
+        <div class="h-px bg-grey-4" />
+
+        <!-- 회고 알림 시간 (회고 작성 알림 동의가 켜져 있을 때만 설정 가능) -->
+        <button
+          class="w-full flex items-center gap-4 text-left"
+          :disabled="!enabled"
+          @click="openTimePicker"
+        >
+          <div class="flex-1 flex flex-col gap-1">
+            <span class="text-body2 font-medium text-grey-10">회고 알림 시간</span>
+            <span class="text-[12px] font-medium leading-[136%] tracking-[-0.02em] text-grey-7">설정한 시간에 회고 알림을 보내드립니다.</span>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <span class="text-body2 font-semibold leading-none mt-px" :class="enabled ? 'text-[#37C58A]' : 'text-grey-6'">{{ reminderTimeLabel }}</span>
+            <img src="/icons/chevron-right-sm.svg" alt="" class="w-6 h-6" />
+          </div>
+        </button>
+        <div class="h-px bg-grey-4" />
+
+      </div>
     </div>
 
     <!-- 시간 피커 (회고 기록 스타일) -->
@@ -79,7 +82,7 @@
             @transitionend="onSheetTransitionEnd"
           >
             <!-- 드래그 핸들 -->
-            <div class="absolute top-[14px] left-1/2 -translate-x-1/2 w-[50px] h-1 rounded-full bg-grey-5" />
+            <div class="absolute top-[10px] left-1/2 -translate-x-1/2 w-[50px] h-1 rounded-full bg-grey-5" />
             <!-- 아래로 드래그해서 닫기 (상단 핸들·타이틀 영역만, 피커 스크롤과 분리) -->
             <div
               class="absolute top-0 left-0 right-0 h-16 z-10 touch-none cursor-grab active:cursor-grabbing"
@@ -98,7 +101,7 @@
                 :key="`p-${pickerKey}`"
                 :model-value="pickerPeriod"
                 :items="periodItems"
-                :row-h="29.2"
+                :row-h="30"
                 :visible-rows="5"
                 :width="62"
                 @update:model-value="pickerPeriod = $event as string"
@@ -107,7 +110,7 @@
                 :key="`h-${pickerKey}`"
                 :model-value="pickerHour"
                 :items="hourItems"
-                :row-h="29.2"
+                :row-h="30"
                 :visible-rows="5"
                 :width="62"
                 @update:model-value="pickerHour = $event as number"
@@ -117,10 +120,9 @@
                 :key="`m-${pickerKey}`"
                 :model-value="pickerMinute"
                 :items="minuteItems"
-                :row-h="29.2"
+                :row-h="30"
                 :visible-rows="5"
                 :width="62"
-                :loop="true"
                 @update:model-value="pickerMinute = $event as number"
               />
             </div>

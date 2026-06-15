@@ -368,7 +368,7 @@ function handleBack() {
     localStorage.removeItem('accessToken')
     localStorage.removeItem('refreshToken')
     localStorage.removeItem('isOnboardingCompleted')
-    navigateTo('/auth/login', { replace: true })
+    navigateTo('/login', { replace: true })
   } else {
     step.value--
   }

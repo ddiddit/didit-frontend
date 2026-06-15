@@ -5,6 +5,6 @@ export default defineNuxtRouteMiddleware(() => {
   // 둘 다 없으면 로그인 화면으로
   if (!accessToken || !refreshToken) {
     localStorage.clear()
-    return navigateTo('/auth/login')
+    return navigateTo('/login')
   }
 })

@@ -23,7 +23,7 @@ export const createApiClient = (baseURL: string) => {
 
   function redirectToLogin() {
     localStorage.clear()
-    window.location.href = '/auth/login'
+    window.location.href = '/login'
   }
 
   client.interceptors.request.use((config) => {

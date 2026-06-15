@@ -159,16 +159,43 @@
 
       <!-- 목록 -->
       <div v-else-if="!isLoading" class="flex-1 overflow-y-auto scrollbar-hide">
-        <ul>
+        <ul class="flex flex-col gap-3 px-5 py-3">
           <li
             v-for="item in retrospects"
             :key="item.id"
-            class="px-5 py-4 border-b border-grey-4"
+            class="bg-white rounded-2xl cursor-pointer"
+            style="padding: 22px 22px 20px;"
             @click="navigateTo(`/retrospects/${item.id}`)"
           >
-            <p class="text-caption1 font-normal text-grey-7 mb-1">{{ formatDate(item.completedAt ?? item.createdAt) }}</p>
-            <p class="text-label1 font-semibold text-grey-13 leading-[1.4]">{{ item.title }}</p>
-            <p v-if="item.summary" class="text-label2 font-normal text-grey-7 mt-1 line-clamp-2 leading-[1.5]">{{ item.summary }}</p>
+            <div class="flex flex-col gap-[14px]">
+              <!-- 메인 콘텐츠 -->
+              <div class="flex flex-col gap-2">
+                <div class="flex flex-col gap-[2px]">
+                  <!-- 프로젝트 + 날짜 -->
+                  <div class="flex items-center gap-[5px]">
+                    <template v-if="item.projectName">
+                      <span class="text-caption1 font-medium text-grey-7">{{ item.projectName }}</span>
+                      <span class="w-[3px] h-[3px] rounded-full bg-grey-5 shrink-0" />
+                    </template>
+                    <span class="text-caption1 font-medium text-grey-7">{{ formatDate(item.completedAt ?? item.createdAt) }}</span>
+                  </div>
+                  <!-- 제목 -->
+                  <p class="text-body2 font-semibold text-grey-13">{{ item.title }}</p>
+                </div>
+                <!-- 요약 -->
+                <p v-if="item.summary" class="text-label1 font-normal text-grey-10 leading-[1.6] line-clamp-2">{{ item.summary }}</p>
+              </div>
+              <!-- 태그 -->
+              <div v-if="item.tags && item.tags.length > 0" class="flex flex-wrap gap-[6px]">
+                <span
+                  v-for="(tag, idx) in item.tags"
+                  :key="tag.id"
+                  class="text-[11px] font-semibold leading-[130%] tracking-[-0.02em] rounded-[6px]"
+                  style="padding: 4px 6px;"
+                  :style="{ backgroundColor: listTagColors[idx % listTagColors.length].bg, color: listTagColors[idx % listTagColors.length].text }"
+                >#{{ tag.name }}</span>
+              </div>
+            </div>
           </li>
         </ul>
       </div>
@@ -241,6 +268,14 @@ const showMoreMenu = ref(false)
 const showProjectPicker = ref(false)
 
 const keyword = computed(() => route.query.keyword as string | undefined)
+
+const listTagColors = [
+  { bg: '#E2FAF0', text: '#37C58A' },
+  { bg: '#FAEBFA', text: '#E079E0' },
+  { bg: '#E6EEFC', text: '#5A8DEE' },
+  { bg: '#FDEDE7', text: '#F08A5D' },
+  { bg: '#EEEBFD', text: '#8C7CF0' },
+]
 
 watch(keyword, () => fetchRetrospects(), { immediate: true })
 
@@ -329,7 +364,7 @@ function scrollToChip(container: HTMLElement, targetLeft: number) {
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr)
-  return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
+  return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
 }
 
 function toggleMoreMenu() {
