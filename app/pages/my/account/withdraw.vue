@@ -106,6 +106,7 @@ definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 const { $api } = useNuxtApp()
 const authStore = useAuthStore()
 const { load: loadProfile } = useProfile()
+const { track, reset } = useAmplitude()
 
 const nickname = ref('')
 // value는 백엔드 WithdrawalReason enum과 일치시킨다.
@@ -146,6 +147,8 @@ async function handleWithdraw() {
         reasonDetail: selectedReason.value === 'OTHER' ? reasonDetail.value.trim() : null,
       },
     })
+    track('user_withdrew', { reason: selectedReason.value })
+    reset()
     authStore.logout()
     await navigateTo('/login')
   } catch { /* 오류 처리 */ } finally {

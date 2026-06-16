@@ -70,6 +70,8 @@
 <script setup lang="ts">
 import type { ApiResponse, TokenResponse } from '~/types/api'
 
+const { track, identify } = useAmplitude()
+
 // 각 SDK의 최소 타입 선언
 declare const Kakao: {
   isInitialized: () => boolean
@@ -150,6 +152,14 @@ async function submitLogin(provider: 'KAKAO' | 'GOOGLE' | 'APPLE', oauthToken: s
     const { data } = await $api.post<ApiResponse<TokenResponse>>('/api/v1/auth/login', { provider, oauthToken })
     localStorage.setItem('accessToken', data.data.accessToken)
     localStorage.setItem('refreshToken', data.data.refreshToken)
+
+    identify(data.data.accessToken, { provider: provider.toLowerCase() })
+
+    if (data.data.isNewUser) {
+      track('user_signed_up', { provider: provider.toLowerCase() })
+    } else {
+      track('user_logged_in', { provider: provider.toLowerCase() })
+    }
 
     const dest = data.data.isNewUser || !data.data.isOnboardingCompleted ? '/onboarding' : '/home'
     navigateTo(dest, { replace: true })

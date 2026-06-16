@@ -32,6 +32,7 @@ export default defineNuxtConfig({
       kakaoRestKey: process.env.NUXT_PUBLIC_KAKAO_REST_KEY ?? '',
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID ?? '',
       appleClientId: process.env.NUXT_PUBLIC_APPLE_CLIENT_ID ?? '',
+      amplitudeApiKey: process.env.NUXT_PUBLIC_AMPLITUDE_API_KEY ?? '',
     },
   },
 

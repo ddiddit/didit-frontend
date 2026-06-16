@@ -112,6 +112,7 @@ import type { ApiResponse, HomeResponse, NotificationHistory } from '~/types/api
 definePageMeta({ middleware: 'auth' })
 
 const { $api } = useNuxtApp()
+const { track } = useAmplitude()
 
 // 페이지 이동 후 재방문 시 깜빡임 없도록 SPA 전체에서 상태 유지
 const nickname = useState<string>('home:nickname', () => '')
@@ -131,6 +132,7 @@ const greetingMessage = computed(() =>
 )
 
 onMounted(async () => {
+  track('home_viewed')
   try {
     const [homeRes, notifRes] = await Promise.all([
       $api.get<ApiResponse<HomeResponse>>('/api/v1/home'),
@@ -152,6 +154,7 @@ function goToNotifications() {
 }
 
 function startRetrospect() {
+  track('retrospect_started')
   navigateTo('/retrospect/start')
 }
 </script>
