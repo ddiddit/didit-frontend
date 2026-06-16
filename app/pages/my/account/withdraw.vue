@@ -97,6 +97,7 @@ definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
 const { $api } = useNuxtApp()
 const authStore = useAuthStore()
+const { track, reset } = useAmplitude()
 
 const nickname = ref('')
 const reasons = [
@@ -127,6 +128,8 @@ async function handleWithdraw() {
   isWithdrawing.value = true
   try {
     await $api.delete('/api/v1/users/me', { data: { reason: selectedReason.value } })
+    track('user_withdrew', { reason: selectedReason.value })
+    reset()
     authStore.logout()
     await navigateTo('/login')
   } catch { /* 오류 처리 */ } finally {

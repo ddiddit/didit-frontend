@@ -9,6 +9,8 @@ import type { ApiResponse, TokenResponse } from '~/types/api'
 
 definePageMeta({ layout: false })
 
+const { track, identify } = useAmplitude()
+
 const route = useRoute()
 const config = useRuntimeConfig()
 const { $api } = useNuxtApp()
@@ -52,6 +54,14 @@ onMounted(async () => {
     localStorage.setItem('accessToken', data.data.accessToken)
     localStorage.setItem('refreshToken', data.data.refreshToken)
     localStorage.setItem('isOnboardingCompleted', String(data.data.isOnboardingCompleted))
+
+    identify(data.data.accessToken, { provider: 'kakao' })
+
+    if (data.data.isNewUser) {
+      track('user_signed_up', { provider: 'kakao' })
+    } else {
+      track('user_logged_in', { provider: 'kakao' })
+    }
 
     const dest = data.data.isNewUser || !data.data.isOnboardingCompleted ? '/onboarding' : '/home'
     navigateTo(dest, { replace: true })
