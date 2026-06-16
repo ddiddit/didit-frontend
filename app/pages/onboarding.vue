@@ -229,6 +229,7 @@ import type { ApiResponse, JobType, AgeType, ExperienceType, NicknameCheckRespon
 definePageMeta({ layout: false })
 
 const { $api } = useNuxtApp()
+const { track } = useAmplitude()
 
 // ── 상태 ──────────────────────────────────────────────────────────
 const step = ref(1)
@@ -444,6 +445,12 @@ async function submitOnboarding() {
       nightPushAgreed: agreements.nightPush,
     })
     localStorage.setItem('isOnboardingCompleted', 'true')
+    track('onboarding_completed', {
+      job: selectedJob.value,
+      age: selectedAge.value,
+      experience: selectedExperience.value,
+      marketing_agreed: agreements.marketing,
+    })
     navigateTo('/home', { replace: true })
   } catch {
     alert('온보딩 처리 중 오류가 발생했어요. 다시 시도해주세요.')
