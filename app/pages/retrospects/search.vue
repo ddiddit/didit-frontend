@@ -95,6 +95,7 @@ import type { Tag } from '~/types/api'
 definePageMeta({ middleware: 'auth', layout: 'default' })
 
 const { $api } = useNuxtApp()
+const { track } = useAmplitude()
 const inputRef = ref<HTMLInputElement | null>(null)
 const searchQuery = ref('')
 
@@ -118,6 +119,7 @@ const tagColors = [
 ]
 
 onMounted(async () => {
+  track('retrospect_search_viewed')
   const saved = localStorage.getItem(RECENT_KEY)
   recentSearches.value = saved ? JSON.parse(saved) : []
   nextTick(() => inputRef.value?.focus())
@@ -147,6 +149,7 @@ function onEnter(event: KeyboardEvent) {
 }
 
 function goSearch(keyword: string) {
+  track('retrospect_searched', { keyword })
   saveRecent(keyword)
   navigateTo(`/retrospects?keyword=${encodeURIComponent(keyword)}`)
 }

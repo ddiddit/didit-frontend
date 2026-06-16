@@ -123,6 +123,7 @@ import type { JobType } from '~/types/api'
 definePageMeta({ middleware: 'auth', layout: 'default' })
 
 const { profile, load: loadProfile } = useProfile()
+const { track } = useAmplitude()
 
 const jobLabels: Record<JobType, string> = {
   PLANNER: '기획자',
@@ -145,6 +146,7 @@ const acquiredBadges = computed(() =>
 )
 
 onMounted(() => {
+  track('my_page_viewed')
   loadProfile()
   loadBadges()
 })

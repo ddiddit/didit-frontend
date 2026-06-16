@@ -137,6 +137,7 @@ import type { BadgeView } from '~/composables/useBadges'
 definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
 const { badges, recentBadge, load } = useBadges()
+const { track } = useAmplitude()
 
 const selected = ref<BadgeView | null>(null)
 
@@ -182,6 +183,7 @@ function onSheetTransitionEnd(e: TransitionEvent) {
 }
 
 function openSheet(badge: BadgeView) {
+  track('badge_detail_viewed', { badge_name: badge.name, badge_code: badge.code, is_acquired: badge.acquired })
   dragY.value = 0
   selected.value = badge
 }
@@ -200,6 +202,7 @@ function formatAcquiredDate(date: string | null): string {
 }
 
 onMounted(() => {
+  track('badge_list_viewed')
   load()
 })
 </script>

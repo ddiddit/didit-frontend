@@ -134,6 +134,7 @@ definePageMeta({ middleware: 'auth', layout: false })
 
 const { $api } = useNuxtApp()
 const router = useRouter()
+const { track } = useAmplitude()
 
 interface LocalProject {
   id?: string
@@ -195,6 +196,7 @@ const hasNewProjects = computed(() =>
 )
 
 onMounted(async () => {
+  track('project_list_viewed')
   isLoading.value = true
   try {
     const res = await $api.get<ApiResponse<Project[]>>('/api/v1/projects')
@@ -271,7 +273,9 @@ async function doDelete() {
   if (!pendingDelete.value?.id || isDeleting.value) return
   isDeleting.value = true
   try {
+    const deletedName = pendingDelete.value.name
     await $api.delete(`/api/v1/projects/${pendingDelete.value.id}`)
+    track('project_deleted', { project_name: deletedName })
     const deletedId = pendingDelete.value.id
     localProjects.value = localProjects.value.filter(p => p.id !== deletedId)
     projects.value = projects.value.filter(p => p.id !== deletedId)
@@ -290,6 +294,7 @@ async function saveProjects() {
     for (const p of newOnes) {
       await $api.post('/api/v1/projects', { name: p.name.trim() })
     }
+    track('project_created', { count: newOnes.length })
     const res = await $api.get<ApiResponse<Project[]>>('/api/v1/projects')
     projects.value = res.data.data
     router.back()

@@ -72,6 +72,7 @@ import type { ApiResponse, NotificationHistory } from '~/types/api'
 definePageMeta({ middleware: 'auth', layout: 'default' })
 
 const { $api } = useNuxtApp()
+const { track } = useAmplitude()
 
 const isLoading = ref(true)
 const notifications = ref<NotificationHistory[]>([])
@@ -79,6 +80,7 @@ const notifications = ref<NotificationHistory[]>([])
 const hasUnread = computed(() => notifications.value.some(n => !n.isRead))
 
 onMounted(async () => {
+  track('notification_center_viewed')
   try {
     const res = await $api.get<ApiResponse<NotificationHistory[]>>('/api/v1/notification-histories')
     notifications.value = res.data.data
@@ -91,6 +93,7 @@ onMounted(async () => {
 
 // 알림 항목 클릭: 읽음 처리 + 문의 답변 알림이면 문의내역으로 이동
 function onNotificationClick(item: NotificationHistory) {
+  track('notification_clicked', { type: item.type })
   markRead(item)
   if (item.type === 'INQUIRY_ANSWERED') {
     navigateTo('/my/inquiry?from=notification')

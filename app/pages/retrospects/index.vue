@@ -257,6 +257,7 @@ definePageMeta({ middleware: 'auth', layout: 'default' })
 
 const { $api } = useNuxtApp()
 const route = useRoute()
+const { track } = useAmplitude()
 
 // 페이지 재방문 시 깜빡임 없도록 SPA 전체에서 상태 유지
 const retrospects = useState<Retrospective[]>('retrospects:list', () => [])
@@ -290,6 +291,7 @@ function updateChipOverflow() {
 watch(projects, () => nextTick(updateChipOverflow))
 
 onMounted(() => {
+  track('retrospect_list_viewed')
   if (projects.value.length === 0) fetchProjects()
   nextTick(updateChipOverflow)
   window.addEventListener('resize', updateChipOverflow)
