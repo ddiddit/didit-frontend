@@ -5,7 +5,6 @@ export function useAmplitude() {
     amplitude.track(eventName, properties)
   }
 
-  // 로그인 후 유저 식별 (JWT sub 클레임 파싱)
   function identify(accessToken: string, extraProps?: Record<string, unknown>) {
     try {
       const payload = JSON.parse(atob(accessToken.split('.')[1]))
@@ -15,16 +14,14 @@ export function useAmplitude() {
       // JWT 파싱 실패 시 익명 세션 유지
     }
 
-    if (extraProps) {
-      const identifyObj = new amplitude.Identify()
-      Object.entries(extraProps).forEach(([key, value]) => {
-        identifyObj.set(key, value as amplitude.Types.ValidPropertyType)
-      })
-      amplitude.identify(identifyObj)
-    }
+    if (!extraProps) return
+    const identifyObj = new amplitude.Identify()
+    Object.entries(extraProps).forEach(([key, value]) => {
+      identifyObj.set(key, value as amplitude.Types.ValidPropertyType)
+    })
+    amplitude.identify(identifyObj)
   }
 
-  // 로그아웃 시 세션 초기화
   function reset() {
     amplitude.reset()
   }
