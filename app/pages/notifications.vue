@@ -85,13 +85,11 @@ onMounted(async () => {
     const res = await $api.get<ApiResponse<NotificationHistory[]>>('/api/v1/notification-histories')
     notifications.value = res.data.data
   } catch {
-    // 오류 처리
   } finally {
     isLoading.value = false
   }
 })
 
-// 알림 항목 클릭: 읽음 처리 + 문의 답변 알림이면 문의내역으로 이동
 function onNotificationClick(item: NotificationHistory) {
   track('notification_clicked', { type: item.type })
   markRead(item)
@@ -100,10 +98,9 @@ function onNotificationClick(item: NotificationHistory) {
   }
 }
 
-// 개별 읽음 처리
 async function markRead(item: NotificationHistory) {
   if (item.isRead) return
-  item.isRead = true // 낙관적 업데이트
+  item.isRead = true
   try {
     await $api.put(`/api/v1/notification-histories/${item.id}/read`)
   } catch {
@@ -116,7 +113,6 @@ async function markAllRead() {
     await $api.put('/api/v1/notification-histories/read')
     notifications.value = notifications.value.map(n => ({ ...n, isRead: true }))
   } catch {
-    // 오류 처리
   }
 }
 

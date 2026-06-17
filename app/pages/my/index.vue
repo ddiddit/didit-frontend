@@ -133,7 +133,6 @@ const jobLabels: Record<JobType, string> = {
 
 const jobLabel = computed(() => (profile.value?.job ? jobLabels[profile.value.job] : ''))
 
-// 획득 배지 (목표 달성 배지 카드 미리보기용, 최근 획득순)
 const { badges, load: loadBadges } = useBadges()
 const acquiredBadges = computed(() =>
   badges.value
