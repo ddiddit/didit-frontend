@@ -115,9 +115,9 @@
     <!-- ── STEP 3: 추가 정보 ── -->
     <template v-else-if="step === 3">
       <div class="flex-1 px-5 overflow-y-auto scrollbar-hide flex flex-col gap-7 pt-7">
-        <!-- 나이대 -->
+        <!-- 나이 -->
         <div>
-          <label class="text-label1 font-medium text-grey-13 mb-3 block">나이대</label>
+          <label class="text-label1 font-medium text-grey-13 mb-3 block">나이</label>
           <div class="grid grid-cols-3 gap-[10px]">
             <UiButton
               v-for="age in ages"
