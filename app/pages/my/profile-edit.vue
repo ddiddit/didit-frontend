@@ -48,9 +48,9 @@
         </div>
       </div>
 
-      <!-- 나이대 -->
+      <!-- 나이 -->
       <div>
-        <label class="text-label1 font-medium text-grey-13 mb-3 block">나이대</label>
+        <label class="text-label1 font-medium text-grey-13 mb-3 block">나이</label>
         <div class="grid grid-cols-3 gap-[10px]">
           <UiButton
             v-for="age in ages"
