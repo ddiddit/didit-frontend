@@ -154,7 +154,6 @@ function goSearch(keyword: string) {
   navigateTo(`/retrospects?keyword=${encodeURIComponent(keyword)}`)
 }
 
-// 태그 클릭은 최근 검색어에 추가하지 않음
 function goSearchByTag(tagName: string) {
   navigateTo(`/retrospects?keyword=${encodeURIComponent(tagName)}`)
 }

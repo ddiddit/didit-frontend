@@ -141,7 +141,6 @@ const { track } = useAmplitude()
 
 const selected = ref<BadgeView | null>(null)
 
-// 드래그해서 닫기
 const dragY = ref(0)
 const dragging = ref(false)
 let dragStartY = 0
