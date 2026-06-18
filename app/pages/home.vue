@@ -118,7 +118,8 @@ const { track } = useAmplitude()
 const nickname = useState<string>('home:nickname', () => '')
 const recentRetrospectives = useState<HomeResponse['recentRetrospectives']>('home:retrospectives', () => [])
 const todayRetrospectiveCount = useState<number>('home:todayCount', () => 0)
-const hasUnread = ref(false)
+// 알림 미읽음 여부는 알림 페이지와 상태를 공유 (읽음 처리 시 벨 아이콘 즉시 갱신)
+const hasUnread = useState<boolean>('notifications:hasUnread', () => false)
 
 // 캐시된 데이터가 있으면 로딩 스켈레톤 생략
 const isLoading = ref(nickname.value === '')

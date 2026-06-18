@@ -79,6 +79,10 @@ const notifications = ref<NotificationHistory[]>([])
 
 const hasUnread = computed(() => notifications.value.some(n => !n.isRead))
 
+// 홈 벨 아이콘과 공유하는 미읽음 상태 — 읽음 처리 시 즉시 홈에 반영
+const unreadFlag = useState<boolean>('notifications:hasUnread', () => false)
+watch(hasUnread, value => { unreadFlag.value = value })
+
 onMounted(async () => {
   track('notification_center_viewed')
   try {
