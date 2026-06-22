@@ -30,6 +30,12 @@ override fun findUnnotified(userId: UUID): List<BadgeResponse> { ... }
 수정: daily 응답 DTO에 `projectName: String?`, `tags: List<TagListResponse>` 추가(v2 리스트와 동일하게).
 > 프론트 임시 보강: daily 항목을 이미 로드된 v2 리스트 데이터와 id 매칭해 프로젝트명·태그를 채워 표시 중. 백엔드가 daily에 두 필드를 내려주면 매칭 의존 없이도 동작하며, 보강 로직은 무해(응답 우선).
 
+### A-3. "10회 기록" 배지(TOTAL_10) 조건 미구현 → 영원히 잠금
+배지 카탈로그의 `record-10`(10회 기록)에 대응하는 `conditionType`이 백엔드에 없음(`TOTAL_30`만 존재). 회고를 10개 이상 저장해도 이 배지는 **절대 획득 불가**(항상 잠금).
+- 프론트는 conditionType 없는 배지를 항상 잠금 처리하므로, 백엔드에 조건이 없으면 화면상 영구 잠금.
+
+수정: `TOTAL_10` 조건을 추가하고 `/api/v1/badges`·`/api/v1/badges/popup` 응답에 포함.
+
 ---
 
 ## B. 안정성 / 정합성 (권장)
@@ -77,9 +83,21 @@ override fun findUnnotified(userId: UUID): List<BadgeResponse> { ... }
 
 수정: `setProperty("code", errorCode.name)` 으로 변경(또는 별도 식별 코드 필드 추가). 그러면 프론트가 코드 기반 분기/문구 처리 가능.
 
+### C-2. 배지 진행 카운트(현재/목표) 미제공
+`/api/v1/badges` 응답에 countable 배지(10회/30회)의 **현재 진행 수가 없음**. 프론트가 진행도 표기를 위해 `/api/v2/retrospectives`를 따로 받아 완료 회고 수를 세고 있음(배지 화면 진입 시 추가 호출 1회).
+- 응답에 `current`/`progress` 같은 카운트가 있으면 프론트의 추가 조회를 제거해 최적화 가능.
+
+수정(선택): countable 배지 응답에 진행 수 포함.
+
+### C-3. 음성 업로드 포맷에 webm 미허용
+`/answers/voice`, `/answers/voice/transcribe`가 wav/m4a/mp3/aac/ac3/ogg/flac만 허용 → 웹 `MediaRecorder` 기본 출력(webm/opus, 특히 크롬)을 거부(`지원하지 않는 음성 파일 형식입니다.` 400).
+- 프론트 임시 대응: 업로드 전 Web Audio API로 wav 변환(네이티브 m4a는 변환 없이 그대로).
+
+수정(선택): webm/opus도 허용하면 프론트 변환 없이 원본 업로드 가능(변환 비용·품질 손실 제거). 필수는 아님 — 음성은 본래 네이티브 전용.
+
 ---
 
 ## 우선순위 요약
-- **즉시(P0)**: A-1(배지), A-2(캘린더 daily projectName/tags) — 구현된 화면 데이터/동작 직접 영향
-- **권장(P1)**: B-1(직렬화 손실), B-2(심화질문 중복)
-- **검토(P2)**: B-3, B-4, C-1
+- **즉시(P0)**: A-1(배지 팝업 중복), A-2(캘린더 daily projectName/tags), A-3(10회 배지 조건 미구현) — 구현된 화면 데이터/동작 직접 영향
+- **권장(P1)**: B-1(직렬화 손실), B-2(심화질문 중복), B-5(home 닉네임 stale)
+- **검토(P2)**: B-3, B-4, C-1, C-2(배지 카운트), C-3(음성 webm)
