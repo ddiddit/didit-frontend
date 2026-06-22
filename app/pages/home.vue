@@ -52,16 +52,51 @@
       </button>
     </div>
 
-    <!-- 회고 있음: 나의 최근 회고 목록 -->
+    <!-- 회고 있음: 최근 제안 받은 피드백 슬라이더 + 나의 최근 회고 -->
     <div
       v-else-if="!isLoading && recentRetrospectives.length > 0"
-      class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pt-4 pb-24"
+      class="flex-1 min-h-0 overflow-y-auto scrollbar-hide pt-4 pb-24"
     >
-      <div class="flex flex-col gap-[14px]">
+      <!-- 최근 제안 받은 피드백 (회고 요약, 최대 3, 스와이프) -->
+      <div v-if="topFeedbacks.length > 0" class="flex flex-col gap-[14px] px-5 mb-[30px]">
+        <p class="text-body2 font-semibold text-grey-9">최근 제안 받은 피드백</p>
+        <div>
+          <div
+            ref="feedbackSlider"
+            class="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+            @scroll="onFeedbackScroll"
+          >
+            <button
+              v-for="r in topFeedbacks"
+              :key="r.id"
+              class="snap-start shrink-0 w-[340px] bg-white rounded-2xl px-[22px] py-5 flex flex-col gap-3 text-left"
+              @click="navigateTo(`/retrospects/${r.id}`)"
+            >
+              <p class="text-body1 font-semibold text-grey-13 line-clamp-1">{{ r.title }}</p>
+              <div class="flex gap-[14px]">
+                <div class="w-1 self-stretch rounded bg-grey-4 shrink-0" />
+                <p class="flex-1 text-body3-reading text-grey-13 line-clamp-5 whitespace-pre-line">{{ r.summary }}</p>
+              </div>
+            </button>
+          </div>
+          <!-- dots -->
+          <div v-if="topFeedbacks.length > 1" class="flex justify-center gap-[10px] pt-[22px]">
+            <span
+              v-for="(_, i) in topFeedbacks"
+              :key="i"
+              class="w-2 h-2 rounded-full transition-colors"
+              :class="i === activeFeedback ? 'bg-grey-13' : 'bg-grey-5'"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- 나의 최근 회고 (프로젝트명·날짜·제목) -->
+      <div class="flex flex-col gap-[14px] px-5">
         <p class="text-body2 font-semibold text-grey-9">나의 최근 회고</p>
         <div class="flex flex-col gap-3">
           <button
-            v-for="r in recentRetrospectives"
+            v-for="r in recentList"
             :key="r.id"
             class="bg-white rounded-2xl text-left"
             style="padding: 22px 22px 20px"
@@ -160,6 +195,18 @@ const greetingMessage = computed(() =>
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr)
   return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
+}
+
+// 최근 회고 최대 3개 — 피드백 슬라이더(요약 있는 것)와 최근 회고 리스트에 사용
+const topFeedbacks = computed(() => recentRetrospectives.value.filter((r) => r.summary).slice(0, 3))
+const recentList = computed(() => recentRetrospectives.value.slice(0, 3))
+
+const feedbackSlider = ref<HTMLElement | null>(null)
+const activeFeedback = ref(0)
+function onFeedbackScroll() {
+  const el = feedbackSlider.value
+  if (!el) return
+  activeFeedback.value = Math.round(el.scrollLeft / 352) // 카드 w-340 + gap-3
 }
 
 onMounted(async () => {

@@ -19,7 +19,8 @@
             @mousedown="onDown"
             @touchstart.passive="onDown"
           />
-          <div class="w-[50px] h-1 rounded-[5px] bg-grey-5" />
+          <!-- 핸들 pill (absolute라 레이아웃 차지 안 함) -->
+          <div class="absolute top-[10px] left-1/2 -translate-x-1/2 w-[50px] h-1 rounded-[5px] bg-grey-5" />
           <slot />
         </div>
       </div>
