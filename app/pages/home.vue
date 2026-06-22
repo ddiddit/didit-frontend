@@ -52,9 +52,35 @@
       </button>
     </div>
 
-    <!-- 회고 있음 (추후 구현) -->
-    <div v-else-if="!isLoading && recentRetrospectives.length > 0" class="flex-1 px-5 pt-4">
-      <!-- TODO: 회고 카드 목록 -->
+    <!-- 회고 있음: 나의 최근 회고 목록 -->
+    <div
+      v-else-if="!isLoading && recentRetrospectives.length > 0"
+      class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pt-4 pb-24"
+    >
+      <div class="flex flex-col gap-[14px]">
+        <p class="text-body2 font-semibold text-grey-9">나의 최근 회고</p>
+        <div class="flex flex-col gap-3">
+          <button
+            v-for="r in recentRetrospectives"
+            :key="r.id"
+            class="bg-white rounded-2xl text-left"
+            style="padding: 22px 22px 20px"
+            @click="navigateTo(`/retrospects/${r.id}`)"
+          >
+            <div class="flex flex-col gap-[10px]">
+              <div class="flex flex-col gap-[2px]">
+                <span v-if="r.completedAt" class="text-caption1 font-medium text-grey-7">
+                  {{ formatDate(r.completedAt) }}
+                </span>
+                <p class="text-body2 font-semibold text-grey-13">{{ r.title }}</p>
+              </div>
+              <p v-if="r.summary" class="text-label1 font-normal text-grey-10 leading-[1.6] line-clamp-3">
+                {{ r.summary }}
+              </p>
+            </div>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- FAB + 툴팁: 회고 있을 때만 표시 -->
@@ -128,8 +154,13 @@ const remaining = computed(() => Math.max(0, maxDaily - todayRetrospectiveCount.
 const isCompleted = computed(() => remaining.value === 0)
 
 const greetingMessage = computed(() =>
-  recentRetrospectives.value.length === 0 ? '첫 회고를 시작해볼까요?' : '오늘도 성장하는 하루 보내세요!',
+  recentRetrospectives.value.length === 0 ? '첫 회고를 시작해볼까요?' : '오늘 어떤 일을 하셨나요?',
 )
+
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr)
+  return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
+}
 
 onMounted(async () => {
   track('home_viewed')

@@ -84,37 +84,30 @@
     />
 
     <!-- 회고 제목 수정 바텀시트 (figma 30659/30701) -->
-    <Teleport to="#app-container">
-      <div v-if="editingTitle" class="absolute inset-0 z-40 bg-black/40" @click="editingTitle = false" />
-      <div v-if="editingTitle" class="absolute left-5 right-5 z-50" style="bottom: 30px">
-        <div class="relative bg-grey-1 rounded-[36px] flex flex-col items-center gap-6 pt-8 pb-5 px-5">
-          <!-- 드래그 핸들 -->
-          <div class="absolute top-[10px] left-1/2 -translate-x-1/2 w-[50px] h-1 rounded-[5px] bg-grey-5" />
-          <p class="text-body1 font-semibold text-grey-13 text-center">회고 제목 수정</p>
-          <div class="w-full flex flex-col gap-10">
-            <!-- 입력 + 카운터 -->
-            <div class="flex items-center justify-between gap-2 bg-grey-3 rounded-xl h-14 p-4">
-              <input
-                v-model="editTitle"
-                maxlength="25"
-                placeholder="회고 제목을 입력하세요"
-                class="flex-1 min-w-0 bg-transparent outline-none text-body3 font-medium text-grey-13 placeholder:text-grey-7"
-              />
-              <span class="text-caption2 font-medium text-grey-7 shrink-0">{{ editTitle.length }}/25</span>
-            </div>
-            <!-- 저장 -->
-            <button
-              class="w-full h-[60px] rounded-xl text-body2 font-semibold transition-colors"
-              :class="canSaveTitle ? 'bg-primary text-grey-13' : 'bg-grey-5 text-grey-6'"
-              :disabled="!canSaveTitle || isSavingTitle"
-              @click="saveTitle"
-            >
-              저장
-            </button>
-          </div>
+    <UiBottomSheet v-model="editingTitle">
+      <p class="text-body1 font-semibold text-grey-13 text-center">회고 제목 수정</p>
+      <div class="w-full flex flex-col gap-10">
+        <!-- 입력 + 카운터 -->
+        <div class="flex items-center justify-between gap-2 bg-grey-3 rounded-xl h-14 p-4">
+          <input
+            v-model="editTitle"
+            maxlength="25"
+            placeholder="회고 제목을 입력하세요"
+            class="flex-1 min-w-0 bg-transparent outline-none text-body3 font-medium text-grey-13 placeholder:text-grey-7"
+          />
+          <span class="text-caption2 font-medium text-grey-7 shrink-0">{{ editTitle.length }}/25</span>
         </div>
+        <!-- 저장 -->
+        <button
+          class="w-full h-[60px] rounded-xl text-body2 font-semibold transition-colors"
+          :class="canSaveTitle ? 'bg-primary text-grey-13' : 'bg-grey-5 text-grey-6'"
+          :disabled="!canSaveTitle || isSavingTitle"
+          @click="saveTitle"
+        >
+          저장
+        </button>
       </div>
-    </Teleport>
+    </UiBottomSheet>
   </div>
 </template>
 
