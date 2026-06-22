@@ -259,7 +259,7 @@ const lastDeepId = ref<number | null>(null) // 마지막 심화질문 메시지 
 const showExitPopup = ref(false)
 const showRestartPopup = ref(false)
 
-// 음성 입력(STT, 네이티브 전용)
+// 음성 입력(STT) — 웹·네이티브 모두 지원
 const showMicPopup = ref(false) // 마이크 권한 안내 팝업 (CHAT_001)
 const micExplained = ref(false) // 안내 팝업을 이미 거쳤는지
 const showRecorder = ref(false) // 녹음 레코더 노출
@@ -278,7 +278,11 @@ const nextId = () => ++uid
 
 // 답변을 1회라도 전송했는지 — 회고 횟수 차감/팝업 문구 분기 (CHAT_008/009)
 const hasAnswered = computed(() => messages.value.some((m) => m.role === 'user'))
-const showVoice = computed(() => isNative.value && inputText.value.trim().length === 0)
+// 음성 입력(STT)은 웹·네이티브 모두 노출. getUserMedia 미지원(비보안 컨텍스트 등)이면 숨김.
+const voiceSupported = computed(
+  () => isNative.value || (import.meta.client && !!navigator.mediaDevices?.getUserMedia),
+)
+const showVoice = computed(() => voiceSupported.value && inputText.value.trim().length === 0)
 const exitDescription = computed(() =>
   hasAnswered.value
     ? '지금까지 작성한 내용은 저장되지 않으며, 오늘 회고 횟수 1회가 차감돼요.'
