@@ -72,12 +72,25 @@ export function useBadges() {
   const badges = ref<BadgeView[]>(buildDefault())
   const loaded = ref(false)
 
+  // countable 배지(10회/30회) 진행 표기용 — 백엔드 배지 응답엔 카운트가 없어 완료 회고 수를 직접 센다.
+  async function fetchRetroCount(): Promise<number> {
+    try {
+      const res = await $api.get<ApiResponse<{ completedAt: string | null }[]>>('/api/v2/retrospectives')
+      return (res.data.data ?? []).filter((r) => r.completedAt).length
+    } catch {
+      return 0
+    }
+  }
+
   async function load() {
     try {
-      const res = await $api.get<ApiResponse<BadgeApiItem[]>>('/api/v1/badges')
+      const [badgeRes, retroCount] = await Promise.all([
+        $api.get<ApiResponse<BadgeApiItem[]>>('/api/v1/badges'),
+        fetchRetroCount(),
+      ])
       // 백엔드는 conditionType으로 식별
       const byCondition = new Map<string, BadgeApiItem>()
-      for (const item of res.data.data ?? []) {
+      for (const item of badgeRes.data.data ?? []) {
         if (item.conditionType) byCondition.set(item.conditionType, item)
       }
       badges.value = BADGE_CATALOG.map((def) => {
@@ -87,7 +100,8 @@ export function useBadges() {
           image: `/badges/${def.code}.svg`,
           acquired: api?.acquired ?? false,
           acquiredAt: api?.acquiredAt ?? null,
-          current: 0,
+          // 회고 수 기준 배지만 진행 카운트 표기 (목표 초과 시 목표값으로 캡)
+          current: def.countable ? Math.min(retroCount, def.goal ?? retroCount) : 0,
         }
       })
     } catch {
