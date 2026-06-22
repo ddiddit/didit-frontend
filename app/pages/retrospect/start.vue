@@ -21,7 +21,7 @@
           <!-- 디닷 질문 -->
           <div
             v-if="msg.role === 'didit'"
-            class="flex flex-col gap-2 items-start w-[280px]"
+            class="chat-in flex flex-col gap-2 items-start w-[280px]"
             :class="{ 'mt-5': i > 0 }"
           >
             <!-- Question N/4 -->
@@ -50,13 +50,13 @@
           </div>
 
           <!-- 심화질문 생성 중 (버블 아님: 초록 스피너 + 텍스트, figma 24371) -->
-          <div v-else-if="msg.role === 'generating'" class="flex items-center gap-[10px] mt-5">
+          <div v-else-if="msg.role === 'generating'" class="chat-in flex items-center gap-[10px] mt-5">
             <span class="spinner shrink-0" />
             <span class="text-label1 font-medium text-grey-13">심화 질문을 생성 중이에요...</span>
           </div>
 
           <!-- 사용자 답변 -->
-          <div v-else class="flex flex-col items-end mt-3.5">
+          <div v-else class="chat-in flex flex-col items-end mt-3.5">
             <div class="bg-grey-12 rounded-3xl px-5 py-3.5 w-[280px]">
               <p
                 class="text-body3 text-grey-1 whitespace-pre-line"
@@ -297,7 +297,8 @@ function pushQuestion(type: QuestionType | null, content: string, skippable = fa
   messages.value.push(msg)
   if (skippable) lastDeepId.value = id
   scrollToBottom()
-  typeQuestion(msg)
+  // 반응형 배열의 프록시를 변경해야 글자 단위 타이핑이 화면에 반영됨 (raw msg 변경은 미반영 → 전체가 한 번에 뜨던 버그)
+  typeQuestion(messages.value[messages.value.length - 1] as DiditMessage)
 }
 
 // 질문 본문을 한 글자씩 타이핑 → 완료 후 가이드/스킵 노출. 타이핑 중 입력 잠금. (CHAT_001)
@@ -516,6 +517,21 @@ onMounted(() => {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* 채팅 메시지 등장: 아래에서 위로 + 페이드인 */
+.chat-in {
+  animation: chatIn 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes chatIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 </style>
