@@ -97,6 +97,34 @@ export function useBadges() {
     }
   }
 
+  // BadgeApiItem → BadgeView (카탈로그 정의와 매칭, 미정의 conditionType은 제외)
+  function mapToView(item: BadgeApiItem): BadgeView | null {
+    const def = BADGE_CATALOG.find((d) => d.conditionType && d.conditionType === item.conditionType)
+    if (!def) return null
+    return {
+      ...def,
+      image: `/badges/${def.code}.svg`,
+      acquired: true,
+      acquiredAt: item.acquiredAt,
+      current: 0,
+    }
+  }
+
+  // 아직 안 보여준 신규 획득 배지 조회 (GET /badges/popup). 배지 적립은 비동기라 1회 재시도.
+  async function fetchUnnotified(): Promise<BadgeView[]> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await $api.get<ApiResponse<BadgeApiItem[]>>('/api/v1/badges/popup')
+        const views = (res.data.data ?? []).map(mapToView).filter((b): b is BadgeView => b !== null)
+        if (views.length) return views
+      } catch {
+        return []
+      }
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 1000))
+    }
+    return []
+  }
+
   // 최근 획득 배지 (acquiredAt 최신순 첫 번째)
   const recentBadge = computed<BadgeView | null>(() => {
     const acquired = badges.value.filter(b => b.acquired)
@@ -109,5 +137,5 @@ export function useBadges() {
     return sorted[0] ?? null
   })
 
-  return { badges, recentBadge, loaded, load }
+  return { badges, recentBadge, loaded, load, fetchUnnotified }
 }
