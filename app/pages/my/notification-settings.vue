@@ -157,6 +157,7 @@ definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
 
 const { $api } = useNuxtApp()
+const push = usePushNotifications()
 
 const isLoading = ref(true)
 const marketingAgreed = ref(false)
@@ -350,6 +351,12 @@ async function toggleEnabled(val: boolean) {
       enabled: val,
       reminderTime: reminderTime.value,
     })
+    // 켤 때: 브라우저 알림 권한 요청 + FCM 토큰 발급·등록 / 끌 때: 토큰 해제(베스트에포트)
+    if (val) {
+      await push.register()
+    } else {
+      await $api.delete('/api/v1/device-tokens', { params: { deviceType: 'WEB' } }).catch(() => {})
+    }
   } catch { enabled.value = prev }
 }
 </script>

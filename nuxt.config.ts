@@ -4,6 +4,9 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
 
   vite: {
+    optimizeDeps: {
+      include: ['firebase/app', 'firebase/messaging'],
+    },
     server: {
       proxy: {
         '/api': {
@@ -33,6 +36,19 @@ export default defineNuxtConfig({
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID ?? '',
       appleClientId: process.env.NUXT_PUBLIC_APPLE_CLIENT_ID ?? '',
       amplitudeApiKey: process.env.NUXT_PUBLIC_AMPLITUDE_API_KEY ?? '',
+      // 웹 FCM (Firebase Cloud Messaging) — 웹 config/VAPID는 공개키라 커밋 무방(클라이언트 번들에 어차피 노출).
+      // env로 덮어쓸 수 있고, 없으면 아래 기본값(didit-bd2f1) 사용 → 배포 시 env 미설정이어도 동작.
+      firebase: {
+        apiKey: process.env.NUXT_PUBLIC_FIREBASE_API_KEY ?? 'AIzaSyASjnqAWkt2CSYxJ4V0SklyhqBsoCCCF-4',
+        authDomain: process.env.NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? 'didit-bd2f1.firebaseapp.com',
+        projectId: process.env.NUXT_PUBLIC_FIREBASE_PROJECT_ID ?? 'didit-bd2f1',
+        storageBucket: process.env.NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? 'didit-bd2f1.firebasestorage.app',
+        messagingSenderId: process.env.NUXT_PUBLIC_FIREBASE_SENDER_ID ?? '370858550739',
+        appId: process.env.NUXT_PUBLIC_FIREBASE_APP_ID ?? '1:370858550739:web:d89f5c9a7cc098147abb26',
+        vapidKey:
+          process.env.NUXT_PUBLIC_FIREBASE_VAPID_KEY ??
+          'BO1LKIuToukD0zFBbpmUVFKiCdBj8dzQNkDPIUSlIwPCWrkiJS5ssG5SyrldjRm6yJe4yIizKSdlAmjKmnCh5nY',
+      },
     },
   },
 
