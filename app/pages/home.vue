@@ -14,8 +14,8 @@
       </button>
     </header>
 
-    <!-- 인사말: 닉네임 + 문구 -->
-    <div class="px-5 shrink-0">
+    <!-- 인사말 (로딩/빈 상태에서만 고정; 회고 있으면 아래 스크롤 영역 안에 포함) -->
+    <div v-if="isLoading || recentRetrospectives.length === 0" class="px-5 shrink-0">
       <template v-if="isLoading">
         <span class="inline-block w-24 h-6 bg-grey-4 rounded animate-pulse mb-1 block" />
         <span class="inline-block w-52 h-6 bg-grey-4 rounded animate-pulse block" />
@@ -52,29 +52,37 @@
       </button>
     </div>
 
-    <!-- 회고 있음: 최근 제안 받은 피드백 슬라이더 + 나의 최근 회고 -->
+    <!-- 회고 있음: 인사말 + 피드백 슬라이더 + 나의 최근 회고 (전체 스크롤) -->
     <div
       v-else-if="!isLoading && recentRetrospectives.length > 0"
-      class="flex-1 min-h-0 overflow-y-auto scrollbar-hide pt-4 pb-24"
+      class="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-24"
     >
-      <!-- 최근 제안 받은 피드백 (회고 요약, 최대 3, 스와이프) -->
-      <div v-if="topFeedbacks.length > 0" class="flex flex-col gap-[14px] px-5 mb-[30px]">
-        <p class="text-body2 font-semibold text-grey-9">최근 제안 받은 피드백</p>
-        <div>
+      <!-- 인사말 (스크롤 영역 포함) -->
+      <h1 class="px-5 text-title3 font-semibold text-grey-13 leading-[1.4]">
+        {{ nickname }}님,<br />
+        {{ greetingMessage }}
+      </h1>
+
+      <!-- 최근 제안 받은 피드백 (회고 요약, 최대 3) — transform 캐러셀(모든 카드 좌측 정렬 + 우측 peek) -->
+      <div v-if="topFeedbacks.length > 0" class="mt-6 mb-[30px]">
+        <p class="px-5 text-body2 font-semibold text-grey-9 mb-[14px]">최근 제안 받은 피드백</p>
+        <div class="overflow-hidden">
           <div
-            ref="feedbackSlider"
-            class="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory cursor-grab active:cursor-grabbing select-none"
-            @scroll="onFeedbackScroll"
+            class="flex gap-3 pl-5 select-none cursor-grab active:cursor-grabbing"
+            :style="trackStyle"
             @mousedown="onSliderDown"
             @mousemove="onSliderMove"
             @mouseup="onSliderUp"
             @mouseleave="onSliderUp"
+            @touchstart.passive="onSliderDown"
+            @touchmove.passive="onSliderMove"
+            @touchend="onSliderUp"
           >
             <button
               v-for="r in topFeedbacks"
               :key="r.id"
-              class="snap-start shrink-0 w-[340px] bg-white rounded-2xl px-[22px] py-5 flex flex-col gap-3 text-left"
-              @click="!isDragging && navigateTo(`/retrospects/${r.id}`)"
+              class="shrink-0 w-[340px] bg-white rounded-2xl px-[22px] py-5 flex flex-col gap-3 text-left"
+              @click="!wasDrag && navigateTo(`/retrospects/${r.id}`)"
             >
               <p class="text-body1 font-semibold text-grey-13 line-clamp-1">{{ r.title }}</p>
               <div class="flex gap-[14px]">
@@ -83,17 +91,17 @@
               </div>
             </button>
           </div>
-          <!-- dots -->
-          <div v-if="topFeedbacks.length > 1" class="flex justify-center gap-[10px] pt-[22px]">
-            <button
-              v-for="(_, i) in topFeedbacks"
-              :key="i"
-              class="w-2 h-2 rounded-full transition-colors"
-              :class="i === activeFeedback ? 'bg-grey-13' : 'bg-grey-5'"
-              :aria-label="`피드백 ${i + 1}`"
-              @click="goFeedback(i)"
-            />
-          </div>
+        </div>
+        <!-- dots -->
+        <div v-if="topFeedbacks.length > 1" class="flex justify-center gap-[10px] pt-[22px]">
+          <button
+            v-for="(_, i) in topFeedbacks"
+            :key="i"
+            class="w-2 h-2 rounded-full transition-colors"
+            :class="i === activeFeedback ? 'bg-grey-13' : 'bg-grey-5'"
+            :aria-label="`피드백 ${i + 1}`"
+            @click="goFeedback(i)"
+          />
         </div>
       </div>
 
@@ -207,46 +215,49 @@ function formatDate(dateStr: string): string {
 const topFeedbacks = computed(() => recentRetrospectives.value.filter((r) => r.summary).slice(0, 3))
 const recentList = computed(() => recentRetrospectives.value.slice(0, 3))
 
-const feedbackSlider = ref<HTMLElement | null>(null)
-const activeFeedback = ref(0)
+// 피드백 캐러셀 (transform 방식 — 모든 카드 좌측 정렬 + 우측 peek, 마우스/터치 드래그)
 const STEP = 352 // 카드 w-340 + gap-3(12)
+const activeFeedback = ref(0)
+const dragOffset = ref(0)
+const dragging = ref(false)
+const wasDrag = ref(false) // 드래그였으면 카드 클릭(이동) 방지
+let startX = 0
 
-function onFeedbackScroll() {
-  const el = feedbackSlider.value
-  if (!el) return
-  activeFeedback.value = Math.round(el.scrollLeft / STEP)
-}
+const trackStyle = computed(() => ({
+  transform: `translateX(${-activeFeedback.value * STEP + dragOffset.value}px)`,
+  transition: dragging.value ? 'none' : 'transform 0.3s cubic-bezier(0.32,0.72,0,1)',
+}))
 
-// dot 클릭 → 해당 카드로 이동
-function goFeedback(i: number) {
-  feedbackSlider.value?.scrollTo({ left: i * STEP, behavior: 'smooth' })
+function pointerX(e: MouseEvent | TouchEvent): number {
+  return 'touches' in e ? (e.touches[0]?.clientX ?? 0) : e.clientX
 }
-
-// 마우스 드래그로 가로 스크롤 (데스크탑) — 드래그 시 카드 클릭(이동) 방지
-const isDragging = ref(false)
-let dragStartX = 0
-let scrollStartLeft = 0
-function onSliderDown(e: MouseEvent) {
-  isDragging.value = false
-  dragStartX = e.clientX
-  scrollStartLeft = feedbackSlider.value?.scrollLeft ?? 0
+function onSliderDown(e: MouseEvent | TouchEvent) {
+  dragging.value = true
+  wasDrag.value = false
+  startX = pointerX(e)
+  dragOffset.value = 0
 }
-function onSliderMove(e: MouseEvent) {
-  if (!(e.buttons & 1) || !feedbackSlider.value) return
-  const dx = e.clientX - dragStartX
-  if (Math.abs(dx) > 4) isDragging.value = true
-  feedbackSlider.value.scrollLeft = scrollStartLeft - dx
+function onSliderMove(e: MouseEvent | TouchEvent) {
+  if (!dragging.value) return
+  if ('buttons' in e && !(e.buttons & 1)) return
+  const dx = pointerX(e) - startX
+  if (Math.abs(dx) > 5) wasDrag.value = true
+  dragOffset.value = dx
 }
 function onSliderUp() {
-  const el = feedbackSlider.value
-  // 드래그로 움직였으면 가장 가까운 카드로 부드럽게 스냅 (CSS snap은 마우스 드래그엔 안 걸림)
-  if (isDragging.value && el) {
-    const idx = Math.round(el.scrollLeft / STEP)
-    el.scrollTo({ left: idx * STEP, behavior: 'smooth' })
-  }
+  if (!dragging.value) return
+  dragging.value = false
+  const moved = dragOffset.value
+  dragOffset.value = 0
+  const max = topFeedbacks.value.length - 1
+  if (moved < -60 && activeFeedback.value < max) activeFeedback.value++
+  else if (moved > 60 && activeFeedback.value > 0) activeFeedback.value--
   setTimeout(() => {
-    isDragging.value = false
+    wasDrag.value = false
   }, 0)
+}
+function goFeedback(i: number) {
+  activeFeedback.value = i
 }
 
 onMounted(async () => {

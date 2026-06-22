@@ -30,8 +30,11 @@
       </div>
     </div>
 
+    <!-- 헤더(검색·더보기)만 고정, 아래 전체(탭바·칩·콘텐츠)는 스크롤 -->
+    <div class="flex-1 min-h-0 overflow-y-auto scrollbar-hide">
+
     <!-- 탭 선택: 리스트 / 캘린더 -->
-    <div class="flex items-start gap-4 px-5 h-[55px] shrink-0">
+    <div class="flex items-start gap-4 px-5 h-[55px]">
       <button
         class="text-title3 transition-none"
         :class="activeTab === 'list' ? 'font-bold text-grey-12' : 'font-medium text-grey-6'"
@@ -44,8 +47,8 @@
       >캘린더</button>
     </div>
 
-    <!-- 프로젝트 필터 칩 (리스트 탭에서만 노출) -->
-    <div v-if="activeTab === 'list'" class="px-5 pb-3 shrink-0">
+    <!-- 프로젝트 필터 칩 (리스트 탭에서만 노출, 스크롤 영역 포함) -->
+    <div v-if="activeTab === 'list'" class="px-5 pb-3">
       <div class="relative flex items-center">
         <!-- 스크롤 가능한 칩 목록 -->
         <div
@@ -145,7 +148,7 @@
       <!-- 빈 상태 -->
       <div
         v-if="!isLoading && retrospects.length === 0"
-        class="flex-1 flex flex-col items-center justify-center gap-[6px]"
+        class="flex flex-col items-center justify-center gap-[6px] min-h-[55vh]"
       >
         <img src="/icons/empty-retrospects.svg" alt="" class="w-[70px] h-[70px] mb-[6px]" />
         <p class="text-heading2 font-semibold text-grey-13">
@@ -158,7 +161,7 @@
       </div>
 
       <!-- 목록 -->
-      <div v-else-if="!isLoading" class="flex-1 min-h-0 overflow-y-auto scrollbar-hide">
+      <div v-else-if="!isLoading">
         <ul class="flex flex-col px-5 py-3">
           <template v-for="group in groupedRetrospects" :key="group.label || 'this-week'">
             <!-- 주 단위 디바이더 (이번 주는 미표시) -->
@@ -207,7 +210,7 @@
 
     <!-- 캘린더 탭 -->
     <template v-else>
-      <div class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pb-6">
+      <div class="px-5 pb-6">
         <!-- 캘린더 섹션 ↔ 날짜별 목록: gap-40 -->
         <div class="flex flex-col gap-[40px]">
           <div class="flex flex-col items-center gap-5 w-full">
@@ -294,6 +297,9 @@
         </div>
       </div>
     </template>
+
+    </div>
+    <!-- /헤더 아래 스크롤 영역 -->
 
   </div>
 </template>
