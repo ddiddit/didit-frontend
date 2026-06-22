@@ -68,6 +68,7 @@
 
 <script setup lang="ts">
 import type { ApiResponse, NotificationHistory } from '~/types/api'
+import { parseServerDate } from '~/utils/date'
 
 definePageMeta({ middleware: 'auth', layout: 'default' })
 
@@ -122,7 +123,7 @@ async function markAllRead() {
 
 function formatTime(createdAt: string): string {
   const now = new Date()
-  const date = new Date(createdAt)
+  const date = parseServerDate(createdAt)
   const diff = now.getTime() - date.getTime()
   const minutes = Math.floor(diff / 60000)
   const hours = Math.floor(diff / 3600000)

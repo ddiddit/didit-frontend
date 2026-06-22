@@ -199,6 +199,7 @@
 <script setup lang="ts">
 import type { ApiResponse, HomeResponse, NotificationHistory } from '~/types/api'
 import { getTagColor } from '~/utils/tag-color'
+import { parseServerDate } from '~/utils/date'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -229,7 +230,7 @@ const greetingMessage = computed(() =>
 )
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr)
+  const d = parseServerDate(dateStr)
   return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
 }
 

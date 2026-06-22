@@ -119,6 +119,7 @@
 
 <script setup lang="ts">
 import type { JobType } from '~/types/api'
+import { parseServerDate } from '~/utils/date'
 
 definePageMeta({ middleware: 'auth', layout: 'default' })
 
@@ -138,8 +139,8 @@ const acquiredBadges = computed(() =>
   badges.value
     .filter(b => b.acquired)
     .sort((a, b) => {
-      const ta = a.acquiredAt ? new Date(a.acquiredAt).getTime() : 0
-      const tb = b.acquiredAt ? new Date(b.acquiredAt).getTime() : 0
+      const ta = a.acquiredAt ? parseServerDate(a.acquiredAt).getTime() : 0
+      const tb = b.acquiredAt ? parseServerDate(b.acquiredAt).getTime() : 0
       return tb - ta
     }),
 )

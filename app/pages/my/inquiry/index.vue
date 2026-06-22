@@ -159,6 +159,7 @@
 
 <script setup lang="ts">
 import type { ApiResponse } from '~/types/api'
+import { parseServerDate } from '~/utils/date'
 
 definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
@@ -269,7 +270,7 @@ interface InquiryListItem {
 
 // ISO 날짜 → YYYY.MM.DD
 function formatDate(iso: string): string {
-  const d = new Date(iso)
+  const d = parseServerDate(iso)
   if (Number.isNaN(d.getTime())) return iso
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
