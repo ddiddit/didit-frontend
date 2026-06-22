@@ -168,6 +168,34 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- 마이크 권한 안내 (CHAT_001 / figma 4374-17748) -->
+    <UiPopup
+      v-model="showMicPopup"
+      title="디딧(didit)이(가) 마이크에 접근하려고 합니다."
+      description="회고를 음성으로 기록하기 위해 마이크 접근 권한이 필요해요."
+      confirm-text="허용"
+      cancel-text="허용 안 함"
+      @confirm="onMicAllow"
+    />
+
+    <!-- 음성 레코더 (figma 2225-7905) -->
+    <RetrospectVoiceRecorder v-if="showRecorder" @done="onRecorderDone" @cancel="onRecorderCancel" />
+
+    <!-- 음성 → 텍스트 변환 중 (figma 2229-8319) -->
+    <Teleport to="#app-container">
+      <div v-if="isTranscribing" class="absolute inset-0 z-[70] bg-black/40 flex items-center justify-center px-10">
+        <div class="bg-grey-1 rounded-2xl w-full max-w-[300px] flex flex-col items-center gap-4 px-5 py-8">
+          <span class="spinner" />
+          <div class="flex flex-col items-center gap-1.5 text-center">
+            <p class="text-body1 font-semibold text-grey-13 leading-[1.4]">
+              {{ nickname || '회고' }}님의 음성 회고를<br />텍스트로 변환하고 있어요
+            </p>
+            <p class="text-label1 font-normal text-grey-8">잠시만 기다려 주세요!</p>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -212,6 +240,13 @@ const lastDeepId = ref<number | null>(null) // 마지막 심화질문 메시지 
 
 const showExitPopup = ref(false)
 const showRestartPopup = ref(false)
+
+// 음성 입력(STT, 네이티브 전용)
+const showMicPopup = ref(false) // 마이크 권한 안내 팝업 (CHAT_001)
+const micExplained = ref(false) // 안내 팝업을 이미 거쳤는지
+const showRecorder = ref(false) // 녹음 레코더 노출
+const isTranscribing = ref(false) // 음성 → 텍스트 변환 중
+const nickname = useState<string>('home:nickname', () => '')
 // 전체보기 모달: 답변과 그에 해당하는 질문을 함께 표시
 const fullView = ref<{ questionNo: number | null; question: string; answer: string } | null>(null)
 
@@ -446,9 +481,32 @@ function waitUntil(startedAt: number, minMs: number) {
   return remain > 0 ? delay(remain) : Promise.resolve()
 }
 
+// 음성 버튼 → (최초) 마이크 권한 안내 팝업 → 레코더
 function onVoice() {
-  // 녹음 기능은 앱 패키징 시 구현 예정
-  show('음성 입력은 앱에서 지원될 예정이에요.')
+  if (micExplained.value) showRecorder.value = true
+  else showMicPopup.value = true
+}
+function onMicAllow() {
+  micExplained.value = true
+  showMicPopup.value = false
+  showRecorder.value = true
+}
+// 녹음 완료 → 음성을 텍스트로 변환해 입력창에 채움(사용자가 검토 후 전송)
+async function onRecorderDone(blob: Blob) {
+  showRecorder.value = false
+  isTranscribing.value = true
+  try {
+    const text = await retro.transcribe(retrospectiveId.value, blob)
+    inputText.value = text
+    nextTick(autoGrow)
+  } catch {
+    show('음성 인식에 실패했어요. 텍스트로 입력해 주세요.')
+  } finally {
+    isTranscribing.value = false
+  }
+}
+function onRecorderCancel() {
+  showRecorder.value = false
 }
 
 function onBack() {
