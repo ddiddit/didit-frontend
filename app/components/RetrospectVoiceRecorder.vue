@@ -3,39 +3,41 @@
     <div class="absolute inset-0 z-[60] bg-black/40" @click="onCancel" />
     <!-- 레코더 카드 (figma 2225-7905) -->
     <div
-      class="absolute left-5 right-5 z-[60] bg-grey-1 rounded-[36px] flex flex-col items-center pt-3 pb-5"
+      class="absolute left-5 right-5 z-[60] bg-grey-1 rounded-[36px] flex flex-col items-center pt-3 pb-8"
       style="bottom: 30px"
     >
       <!-- 핸들 -->
       <div class="w-[50px] h-[5px] rounded-[5px] bg-grey-5" />
 
-      <!-- 타이머 -->
-      <div class="flex items-center gap-2 mt-[22px]">
+      <!-- 타이머: 빨간 점 + 시간 -->
+      <div class="flex items-center gap-2 mt-7">
         <span class="w-[6px] h-[6px] rounded-full" :class="isPaused ? 'bg-grey-6' : 'bg-accent'" />
-        <span class="text-body3 font-medium text-grey-8 w-16 text-center tabular-nums">{{ timeLabel }}</span>
+        <span class="text-[15px] font-medium leading-[1.5] tracking-[-0.3px] text-grey-8 w-16 text-center tabular-nums">
+          {{ timeLabel }}
+        </span>
       </div>
 
-      <!-- 파형 -->
-      <div class="w-full h-[110px] mt-3 flex items-center justify-center gap-[3px] px-6 overflow-hidden">
-        <span
-          v-for="(b, i) in bars"
-          :key="i"
-          class="w-[3px] rounded-full bg-primary shrink-0 transition-[height] duration-150"
-          :style="{ height: Math.max(6, b) + '%' }"
-        />
+      <!-- 파형: 중앙 점선 + 얇은 막대 (풀폭) -->
+      <div class="relative w-full h-[110px] mt-7 flex items-center overflow-hidden">
+        <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-dashed border-primary/40" />
+        <div class="relative flex-1 flex items-center justify-center gap-[2px] h-full px-1">
+          <span
+            v-for="(b, i) in bars"
+            :key="i"
+            class="w-[2px] rounded-full bg-primary shrink-0 transition-[height] duration-100"
+            :style="{ height: Math.max(4, b) + '%' }"
+          />
+        </div>
       </div>
-
-      <!-- 미리보기 모드 안내(개발 전용) -->
-      <p v-if="previewMode" class="text-caption1 text-grey-6 mt-1">미리보기 모드 (마이크 없이 UI만)</p>
 
       <!-- 버튼: 일시정지/재생 + 전송 -->
-      <div class="flex items-center gap-3 mt-2.5">
+      <div class="flex items-center gap-3 mt-[30px]">
         <button
           class="w-12 h-12 rounded-full bg-grey-3 flex items-center justify-center"
           :aria-label="isPaused ? '재생' : '일시정지'"
           @click="togglePause"
         >
-          <Icon :name="isPaused ? 'mingcute:play-fill' : 'mingcute:pause-fill'" class="w-5 h-5 text-grey-13" />
+          <Icon :name="isPaused ? 'mingcute:play-fill' : 'mingcute:pause-fill'" class="w-[15px] h-[15px] text-grey-13" />
         </button>
         <button
           class="w-12 h-12 rounded-3xl bg-grey-3 flex items-center justify-center"
@@ -45,6 +47,9 @@
           <Icon name="mingcute:send-fill" class="w-6 h-6 text-grey-13" />
         </button>
       </div>
+
+      <!-- 미리보기 모드 안내(마이크 없이 UI 확인) -->
+      <p v-if="previewMode" class="text-caption2 text-grey-6 mt-3">미리보기 모드 · 마이크 없이 UI만</p>
     </div>
   </Teleport>
 </template>
@@ -54,9 +59,9 @@ const emit = defineEmits<{ done: [blob: Blob]; cancel: [] }>()
 const { show } = useToast()
 const recorder = useVoiceRecorder()
 
-// 파형 막대 (녹음 중엔 좌→우로 흐르듯 갱신, 일시정지 시 정지)
-const BAR_COUNT = 56
-const bars = ref<number[]>(Array.from({ length: BAR_COUNT }, () => 12))
+// 파형 막대 (녹음 중엔 좌→우로 흐르듯 갱신, 일시정지 시 정지) — 얇고 촘촘하게
+const BAR_COUNT = 84
+const bars = ref<number[]>(Array.from({ length: BAR_COUNT }, () => 8))
 let waveTimer: ReturnType<typeof setInterval> | null = null
 
 // 마이크 없이 UI만 확인하는 미리보기(개발 전용)
@@ -78,8 +83,9 @@ const timeLabel = computed(() => {
 function startWave() {
   stopWave()
   waveTimer = setInterval(() => {
-    bars.value = [...bars.value.slice(1), 12 + Math.random() * 88]
-  }, 110)
+    // 대부분 낮고 가끔 솟는 자연스러운 파형
+    bars.value = [...bars.value.slice(1), 6 + Math.random() ** 2 * 92]
+  }, 90)
 }
 function stopWave() {
   if (waveTimer) {
