@@ -1,4 +1,5 @@
 import type { ApiResponse } from '~/types/api'
+import { parseServerDate } from '~/utils/date'
 
 // 백엔드 BadgeConditionType (대응되는 배지만 매핑)
 export type BadgeConditionType =
@@ -144,8 +145,8 @@ export function useBadges() {
     const acquired = badges.value.filter(b => b.acquired)
     if (acquired.length === 0) return null
     const sorted = [...acquired].sort((a, b) => {
-      const ta = a.acquiredAt ? new Date(a.acquiredAt).getTime() : 0
-      const tb = b.acquiredAt ? new Date(b.acquiredAt).getTime() : 0
+      const ta = a.acquiredAt ? parseServerDate(a.acquiredAt).getTime() : 0
+      const tb = b.acquiredAt ? parseServerDate(b.acquiredAt).getTime() : 0
       return tb - ta
     })
     return sorted[0] ?? null
