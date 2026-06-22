@@ -31,7 +31,7 @@
     </div>
 
     <!-- 헤더(검색·더보기)만 고정, 아래 전체(탭바·칩·콘텐츠)는 스크롤 -->
-    <div class="flex-1 min-h-0 overflow-y-auto scrollbar-hide">
+    <div class="flex-1 min-h-0 overflow-y-auto scrollbar-hide flex flex-col">
 
     <!-- 탭 선택: 리스트 / 캘린더 -->
     <div class="flex items-start gap-4 px-5 h-[55px]">
@@ -148,7 +148,7 @@
       <!-- 빈 상태 -->
       <div
         v-if="!isLoading && retrospects.length === 0"
-        class="flex flex-col items-center justify-center gap-[6px] min-h-[55vh]"
+        class="flex-1 flex flex-col items-center justify-center gap-[6px]"
       >
         <img src="/icons/empty-retrospects.svg" alt="" class="w-[70px] h-[70px] mb-[6px]" />
         <p class="text-heading2 font-semibold text-grey-13">
@@ -208,8 +208,8 @@
         <!-- 캘린더 섹션 ↔ 날짜별 목록: gap-40 -->
         <div class="flex flex-col gap-[40px]">
           <div class="flex flex-col items-center gap-5 w-full">
-            <!-- 주간 회고 메시지 (깃발 위 / 텍스트 아래, gap-8) -->
-            <div class="flex flex-col items-center gap-2">
+            <!-- 주간 회고 메시지 (깃발 위 / 텍스트 아래, gap-8) — 이번 주 회고가 1회 이상일 때만 노출 -->
+            <div v-if="weeklyCount > 0" class="flex flex-col items-center gap-2">
               <Icon name="material-symbols:flag-rounded" class="w-6 h-6 text-primary" />
               <span class="text-body1 font-semibold bg-gradient-to-r from-green-hover to-primary bg-clip-text text-transparent">
                 {{ weeklyMessage }}
@@ -252,7 +252,7 @@
                     <span
                       class="w-8 h-8 flex items-center justify-center rounded-full text-label1 transition-none"
                       :class="getCellClass(date)"
-                    ><span class="translate-x-[0.3px] translate-y-[0.5px]">{{ date }}</span></span>
+                    ><span class="translate-x-[0.3px] translate-y-[0.5px] mb-px mr-px">{{ date }}</span></span>
                     <span class="flex gap-[3px] h-[5px]">
                       <span v-for="i in dotCount(date)" :key="i" class="w-[5px] h-[5px] rounded-full bg-primary" />
                     </span>
@@ -275,12 +275,22 @@
                 style="padding: 22px 22px 20px;"
                 @click="navigateTo(`/retrospects/${r.id}`)"
               >
-                <div class="flex flex-col gap-2">
-                  <div class="flex flex-col gap-[2px]">
-                    <span v-if="r.completedAt" class="text-caption1 font-medium text-grey-7">{{ formatDate(r.completedAt) }}</span>
-                    <p class="text-body2 font-semibold text-grey-13">{{ r.title }}</p>
+                <div class="flex flex-col gap-[14px]">
+                  <!-- 메인 콘텐츠 -->
+                  <div class="flex flex-col gap-2">
+                    <div class="flex flex-col gap-[2px]">
+                      <!-- 프로젝트 (날짜는 상단 'N월 N일의 회고' 헤더와 중복이라 생략) -->
+                      <span v-if="r.projectName" class="text-caption1 font-medium text-grey-7">{{ r.projectName }}</span>
+                      <!-- 제목 -->
+                      <p class="text-body2 font-semibold text-grey-13">{{ r.title }}</p>
+                    </div>
+                    <!-- 요약 -->
+                    <p v-if="r.summary" class="text-label1 font-normal text-grey-10 leading-[1.6] line-clamp-2">{{ r.summary }}</p>
                   </div>
-                  <p v-if="r.summary" class="text-label1 font-normal text-grey-10 leading-[1.6] line-clamp-2">{{ r.summary }}</p>
+                  <!-- 태그 -->
+                  <div v-if="r.tags && r.tags.length > 0" class="flex flex-wrap gap-[6px]">
+                    <UiTag v-for="tag in r.tags" :key="tag.id" :color="getTagColor(tag.id)">#{{ tag.name }}</UiTag>
+                  </div>
                 </div>
               </li>
             </ul>
@@ -393,11 +403,17 @@ async function fetchRetrospects() {
     } else {
       const res = await $api.get<ApiResponse<Retrospective[]>>('/api/v2/retrospectives')
       list = res.data.data
-      // v2 목록은 keyword 미지원 → 검색어가 있으면 제목/요약에서 클라이언트 필터
-      if (keyword.value) {
-        const k = keyword.value.toLowerCase()
-        list = list.filter((r) => r.title?.toLowerCase().includes(k) || r.summary?.toLowerCase().includes(k))
-      }
+    }
+    // v2 목록은 keyword 미지원 → 검색어가 있으면 제목·요약·태그명·프로젝트명에서 클라이언트 필터.
+    // 프로젝트 선택 여부와 무관하게 동일하게 적용해 ALL/프로젝트 간 결과 불일치를 막는다.
+    if (keyword.value) {
+      const k = keyword.value.toLowerCase()
+      list = list.filter((r) =>
+        r.title?.toLowerCase().includes(k) ||
+        r.summary?.toLowerCase().includes(k) ||
+        r.projectName?.toLowerCase().includes(k) ||
+        r.tags?.some((t) => t.name.toLowerCase().includes(k)),
+      )
     }
     retrospects.value = list
   } catch {
@@ -502,7 +518,16 @@ async function fetchDaily(date: number) {
       '/api/v1/retrospectives/calendar/daily',
       { params: { date: dateKey(date) } },
     )
-    dailyRetrospects.value = res.data.data
+    // daily 응답엔 projectName/tags가 없어, 이미 로드된 v2 리스트(프로젝트·태그 포함)와 id 매칭해 보강
+    const byId = new Map(retrospects.value.map((r) => [r.id, r]))
+    dailyRetrospects.value = res.data.data.map((d) => {
+      const full = byId.get(d.id)
+      return {
+        ...d,
+        projectName: d.projectName ?? full?.projectName ?? null,
+        tags: d.tags?.length ? d.tags : (full?.tags ?? []),
+      }
+    })
   } catch {
     dailyRetrospects.value = []
   } finally {
