@@ -62,9 +62,11 @@ export interface HomeResponse {
 
 export interface RecentRetrospective {
   id: string
-  title: string
-  summary: string
-  completedAt: string
+  title: string | null
+  summary: string | null
+  completedAt: string | null
+  projectName: string | null
+  tags: Tag[]
 }
 
 // Retrospective
