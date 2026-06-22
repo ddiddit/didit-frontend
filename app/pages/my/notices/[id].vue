@@ -28,6 +28,7 @@
 
 <script setup lang="ts">
 import type { ApiResponse, NoticeDetail } from '~/types/api'
+import { parseServerDate } from '~/utils/date'
 
 definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
@@ -38,7 +39,7 @@ const notice = ref<NoticeDetail | null>(null)
 
 // ISO 날짜 → "2026.03.05"
 function formatDate(iso: string): string {
-  const d = new Date(iso)
+  const d = parseServerDate(iso)
   if (Number.isNaN(d.getTime())) return ''
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')

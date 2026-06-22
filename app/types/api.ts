@@ -198,7 +198,7 @@ export interface Badge {
 }
 
 // Notification
-export type NotificationType = 'DAILY_REMINDER' | 'INQUIRY_ANSWERED'
+export type NotificationType = 'DAILY_REMINDER' | 'INQUIRY_ANSWERED' | 'RETROSPECTIVE_RESULT_CREATED'
 
 export interface NotificationHistory {
   id: string

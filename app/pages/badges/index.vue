@@ -133,6 +133,7 @@
 
 <script setup lang="ts">
 import type { BadgeView } from '~/composables/useBadges'
+import { parseServerDate } from '~/utils/date'
 
 definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
@@ -193,7 +194,7 @@ function closeSheet() {
 
 function formatAcquiredDate(date: string | null): string {
   if (!date) return ''
-  const d = new Date(date)
+  const d = parseServerDate(date)
   const yyyy = d.getFullYear()
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   const dd = String(d.getDate()).padStart(2, '0')

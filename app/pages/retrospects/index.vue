@@ -311,6 +311,7 @@
 <script setup lang="ts">
 import type { ApiResponse, CalendarResponse, DailyRetrospective, Project, Retrospective } from '~/types/api'
 import { getTagColor } from '~/utils/tag-color'
+import { parseServerDate } from '~/utils/date'
 
 definePageMeta({ middleware: 'auth', layout: 'default' })
 
@@ -344,7 +345,7 @@ const groupedRetrospects = computed(() => {
   const thisWeek = startOfWeek(now)
   const nowMonths = now.getFullYear() * 12 + now.getMonth()
   for (const item of retrospects.value) {
-    const date = new Date(item.completedAt ?? item.createdAt)
+    const date = parseServerDate(item.completedAt ?? item.createdAt)
     const weeksAgo = Math.max(0, Math.round((thisWeek - startOfWeek(date)) / (7 * 86_400_000)))
     // 이번 주: 디바이더 없음 / ~4주: 주 단위 / 그 이후: 달 단위 / 12달 초과: 년 단위
     let label: string
@@ -460,7 +461,7 @@ function scrollToChip(container: HTMLElement, targetLeft: number) {
 }
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr)
+  const d = parseServerDate(dateStr)
   return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
 }
 

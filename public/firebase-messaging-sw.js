@@ -16,10 +16,10 @@ const messaging = firebase.messaging()
 
 // 앱이 백그라운드/닫힘 상태일 때 푸시 수신 → 알림 표시
 messaging.onBackgroundMessage((payload) => {
-  // 웹은 백엔드가 data 메시지로 보냄(title/body가 data에 담김). notification은 폴백.
-  const title = payload.data?.title || payload.notification?.title || '디딧'
-  self.registration.showNotification(title, {
-    body: payload.data?.body || payload.notification?.body || '',
+  // 제목은 앱 이름으로 고정, 멘트(본문)는 data.body 사용. notification은 폴백.
+  const body = payload.data?.body || payload.notification?.body || ''
+  self.registration.showNotification('디딧', {
+    body,
     icon: '/icon.png',
     badge: '/icon.png',
     data: payload.data || {},
