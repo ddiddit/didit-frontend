@@ -34,7 +34,7 @@
     <div class="flex-1 min-h-0 overflow-y-auto scrollbar-hide flex flex-col">
 
     <!-- 탭 선택: 리스트 / 캘린더 -->
-    <div class="flex items-start gap-4 px-5 h-[55px]">
+    <div class="flex items-start gap-4 px-5 h-[55px] shrink-0">
       <button
         class="text-title3 transition-none"
         :class="activeTab === 'list' ? 'font-bold text-grey-12' : 'font-medium text-grey-6'"
@@ -48,7 +48,7 @@
     </div>
 
     <!-- 프로젝트 필터 칩 (리스트 탭에서만 노출, 스크롤 영역 포함) -->
-    <div v-if="activeTab === 'list'" class="px-5 pb-3">
+    <div v-if="activeTab === 'list'" class="px-5 pb-3 shrink-0">
       <div class="relative flex items-center">
         <!-- 스크롤 가능한 칩 목록 -->
         <div
