@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Amplitude 이벤트 정의서 (Tracking Plan)</title>
+<style>
+  :root { --line:#e5e7eb; --head:#f3f4f6; --muted:#6b7280; --accent:#2563eb; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
+                 "Malgun Gothic", sans-serif;
+    line-height: 1.7; color: #111827; max-width: 980px; margin: 0 auto;
+    padding: 48px 24px 80px; background: #fff;
+  }
+  h1 { font-size: 28px; border-bottom: 2px solid #111827; padding-bottom: 12px; }
+  h2 { font-size: 21px; margin-top: 44px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+  h3 { font-size: 17px; margin-top: 28px; color: #1f2937; }
+  blockquote {
+    margin: 16px 0; padding: 12px 16px; background: #f9fafb;
+    border-left: 4px solid var(--accent); color: var(--muted); border-radius: 4px;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--line); padding: 9px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--head); font-weight: 700; }
+  tr:nth-child(even) td { background: #fafafa; }
+  code {
+    background: #f3f4f6; padding: 2px 6px; border-radius: 4px;
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px; color: #be123c;
+  }
+  ul { padding-left: 22px; }
+  li { margin: 4px 0; }
+  hr { border: none; border-top: 1px solid var(--line); margin: 36px 0; }
+  .ok { color: #059669; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<h1>Amplitude 이벤트 정의서 (Tracking Plan)</h1>
+
+<blockquote>didit 프론트엔드의 앰플리튜드 이벤트 명세. 새 이벤트를 추가하거나 프로퍼티를 바꿀 때 이 문서를 함께 갱신한다.</blockquote>
+
+<h2>기본 원칙</h2>
+<ul>
+  <li><strong>이벤트명</strong>: <code>object_action</code> 형태의 snake_case (예: <code>retrospect_completed</code>)</li>
+  <li><strong>프로퍼티명</strong>: snake_case</li>
+  <li><strong>사전 등록 불필요</strong>: <code>track()</code> 호출 즉시 앰플리튜드에 수집된다. 이 문서는 거버넌스/일관성용.</li>
+  <li><strong>수집 환경</strong>: 개발 환경(dev)에서는 전송 안 됨. 프로덕션에서 API Key 필요.</li>
+</ul>
+
+<h2>유저 식별 (User Identity)</h2>
+<table>
+  <thead><tr><th>시점</th><th>동작</th><th>위치</th></tr></thead>
+  <tbody>
+    <tr><td>로그인/회원가입</td><td><code>identify()</code> → JWT의 사용자 ID로 식별</td><td>login.vue, kakao/callback.vue</td></tr>
+    <tr><td>탈퇴</td><td><code>reset()</code></td><td>my/account/withdraw.vue</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li>리텐션·DAU·MAU·stickiness는 위 식별 + 이벤트 타임스탬프로 <strong>앰플리튜드가 자동 계산</strong>한다(별도 이벤트 불필요).</li>
+  <li>SDK가 userId를 자체 저장하므로 세션이 바뀌어도(토큰 자동로그인) 식별이 유지된다.</li>
+  <li>앱 부팅 시 토큰이 있으면 <code>setUserId</code>를 호출해 식별 누락 엣지 케이스를 방지. <span class="ok">(반영 완료)</span></li>
+</ul>
+
+<hr />
+
+<h2>현재 구현된 이벤트</h2>
+<table>
+  <thead><tr><th>이벤트명</th><th>트리거</th><th>프로퍼티</th><th>위치</th></tr></thead>
+  <tbody>
+    <tr><td><code>user_signed_up</code></td><td>신규 회원가입 성공</td><td>provider</td><td>login.vue, kakao/callback.vue</td></tr>
+    <tr><td><code>user_logged_in</code></td><td>기존 로그인 성공</td><td>provider</td><td>login.vue, kakao/callback.vue</td></tr>
+    <tr><td><code>login_failed</code></td><td>로그인/콜백 실패</td><td>provider</td><td>login.vue, kakao/callback.vue</td></tr>
+    <tr><td><code>user_logged_out</code></td><td>로그아웃</td><td>—</td><td>my/account/index.vue</td></tr>
+    <tr><td><code>user_withdrew</code></td><td>탈퇴 완료</td><td>reason</td><td>my/account/withdraw.vue</td></tr>
+    <tr><td><code>onboarding_completed</code></td><td>온보딩 완료</td><td>job, age, experience, marketing_agreed, night_push_agreed</td><td>onboarding.vue</td></tr>
+    <tr><td><code>home_viewed</code></td><td>홈 진입</td><td>—</td><td>home.vue</td></tr>
+    <tr><td><code>retrospect_started</code></td><td>회고 시작 버튼</td><td>source</td><td>home.vue</td></tr>
+    <tr><td><code>retrospect_start_failed</code></td><td>회고 시작 실패(횟수 소진 등)</td><td>reason</td><td>retrospect/start.vue</td></tr>
+    <tr><td><code>answer_submitted</code></td><td>답변 1건 제출 성공</td><td>question_no, is_deep</td><td>retrospect/start.vue</td></tr>
+    <tr><td><code>deep_question_shown</code></td><td>심화질문(Q4_DEEP) 노출</td><td>—</td><td>retrospect/start.vue</td></tr>
+    <tr><td><code>deep_question_skipped</code></td><td>심화질문 스킵</td><td>—</td><td>retrospect/start.vue</td></tr>
+    <tr><td><code>retrospect_completed</code></td><td>회고 질문 종료 → 결과로 이동</td><td>answer_count, deep_question_answered, duration_sec</td><td>retrospect/start.vue</td></tr>
+    <tr><td><code>retrospect_saved</code></td><td>회고 제목 확정 저장</td><td>has_project, tag_count, title_length</td><td>retrospect/result.vue</td></tr>
+    <tr><td><code>retrospect_save_failed</code></td><td>저장 실패</td><td>—</td><td>retrospect/result.vue</td></tr>
+    <tr><td><code>retrospect_viewed</code></td><td>회고 상세 진입</td><td>retrospect_id</td><td>retrospects/[id].vue</td></tr>
+    <tr><td><code>retrospect_list_viewed</code></td><td>회고 목록 진입</td><td>—</td><td>retrospects/index.vue</td></tr>
+    <tr><td><code>retrospect_search_viewed</code></td><td>검색 화면 진입</td><td>—</td><td>retrospects/search.vue</td></tr>
+    <tr><td><code>retrospect_searched</code></td><td>검색 실행(결과 로드 시)</td><td>keyword, result_count</td><td>retrospects/index.vue</td></tr>
+    <tr><td><code>project_list_viewed</code></td><td>프로젝트 목록 진입</td><td>—</td><td>projects/index.vue</td></tr>
+    <tr><td><code>project_created</code></td><td>프로젝트 생성</td><td>count</td><td>projects/index.vue</td></tr>
+    <tr><td><code>project_deleted</code></td><td>프로젝트 삭제</td><td>project_name</td><td>projects/index.vue</td></tr>
+    <tr><td><code>notification_viewed</code></td><td>알림함 진입</td><td>—</td><td>notifications.vue</td></tr>
+    <tr><td><code>notification_clicked</code></td><td>알림 클릭</td><td>type</td><td>notifications.vue</td></tr>
+    <tr><td><code>badge_list_viewed</code></td><td>뱃지 목록 진입</td><td>—</td><td>badges/index.vue</td></tr>
+    <tr><td><code>badge_detail_viewed</code></td><td>뱃지 상세 조회</td><td>badge_name, badge_code, is_acquired</td><td>badges/index.vue</td></tr>
+    <tr><td><code>badge_acquired</code></td><td>뱃지 획득</td><td>badge_name, badge_code</td><td>useBadgeAcquired.ts</td></tr>
+    <tr><td><code>my_page_viewed</code></td><td>마이페이지 진입</td><td>—</td><td>my/index.vue</td></tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2>프로퍼티 설명</h2>
+<table>
+  <thead><tr><th>프로퍼티</th><th>의미</th></tr></thead>
+  <tbody>
+    <tr><td><code>provider</code></td><td>소셜 로그인 수단 (kakao / google / apple)</td></tr>
+    <tr><td><code>source</code></td><td>진입 경로 (예: home)</td></tr>
+    <tr><td><code>question_no</code></td><td>몇 번째 질문에 답했는지</td></tr>
+    <tr><td><code>is_deep</code></td><td>심화질문에 대한 답변인지 여부 (true/false)</td></tr>
+    <tr><td><code>answer_count</code></td><td>한 회고에서 작성한 답변 개수</td></tr>
+    <tr><td><code>deep_question_answered</code></td><td>심화질문에 실제로 답했는지 (스킵 시 false)</td></tr>
+    <tr><td><code>duration_sec</code></td><td>회고 시작~완료 소요 시간(초)</td></tr>
+    <tr><td><code>has_project</code></td><td>저장 시 프로젝트를 연결했는지</td></tr>
+    <tr><td><code>tag_count</code></td><td>저장 시 연결한 태그 개수</td></tr>
+    <tr><td><code>title_length</code></td><td>회고 제목 글자 수</td></tr>
+    <tr><td><code>keyword</code></td><td>검색어</td></tr>
+    <tr><td><code>result_count</code></td><td>검색 결과 개수</td></tr>
+    <tr><td><code>reason</code></td><td>실패/탈퇴 사유</td></tr>
+  </tbody>
+</table>
+
+<p style="color:#6b7280; font-size:13px; margin-top:48px;">
+  ※ 원본 마크다운: <code>docs/amplitude-events.md</code> · 코드 수정 시 두 파일을 함께 갱신하세요.
+</p>
+
+</body>
+</html>
