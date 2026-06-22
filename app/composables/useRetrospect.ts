@@ -7,6 +7,7 @@ import type {
   CompleteRetrospectiveResponse,
   RetrospectiveDetail,
 } from '~/types/api'
+import { toUploadableAudio } from '~/utils/audio'
 
 // 회고 진행 플로우 API 레이어.
 // 대부분 mutation 성격이라 캐싱하지 않고, AI 생성(완료/심화질문/STT)은
@@ -33,8 +34,9 @@ export function useRetrospect() {
 
   // 음성 답변 제출(STT 포함) → 변환 텍스트 + 다음 질문 (앱 전용)
   async function answerByVoice(id: string, file: Blob): Promise<SubmitAnswerResponse> {
+    const { blob, filename } = await toUploadableAudio(file)
     const form = new FormData()
-    form.append('file', file)
+    form.append('file', blob, filename)
     const res = await $api.post<ApiResponse<SubmitAnswerResponse>>(
       `/api/v1/retrospectives/${id}/answers/voice`,
       form,
@@ -45,8 +47,9 @@ export function useRetrospect() {
 
   // 음성 → 텍스트 변환만 (전송 전 미리보기, 앱 전용)
   async function transcribe(id: string, file: Blob): Promise<string> {
+    const { blob, filename } = await toUploadableAudio(file)
     const form = new FormData()
-    form.append('file', file)
+    form.append('file', blob, filename)
     const res = await $api.post<ApiResponse<TranscribeResponse>>(
       `/api/v1/retrospectives/${id}/answers/voice/transcribe`,
       form,
