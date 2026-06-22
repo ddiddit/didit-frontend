@@ -21,20 +21,21 @@ export function usePushNotifications() {
   }
 
   // 권한 요청 → 토큰 발급 → 백엔드 등록. 성공 시 토큰 반환.
-  async function register(): Promise<string | null> {
+  // silent=true: 앱 시작 시 자동 동기화용 — 실패/거부 토스트를 띄우지 않는다.
+  async function register({ silent = false }: { silent?: boolean } = {}): Promise<string | null> {
     if (!import.meta.client) return null
     if (!config.apiKey || !config.vapidKey) {
-      show('푸시 설정이 누락됐어요.')
+      if (!silent) show('푸시 설정이 누락됐어요.')
       return null
     }
     if (!(await isSupported())) {
-      show('이 브라우저는 푸시 알림을 지원하지 않아요.')
+      if (!silent) show('이 브라우저는 푸시 알림을 지원하지 않아요.')
       return null
     }
 
     const permission = await Notification.requestPermission()
     if (permission !== 'granted') {
-      show('알림 권한이 거부되었어요.')
+      if (!silent) show('알림 권한이 거부되었어요.')
       return null
     }
 
@@ -50,19 +51,18 @@ export function usePushNotifications() {
       // [테스트용] 토큰 출력 — Firebase 콘솔 "테스트 메시지 전송"에 붙여넣어 확인
       console.log('%c[FCM] web token →', 'color:#3DDB99;font-weight:bold', token)
 
-      // 백엔드 등록 (deviceType WEB — 백엔드 enum에 WEB 추가 필요)
+      // 백엔드 등록 (deviceType WEB)
       try {
         await $api.post('/api/v1/device-tokens', { token, deviceType: 'WEB' })
       } catch {
-        // 백엔드에 WEB 타입이 아직 없으면 400 → 토큰 자체는 발급됐으니 테스트엔 지장 없음
-        console.warn('[FCM] device-token 등록 실패 (백엔드 WEB 타입 추가 전이면 정상)')
+        console.warn('[FCM] device-token 등록 실패')
       }
 
       listenForeground()
       return token
     } catch (e) {
       console.error('[FCM] 토큰 발급 실패:', e)
-      show('알림 등록에 실패했어요.')
+      if (!silent) show('알림 등록에 실패했어요.')
       return null
     }
   }
@@ -81,12 +81,20 @@ export function usePushNotifications() {
     })
   }
 
-  // 이미 권한 허용 상태면 토큰 재등록(앱 시작 시 호출용)
-  async function syncIfGranted(): Promise<void> {
+  // 앱 시작 시 호출: 서버에 저장된 푸시 동의(enabled)를 보고, 동의 상태면 권한 요청·토큰 등록을 수행한다.
+  // (이미 동의한 사용자가 토글을 껐다 켜야만 권한 팝업이 뜨던 문제 해결 — 동의=true면 로그인 시 자동 반영)
+  // 자동 호출이라 실패/거부 시 토스트는 띄우지 않는다(silent).
+  async function syncIfConsented(): Promise<void> {
     if (!import.meta.client) return
-    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
-    await register()
+    // 권한이 명시적으로 거부된 상태면 매 로드마다 권한 요청을 반복하지 않는다.
+    if (typeof Notification === 'undefined' || Notification.permission === 'denied') return
+    try {
+      const res = await $api.get<{ data: { enabled: boolean } }>('/api/v1/notification-settings')
+      if (res.data.data.enabled) await register({ silent: true })
+    } catch {
+      // 비로그인/조회 실패 시 무시
+    }
   }
 
-  return { register, listenForeground, syncIfGranted }
+  return { register, listenForeground, syncIfConsented }
 }
