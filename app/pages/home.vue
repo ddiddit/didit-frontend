@@ -238,6 +238,12 @@ function onSliderMove(e: MouseEvent) {
   feedbackSlider.value.scrollLeft = scrollStartLeft - dx
 }
 function onSliderUp() {
+  const el = feedbackSlider.value
+  // 드래그로 움직였으면 가장 가까운 카드로 부드럽게 스냅 (CSS snap은 마우스 드래그엔 안 걸림)
+  if (isDragging.value && el) {
+    const idx = Math.round(el.scrollLeft / STEP)
+    el.scrollTo({ left: idx * STEP, behavior: 'smooth' })
+  }
   setTimeout(() => {
     isDragging.value = false
   }, 0)
