@@ -191,15 +191,9 @@
                 <!-- 요약 -->
                 <p v-if="item.summary" class="text-label1 font-normal text-grey-10 leading-[1.6] line-clamp-2">{{ item.summary }}</p>
               </div>
-              <!-- 태그 -->
+              <!-- 태그 (UiTag로 통일 — 태그 id 해시 기반 색상, 화면 간 동일) -->
               <div v-if="item.tags && item.tags.length > 0" class="flex flex-wrap gap-[6px]">
-                <span
-                  v-for="(tag, idx) in item.tags"
-                  :key="tag.id"
-                  class="text-[11px] font-semibold leading-[130%] tracking-[-0.02em] rounded-[6px]"
-                  style="padding: 4px 6px;"
-                  :style="{ backgroundColor: listTagColors[idx % listTagColors.length].bg, color: listTagColors[idx % listTagColors.length].text }"
-                >#{{ tag.name }}</span>
+                <UiTag v-for="tag in item.tags" :key="tag.id" :color="getTagColor(tag.id)">#{{ tag.name }}</UiTag>
               </div>
             </div>
             </li>
@@ -306,6 +300,7 @@
 
 <script setup lang="ts">
 import type { ApiResponse, CalendarResponse, DailyRetrospective, Project, Retrospective } from '~/types/api'
+import { getTagColor } from '~/utils/tag-color'
 
 definePageMeta({ middleware: 'auth', layout: 'default' })
 
@@ -323,14 +318,6 @@ const showMoreMenu = ref(false)
 const showProjectPicker = ref(false)
 
 const keyword = computed(() => route.query.keyword as string | undefined)
-
-const listTagColors = [
-  { bg: '#E2FAF0', text: '#37C58A' },
-  { bg: '#FAEBFA', text: '#E079E0' },
-  { bg: '#E6EEFC', text: '#5A8DEE' },
-  { bg: '#FDEDE7', text: '#F08A5D' },
-  { bg: '#EEEBFD', text: '#8C7CF0' },
-]
 
 watch(keyword, () => fetchRetrospects(), { immediate: true })
 

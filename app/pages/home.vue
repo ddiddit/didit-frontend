@@ -84,8 +84,13 @@
               class="shrink-0 w-[340px] bg-white rounded-2xl px-[22px] py-5 flex flex-col gap-3 text-left"
               @click="!wasDrag && navigateTo(`/retrospects/${r.id}`)"
             >
-              <p class="text-body1 font-semibold text-grey-13 line-clamp-1">{{ r.title }}</p>
-              <div class="flex gap-[14px]">
+              <div class="flex flex-col gap-1 w-full">
+                <p class="text-body1 font-semibold text-grey-13 line-clamp-1">{{ r.title }}</p>
+                <p v-if="r.projectName" class="text-label1 font-medium text-green-hover line-clamp-1">
+                  {{ r.projectName }}
+                </p>
+              </div>
+              <div class="flex gap-[14px] w-full">
                 <div class="w-1 self-stretch rounded bg-grey-4 shrink-0" />
                 <p class="flex-1 text-body3-reading text-grey-13 line-clamp-5 whitespace-pre-line">{{ r.summary }}</p>
               </div>
@@ -133,6 +138,10 @@
               <p v-if="r.summary" class="text-label1 font-normal text-grey-10 leading-[1.6] line-clamp-3">
                 {{ r.summary }}
               </p>
+              <!-- 태그 (UiTag로 통일 — 화면 간 동일 색상) -->
+              <div v-if="r.tags && r.tags.length > 0" class="flex flex-wrap gap-[6px]">
+                <UiTag v-for="tag in r.tags" :key="tag.id" :color="getTagColor(tag.id)">#{{ tag.name }}</UiTag>
+              </div>
             </div>
           </button>
         </div>
@@ -189,6 +198,7 @@
 
 <script setup lang="ts">
 import type { ApiResponse, HomeResponse, NotificationHistory } from '~/types/api'
+import { getTagColor } from '~/utils/tag-color'
 
 definePageMeta({ middleware: 'auth' })
 
