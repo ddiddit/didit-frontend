@@ -37,7 +37,7 @@
           v-for="item in notifications"
           :key="item.id"
           class="px-5 pt-[18px]"
-          :class="(!item.isRead || item.type === 'INQUIRY_ANSWERED') ? 'cursor-pointer' : ''"
+          :class="(!item.isRead || !!item.link || item.type === 'INQUIRY_ANSWERED') ? 'cursor-pointer' : ''"
           @click="onNotificationClick(item)"
         >
           <div class="pb-[18px] border-b border-grey-5 flex items-start justify-between gap-2">
@@ -98,7 +98,10 @@ onMounted(async () => {
 function onNotificationClick(item: NotificationHistory) {
   track('notification_clicked', { type: item.type })
   markRead(item)
-  if (item.type === 'INQUIRY_ANSWERED') {
+  // 백엔드가 내려준 link 우선 (예: 회고 결과 알림 → 회고 상세), 없으면 타입별 기본 이동
+  if (item.link) {
+    navigateTo(item.link)
+  } else if (item.type === 'INQUIRY_ANSWERED') {
     navigateTo('/my/inquiry?from=notification')
   }
 }

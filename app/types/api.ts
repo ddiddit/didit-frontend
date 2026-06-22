@@ -205,6 +205,7 @@ export interface NotificationHistory {
   type: NotificationType
   title: string
   body: string
+  link: string | null // 클릭 시 이동할 경로 (예: 회고 상세). 없으면 null
   isRead: boolean
   createdAt: string
 }
