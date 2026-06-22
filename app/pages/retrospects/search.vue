@@ -128,7 +128,7 @@ function onEnter(event: KeyboardEvent) {
 }
 
 function goSearch(keyword: string) {
-  track('retrospect_searched', { keyword })
+  // retrospect_searched 이벤트는 결과 개수(result_count)를 함께 담기 위해 결과 페이지(retrospects/index.vue)에서 발생시킨다
   saveRecent(keyword)
   navigateTo(`/retrospects?keyword=${encodeURIComponent(keyword)}`)
 }

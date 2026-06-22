@@ -164,6 +164,7 @@ async function submitLogin(provider: 'KAKAO' | 'GOOGLE' | 'APPLE', oauthToken: s
     const dest = data.data.isNewUser || !data.data.isOnboardingCompleted ? '/onboarding' : '/home'
     navigateTo(dest, { replace: true })
   } catch {
+    track('login_failed', { provider: provider.toLowerCase() })
     errorMessage.value = '로그인에 실패했습니다. 다시 시도해주세요.'
   } finally {
     isLoading.value = false

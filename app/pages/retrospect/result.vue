@@ -133,7 +133,11 @@ async function onSave() {
   isSaving.value = true
   try {
     await retro.save(completingId.value, title.value.trim())
-    track('retrospect_saved')
+    track('retrospect_saved', {
+      has_project: !!selectedProject.value,
+      tag_count: selectedTags.value.length,
+      title_length: title.value.trim().length,
+    })
     completingId.value = ''
     show('회고가 저장되었어요!')
     navigateTo('/retrospects')
@@ -154,6 +158,7 @@ async function onSave() {
       }
     }
   } catch {
+    track('retrospect_save_failed')
     show('저장에 실패했어요. 잠시 후 다시 시도해주세요.')
   } finally {
     isSaving.value = false

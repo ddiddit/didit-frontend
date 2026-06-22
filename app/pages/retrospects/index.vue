@@ -417,6 +417,10 @@ async function fetchRetrospects() {
       )
     }
     retrospects.value = list
+    // 검색어로 진입한 경우에만 검색 이벤트 발생 (결과 개수 포함)
+    if (keyword.value) {
+      track('retrospect_searched', { keyword: keyword.value, result_count: list.length })
+    }
   } catch {
     retrospects.value = []
   } finally {

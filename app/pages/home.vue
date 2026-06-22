@@ -307,7 +307,7 @@ function goToNotifications() {
 }
 
 function startRetrospect() {
-  track('retrospect_started')
+  track('retrospect_started', { source: 'home' })
   navigateTo('/retrospect/start')
 }
 </script>

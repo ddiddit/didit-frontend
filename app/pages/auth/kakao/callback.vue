@@ -66,6 +66,7 @@ onMounted(async () => {
     const dest = data.data.isNewUser || !data.data.isOnboardingCompleted ? '/onboarding' : '/home'
     navigateTo(dest, { replace: true })
   } catch {
+    track('login_failed', { provider: 'kakao' })
     navigateTo('/login', { replace: true })
   }
 })

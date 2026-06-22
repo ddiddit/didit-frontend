@@ -450,6 +450,7 @@ async function submitOnboarding() {
       age: selectedAge.value,
       experience: selectedExperience.value,
       marketing_agreed: agreements.marketing,
+      night_push_agreed: agreements.nightPush,
     })
     navigateTo('/home', { replace: true })
   } catch {
