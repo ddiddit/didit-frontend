@@ -264,7 +264,9 @@ const showMicPopup = ref(false) // 마이크 권한 안내 팝업 (CHAT_001)
 const micExplained = ref(false) // 안내 팝업을 이미 거쳤는지
 const showRecorder = ref(false) // 녹음 레코더 노출
 const isTranscribing = ref(false) // 음성 → 텍스트 변환 중
-const nickname = useState<string>('home:nickname', () => '')
+// 닉네임은 authoritative한 프로필에서 사용 (홈과 동일 — /api/v2/home 의 stale nickname 미사용)
+const { profile, load: loadProfile } = useProfile()
+const nickname = computed(() => profile.value?.nickname ?? '')
 // 전체보기 모달: 답변과 그에 해당하는 질문을 함께 표시
 const fullView = ref<{ questionNo: number | null; question: string; answer: string } | null>(null)
 
@@ -577,6 +579,7 @@ async function onConfirmRestart() {
 }
 
 onMounted(() => {
+  loadProfile()
   init()
 })
 </script>
