@@ -22,12 +22,13 @@ override fun findUnnotified(userId: UUID): List<BadgeResponse> { ... }
 ```
 > 프론트는 임시로 localStorage 기기별 1회 노출 가드를 넣어둠. 이 수정이 적용되면 가드 없이도 정상 동작하며, 가드는 무해.
 
-### A-2. 회고 리스트 응답에 `projectName`, `tags` 누락
-리스트/캘린더 카드가 "프로젝트명 · 날짜 / 제목 / 요약 / 태그칩"을 렌더하나, 리스트 DTO에 필드가 없어 **항상 날짜만** 표시됨. (`.specs/api-필드-요청.md` A-3 미반영)
-- `adapter/webapi/organization/dto/RetrospectiveListResponse.kt` — `id, title, summary, completedAt` 뿐
-- `adapter/webapi/retrospect/dto/RetrospectiveListItemResponse.kt` — 동일
+### A-2. 캘린더 날짜별(daily) 응답에 `projectName`, `tags` 누락
+캘린더 날짜별 카드도 리스트 카드와 동일하게 "프로젝트명 / 제목 / 요약 / 태그칩"을 렌더하나, daily 응답 DTO에 두 필드가 없어 표시 안 됨.
+- `GET /api/v2/retrospectives` (리스트) — `projectName`, `tags` **포함됨**(정상). 리스트 탭은 OK.
+- `GET /api/v1/retrospectives/calendar/daily` (캘린더 날짜별) — `id, title, summary, completedAt` 뿐, `projectName`/`tags` **누락**.
 
-수정: 두 응답 DTO에 `projectName: String?`, `tags: List<TagListResponse>` 추가. (프론트는 이미 렌더 준비 완료 — 값만 내려오면 표시됨)
+수정: daily 응답 DTO에 `projectName: String?`, `tags: List<TagListResponse>` 추가(v2 리스트와 동일하게).
+> 프론트 임시 보강: daily 항목을 이미 로드된 v2 리스트 데이터와 id 매칭해 프로젝트명·태그를 채워 표시 중. 백엔드가 daily에 두 필드를 내려주면 매칭 의존 없이도 동작하며, 보강 로직은 무해(응답 우선).
 
 ---
 
@@ -58,6 +59,13 @@ override fun findUnnotified(userId: UUID): List<BadgeResponse> { ... }
 
 수정: 카운트 쿼리에 `deletedAt IS NULL` 추가 (정책 확정 후).
 
+### B-5. `/api/v2/home` 의 `nickname` 이 stale — 프로필 변경이 반영 안 됨
+닉네임을 `프로필수정`에서 변경해도 `GET /api/v2/home` 응답의 `nickname` 은 옛 값을 그대로 반환(예: "디바" → "디딧" 변경 후에도 home 은 "디바"). 마이페이지(`/api/v2/users/profile`)와 불일치.
+- home 응답이 닉네임을 비정규화 저장/캐시하고 프로필 업데이트 시 동기화하지 않는 것으로 추정.
+
+수정: home 의 nickname 도 프로필 변경 시 최신값을 반영(또는 조회 시점 user 에서 직접 read).
+> 프론트 임시 대응: 홈 화면 닉네임을 home 응답 대신 `/api/v2/users/profile`(authoritative)에서 가져오도록 변경함. 백엔드 동기화 시에도 무해.
+
 ---
 
 ## C. 프론트 분기 편의
@@ -72,6 +80,6 @@ override fun findUnnotified(userId: UUID): List<BadgeResponse> { ... }
 ---
 
 ## 우선순위 요약
-- **즉시(P0)**: A-1(배지), A-2(리스트 projectName/tags) — 구현된 화면 데이터/동작 직접 영향
+- **즉시(P0)**: A-1(배지), A-2(캘린더 daily projectName/tags) — 구현된 화면 데이터/동작 직접 영향
 - **권장(P1)**: B-1(직렬화 손실), B-2(심화질문 중복)
 - **검토(P2)**: B-3, B-4, C-1
