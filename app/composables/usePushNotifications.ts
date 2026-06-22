@@ -74,8 +74,9 @@ export function usePushNotifications() {
       if (!ok) return
       const messaging = getMessaging(firebaseApp())
       onMessage(messaging, (payload) => {
-        const title = payload.notification?.title ?? '알림'
-        const body = payload.notification?.body ?? ''
+        // 웹은 백엔드가 data 메시지로 보냄(title/body가 data에 담김). notification은 폴백.
+        const title = payload.data?.title ?? payload.notification?.title ?? '알림'
+        const body = payload.data?.body ?? payload.notification?.body ?? ''
         show(body ? `${title} · ${body}` : title)
       })
     })
