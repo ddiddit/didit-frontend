@@ -164,6 +164,8 @@ export interface DailyRetrospective {
   id: string
   title: string
   summary: string | null
+  projectName: string | null
+  tags: Tag[]
   completedAt: string
 }
 

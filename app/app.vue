@@ -89,6 +89,14 @@
 const { width } = useWindowSize()
 const isDesktop = computed(() => width.value >= 980)
 
+// 로그인 상태면 서버의 푸시 동의(enabled)를 보고 권한·토큰을 자동 동기화한다.
+// (이미 동의한 사용자가 토글을 껐다 켜야만 권한 팝업이 뜨던 문제 해결)
+onMounted(() => {
+  if (import.meta.client && localStorage.getItem('accessToken')) {
+    usePushNotifications().syncIfConsented()
+  }
+})
+
 const features = [
   'AI 심화 질문으로 더 깊은 성찰',
   '프로젝트·태그로 체계적인 회고 관리',

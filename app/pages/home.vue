@@ -205,15 +205,20 @@ definePageMeta({ middleware: 'auth' })
 const { $api } = useNuxtApp()
 const { track } = useAmplitude()
 
+// 닉네임은 authoritative한 프로필(/api/v2/users/profile)에서 사용.
+// (/api/v2/home 의 nickname 은 갱신이 안 돼 stale 할 수 있어 마이페이지와 불일치하던 문제)
+const { profile, load: loadProfile } = useProfile()
+const nickname = computed(() => profile.value?.nickname ?? '')
+
 // 페이지 이동 후 재방문 시 깜빡임 없도록 SPA 전체에서 상태 유지
-const nickname = useState<string>('home:nickname', () => '')
 const recentRetrospectives = useState<HomeResponse['recentRetrospectives']>('home:retrospectives', () => [])
 const todayRetrospectiveCount = useState<number>('home:todayCount', () => 0)
 // 알림 미읽음 여부는 알림 페이지와 상태를 공유 (읽음 처리 시 벨 아이콘 즉시 갱신)
 const hasUnread = useState<boolean>('notifications:hasUnread', () => false)
 
 // 캐시된 데이터가 있으면 로딩 스켈레톤 생략
-const isLoading = ref(nickname.value === '')
+const homeLoaded = useState<boolean>('home:loaded', () => false)
+const isLoading = ref(!homeLoaded.value)
 
 const maxDaily = 3
 const remaining = computed(() => Math.max(0, maxDaily - todayRetrospectiveCount.value))
@@ -283,11 +288,12 @@ onMounted(async () => {
     const [homeRes, notifRes] = await Promise.all([
       $api.get<ApiResponse<HomeResponse>>('/api/v2/home'),
       $api.get<ApiResponse<NotificationHistory[]>>('/api/v1/notification-histories'),
+      loadProfile(),
     ])
-    nickname.value = homeRes.data.data.nickname
     recentRetrospectives.value = homeRes.data.data.recentRetrospectives
     todayRetrospectiveCount.value = homeRes.data.data.todayRetrospectiveCount
     hasUnread.value = notifRes.data.data.some(n => !n.isRead)
+    homeLoaded.value = true
   } catch {
     // 401/403은 axios 인터셉터가 처리
   } finally {
