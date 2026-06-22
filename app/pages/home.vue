@@ -86,13 +86,13 @@
             >
               <div class="flex flex-col gap-1 w-full">
                 <p class="text-body1 font-semibold text-grey-13 line-clamp-1">{{ r.title }}</p>
-                <p v-if="r.projectName" class="text-label1 font-medium text-green-hover line-clamp-1">
-                  {{ r.projectName }}
-                </p>
+                <!-- 프로젝트명: 없어도 빈 줄로 자리를 확보해 카드 높이를 일정하게 유지 -->
+                <p class="min-h-[20px] text-label1 font-medium text-green-hover line-clamp-1">{{ r.projectName || ' ' }}</p>
               </div>
               <div class="flex gap-[14px] w-full">
                 <div class="w-1 self-stretch rounded bg-grey-4 shrink-0" />
-                <p class="flex-1 text-body3-reading text-grey-13 line-clamp-5 whitespace-pre-line">{{ r.summary }}</p>
+                <!-- 본문은 항상 5줄(15px×1.6×5=120px) 높이를 확보 → 4줄/5줄 카드 높이 통일 -->
+                <p class="flex-1 min-h-[120px] text-body3-reading text-grey-13 line-clamp-5 whitespace-pre-line">{{ r.summary }}</p>
               </div>
             </button>
           </div>
