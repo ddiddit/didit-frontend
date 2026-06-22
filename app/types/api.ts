@@ -82,49 +82,80 @@ export interface Retrospective {
   completedAt: string | null
 }
 
-export interface RetrospectiveDetail extends Retrospective {
-  qnas: Qna[]
-}
+// 회고 질문 타입 (기본 질문 Q1~Q4, 이후 AI 심화질문)
+export type QuestionType = string
 
-export interface Qna {
-  id: string
-  question: string
-  answer: string
-  deepQuestions: DeepQna[]
-}
-
-export interface DeepQna {
-  id: string
-  question: string
-  answer: string | null
-}
-
+// 회고 시작 → 첫 질문 반환
 export interface StartRetrospectiveResponse {
-  id: string
-  currentQuestion: string
-  questionIndex: number
-  totalQuestions: number
-}
-
-export interface SubmitAnswerResponse {
-  isCompleted: boolean
-  nextQuestion: string | null
-  questionIndex: number | null
-  deepQuestion: string | null
   retrospectiveId: string
+  firstQuestionType: QuestionType
+  firstQuestionContent: string
 }
 
+// 답변 제출(텍스트/음성 공통) → 다음 질문 또는 완료 준비 신호
+export interface SubmitAnswerResponse {
+  content: string | null // 음성 답변일 때 STT 변환 텍스트, 텍스트 답변이면 null
+  nextQuestionType: QuestionType | null
+  nextQuestionContent: string | null
+  isReadyToComplete: boolean
+}
+
+// 음성 → 텍스트 변환 전용 (전송 전 미리보기용)
+export interface TranscribeResponse {
+  content: string
+}
+
+// AI 심화질문 조회 (생성 대기 중이면 isReady=false 로 폴링)
+export interface DeepQuestionResponse {
+  isReady: boolean
+  content: string | null
+}
+
+// 제목 + 설명 쌍 (insight, nextAction)
+export interface RetrospectiveInsight {
+  title: string
+  description: string
+}
+
+// AI가 생성한 회고 요약 본문
+export interface RetrospectiveContent {
+  summary: string
+  blockedPoint: string[]
+  solutionProcess: string[]
+  lessonLearned: string[]
+  insight: RetrospectiveInsight
+  nextAction: RetrospectiveInsight
+}
+
+// 회고 완료 → AI 제목/요약 생성
 export interface CompleteRetrospectiveResponse {
+  title: string
+  content: RetrospectiveContent
+}
+
+// 회고 상세 (완료된 회고, v2: 프로젝트/태그 포함)
+export interface RetrospectiveDetail {
   id: string
   title: string
-  summary: string
-  completedAt: string
+  status: RetrospectiveStatus
+  content: RetrospectiveContent
+  completedAt: string | null
+  project: { id: string; name: string } | null
+  tags: Tag[]
 }
 
 // Calendar
 export interface CalendarDay {
   date: string
   count: number
+}
+
+export interface CalendarResponse {
+  year: number
+  month: number
+  days: CalendarDay[]
+  weeklyCount: number
+  isWeeklyGoalAchieved: boolean
 }
 
 export interface DailyRetrospective {

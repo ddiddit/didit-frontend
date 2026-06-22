@@ -47,8 +47,10 @@
           @click="goSearch(item)"
         >
           <span class="text-label2 font-medium text-grey-13">{{ item }}</span>
-          <span class="flex items-center shrink-0" @click.stop="removeRecent(item)">
-            <img src="/icons/close.svg" class="w-4 h-4 block" style="filter: brightness(0) invert(1) brightness(0.776)" />
+          <span class="flex items-center shrink-0 text-grey-6" @click.stop="removeRecent(item)">
+            <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none">
+              <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
           </span>
         </button>
       </div>

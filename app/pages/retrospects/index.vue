@@ -158,15 +158,18 @@
       </div>
 
       <!-- 목록 -->
-      <div v-else-if="!isLoading" class="flex-1 overflow-y-auto scrollbar-hide">
-        <ul class="flex flex-col gap-3 px-5 py-3">
-          <li
-            v-for="item in retrospects"
-            :key="item.id"
-            class="bg-white rounded-2xl cursor-pointer"
-            style="padding: 22px 22px 20px;"
-            @click="navigateTo(`/retrospects/${item.id}`)"
-          >
+      <div v-else-if="!isLoading" class="flex-1 min-h-0 overflow-y-auto scrollbar-hide">
+        <ul class="flex flex-col px-5 py-3">
+          <template v-for="group in groupedRetrospects" :key="group.label || 'this-week'">
+            <!-- 주 단위 디바이더 (이번 주는 미표시) -->
+            <li v-if="group.label" class="text-center text-label2 font-medium text-grey-7 py-3">{{ group.label }}</li>
+            <li
+              v-for="item in group.items"
+              :key="item.id"
+              class="bg-white rounded-2xl cursor-pointer mb-3"
+              style="padding: 22px 22px 20px;"
+              @click="navigateTo(`/retrospects/${item.id}`)"
+            >
             <div class="flex flex-col gap-[14px]">
               <!-- 메인 콘텐츠 -->
               <div class="flex flex-col gap-2">
@@ -196,52 +199,97 @@
                 >#{{ tag.name }}</span>
               </div>
             </div>
-          </li>
+            </li>
+          </template>
         </ul>
       </div>
     </template>
 
     <!-- 캘린더 탭 -->
     <template v-else>
-      <div class="flex-1 overflow-y-auto scrollbar-hide px-5">
-        <!-- 캘린더 카드 -->
-        <div class="bg-white rounded-2xl py-5 px-[14px]">
-          <!-- 월 네비게이션 -->
-          <div class="flex items-center justify-center gap-2 mb-5">
-            <button class="shrink-0 flex items-center" @click="prevMonth">
-              <img src="/icons/chevron-left.svg" alt="이전 달" class="w-6 h-6 block" />
-            </button>
-            <span class="text-body3 font-semibold text-grey-13">{{ currentYear }}년 {{ currentMonth }}월</span>
-            <button class="shrink-0 flex items-center" @click="nextMonth">
-              <img src="/icons/chevron-right.svg" alt="다음 달" class="w-6 h-6 block" />
-            </button>
+      <div class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pb-6">
+        <!-- 캘린더 섹션 ↔ 날짜별 목록: gap-40 -->
+        <div class="flex flex-col gap-[40px]">
+          <div class="flex flex-col items-center gap-5 w-full">
+            <!-- 주간 회고 메시지 (깃발 위 / 텍스트 아래, gap-8) -->
+            <div class="flex flex-col items-center gap-2">
+              <Icon name="material-symbols:flag-rounded" class="w-6 h-6 text-primary" />
+              <span class="text-body1 font-semibold bg-gradient-to-r from-green-hover to-primary bg-clip-text text-transparent">
+                {{ weeklyMessage }}
+              </span>
+            </div>
+
+            <!-- 캘린더 카드: pt-22 pb-20, 내부 gap-20 -->
+            <div class="bg-white rounded-2xl w-full flex flex-col items-center gap-5 pt-[22px] pb-5 overflow-clip">
+              <!-- 월 네비게이션 -->
+              <div class="flex items-center justify-center gap-2 w-full">
+                <button class="shrink-0 flex items-center" @click="prevMonth">
+                  <img src="/icons/chevron-left.svg" alt="이전 달" class="w-6 h-6 block" style="margin-bottom: 1px" />
+                </button>
+                <span class="text-body3 font-semibold text-grey-13">{{ currentYear }}년 {{ currentMonth }}월</span>
+                <button class="shrink-0 flex items-center" @click="nextMonth">
+                  <img src="/icons/chevron-right.svg" alt="다음 달" class="w-6 h-6 block" style="margin-bottom: 1px" />
+                </button>
+              </div>
+
+              <!-- 요일 ↔ 날짜: gap-14 -->
+              <div class="flex flex-col items-center gap-[14px]">
+                <!-- 요일 헤더 -->
+                <div class="flex items-center w-[322px]">
+                  <div
+                    v-for="day in weekdays"
+                    :key="day"
+                    class="flex-1 flex items-center justify-center text-label2 font-medium text-grey-8"
+                  >{{ day }}</div>
+                </div>
+
+                <!-- 날짜 그리드 (w-322, 셀 w-46, 행간 16) -->
+                <div class="flex flex-wrap items-start gap-y-4 w-[322px]">
+                  <div v-for="n in firstDayOfMonth" :key="`empty-${n}`" class="w-[46px] h-[43px]" />
+                  <button
+                    v-for="date in daysInMonth"
+                    :key="date"
+                    class="w-[46px] flex flex-col items-center gap-[6px]"
+                    @click="selectDate(date)"
+                  >
+                    <span
+                      class="w-8 h-8 flex items-center justify-center rounded-full text-label1 transition-none"
+                      :class="getCellClass(date)"
+                    ><span class="translate-x-[0.3px] translate-y-[0.5px]">{{ date }}</span></span>
+                    <span class="flex gap-[3px] h-[5px]">
+                      <span v-for="i in dotCount(date)" :key="i" class="w-[5px] h-[5px] rounded-full bg-primary" />
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- 요일 헤더 -->
-          <div class="grid grid-cols-7 mb-[14px]">
-            <div
-              v-for="day in weekdays"
-              :key="day"
-              class="h-[20px] flex items-center justify-center text-label2 font-medium text-grey-8"
-            >{{ day }}</div>
-          </div>
-
-          <!-- 날짜 그리드 -->
-          <div class="grid grid-cols-7 gap-y-4">
-            <!-- 빈 셀 (월 시작 전) -->
-            <div v-for="n in firstDayOfMonth" :key="`empty-${n}`" class="h-8" />
-            <!-- 날짜 셀: 내부 32×32 원형 -->
-            <button
-              v-for="date in daysInMonth"
-              :key="date"
-              class="h-8 w-full flex items-center justify-center"
-              @click="selectDate(date)"
-            >
-              <span
-                class="w-8 h-8 flex items-center justify-center rounded-full text-label1 font-semibold transition-none"
-                :class="getCellClass(date)"
-              ><span class="translate-x-[0.3px] translate-y-[0.5px]">{{ date }}</span></span>
-            </button>
+          <!-- 선택한 날짜의 회고 목록 (gap-14) -->
+          <div v-if="selectedDate" class="flex flex-col items-start gap-[14px] w-full">
+            <p class="text-body2 font-semibold text-grey-9">
+              {{ currentMonth }}월 {{ selectedDate }}일의 회고
+            </p>
+            <ul v-if="dailyRetrospects.length > 0" class="flex flex-col gap-3 w-full">
+              <li
+                v-for="r in dailyRetrospects"
+                :key="r.id"
+                class="bg-white rounded-2xl cursor-pointer w-full"
+                style="padding: 22px 22px 20px;"
+                @click="navigateTo(`/retrospects/${r.id}`)"
+              >
+                <div class="flex flex-col gap-2">
+                  <div class="flex flex-col gap-[2px]">
+                    <span v-if="r.completedAt" class="text-caption1 font-medium text-grey-7">{{ formatDate(r.completedAt) }}</span>
+                    <p class="text-body2 font-semibold text-grey-13">{{ r.title }}</p>
+                  </div>
+                  <p v-if="r.summary" class="text-label1 font-normal text-grey-10 leading-[1.6] line-clamp-2">{{ r.summary }}</p>
+                </div>
+              </li>
+            </ul>
+            <p v-else-if="!dailyLoading" class="text-body3 text-grey-7 text-center w-full py-8">
+              이 날 작성한 회고가 없어요.
+            </p>
           </div>
         </div>
       </div>
@@ -251,7 +299,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ApiResponse, Project, Retrospective } from '~/types/api'
+import type { ApiResponse, CalendarResponse, DailyRetrospective, Project, Retrospective } from '~/types/api'
 
 definePageMeta({ middleware: 'auth', layout: 'default' })
 
@@ -279,6 +327,38 @@ const listTagColors = [
 ]
 
 watch(keyword, () => fetchRetrospects(), { immediate: true })
+
+// 주(월~일) 단위 날짜 디바이더로 그룹핑 (REC_003 기준, 이번 주 / 일주일 전 / N주 전)
+const groupedRetrospects = computed(() => {
+  const groups: { label: string; items: Retrospective[] }[] = []
+  const startOfWeek = (d: Date) => {
+    const x = new Date(d)
+    x.setHours(0, 0, 0, 0)
+    x.setDate(x.getDate() - ((x.getDay() + 6) % 7)) // 월요일 시작
+    return x.getTime()
+  }
+  const now = new Date()
+  const thisWeek = startOfWeek(now)
+  const nowMonths = now.getFullYear() * 12 + now.getMonth()
+  for (const item of retrospects.value) {
+    const date = new Date(item.completedAt ?? item.createdAt)
+    const weeksAgo = Math.max(0, Math.round((thisWeek - startOfWeek(date)) / (7 * 86_400_000)))
+    // 이번 주: 디바이더 없음 / ~4주: 주 단위 / 그 이후: 달 단위 / 12달 초과: 년 단위
+    let label: string
+    if (weeksAgo === 0) {
+      label = ''
+    } else if (weeksAgo <= 4) {
+      label = weeksAgo === 1 ? '일주일 전' : `${weeksAgo}주 전`
+    } else {
+      const monthsAgo = Math.max(1, nowMonths - (date.getFullYear() * 12 + date.getMonth()))
+      label = monthsAgo < 12 ? `${monthsAgo}달 전` : `${Math.floor(monthsAgo / 12)}년 전`
+    }
+    const last = groups[groups.length - 1]
+    if (last && last.label === label) last.items.push(item)
+    else groups.push({ label, items: [item] })
+  }
+  return groups
+})
 
 const chipsOverflow = ref(false)
 
@@ -384,6 +464,65 @@ const currentYear = ref(today.getFullYear())
 const currentMonth = ref(today.getMonth() + 1)
 const selectedDate = ref<number | null>(null)
 
+// 캘린더 데이터 (회고 있는 날 dot + 주간 횟수 + 날짜별 목록)
+const calendarDays = ref<Record<string, number>>({})
+const weeklyCount = ref(0)
+const weeklyGoalAchieved = ref(false)
+const dailyRetrospects = ref<DailyRetrospective[]>([])
+const dailyLoading = ref(false)
+
+const pad = (n: number) => String(n).padStart(2, '0')
+const dateKey = (date: number) => `${currentYear.value}-${pad(currentMonth.value)}-${pad(date)}`
+const hasRetro = (date: number) => (calendarDays.value[dateKey(date)] ?? 0) > 0
+const weeklyMessage = computed(() =>
+  weeklyGoalAchieved.value ? '이번 주 3회 이상 회고 완료!' : `이번 주 ${weeklyCount.value}회 회고`,
+)
+
+async function fetchCalendar() {
+  try {
+    const res = await $api.get<ApiResponse<CalendarResponse>>('/api/v1/retrospectives/calendar', {
+      params: { year: currentYear.value, month: currentMonth.value },
+    })
+    const data = res.data.data
+    const map: Record<string, number> = {}
+    for (const d of data.days) map[d.date] = d.count
+    calendarDays.value = map
+    weeklyCount.value = data.weeklyCount
+    weeklyGoalAchieved.value = data.isWeeklyGoalAchieved
+  } catch {
+    calendarDays.value = {}
+    weeklyCount.value = 0
+    weeklyGoalAchieved.value = false
+  }
+}
+
+async function fetchDaily(date: number) {
+  dailyLoading.value = true
+  try {
+    const res = await $api.get<ApiResponse<DailyRetrospective[]>>(
+      '/api/v1/retrospectives/calendar/daily',
+      { params: { date: dateKey(date) } },
+    )
+    dailyRetrospects.value = res.data.data
+  } catch {
+    dailyRetrospects.value = []
+  } finally {
+    dailyLoading.value = false
+  }
+}
+
+// 캘린더 탭 진입 / 월 변경 시 캘린더 데이터 로드 + 오늘 날짜 회고 자동 노출
+watch(activeTab, (t) => {
+  if (t !== 'calendar') return
+  fetchCalendar()
+  const onTodayMonth =
+    currentYear.value === today.getFullYear() && currentMonth.value === today.getMonth() + 1
+  if (selectedDate.value === null && onTodayMonth) selectDate(today.getDate())
+})
+watch([currentYear, currentMonth], () => {
+  if (activeTab.value === 'calendar') fetchCalendar()
+})
+
 const weekdays = ['일', '월', '화', '수', '목', '금', '토']
 
 const firstDayOfMonth = computed(() => {
@@ -407,12 +546,14 @@ function getDayOfWeek(date: number): number {
 }
 
 function getCellClass(date: number) {
-  if (isToday(date)) return 'bg-green-light text-primary font-semibold'
+  if (isToday(date)) return 'bg-green-light-active text-primary font-semibold'
   if (selectedDate.value === date) return 'bg-grey-11 text-grey-1 font-semibold'
   const dow = getDayOfWeek(date)
-  if (dow === 0 || dow === 6) return 'text-grey-7 font-normal'
-  return 'text-grey-13 font-normal'
+  if (dow === 0 || dow === 6) return 'text-grey-7 font-medium'
+  return 'text-grey-13 font-medium'
 }
+
+const dotCount = (date: number) => Math.min(calendarDays.value[dateKey(date)] ?? 0, 3)
 
 function prevMonth() {
   selectedDate.value = null
@@ -436,6 +577,7 @@ function nextMonth() {
 
 function selectDate(date: number) {
   selectedDate.value = date
+  fetchDaily(date)
 }
 
 function goToSearch() {
