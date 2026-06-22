@@ -1,9 +1,9 @@
-// 음성 녹음 (네이티브 전용 — 웹에선 음성 버튼 자체가 노출되지 않음).
+// 음성 녹음 — 웹·네이티브 공통. 웹은 브라우저 MediaRecorder로 녹음한다.
+// 웹 MediaRecorder 출력은 보통 webm/opus라 백엔드가 받는 포맷이 아니지만,
+// 업로드 직전 toUploadableAudio(app/utils/audio.ts)에서 WAV로 변환해 전송한다.
 //
-// ⚠️ 지금은 Capacitor 미설치 상태라 웹 MediaRecorder로 뼈대만 구현해둔다.
-// Capacitor 패키징 시 아래 TODO대로 네이티브 레코더 플러그인으로 교체해야 한다:
-//   - 웹 MediaRecorder 출력은 보통 webm/opus → 백엔드 /answers/voice 가 받는 포맷(wav/m4a/mp3/aac/ac3/ogg/flac)이 아님
-//   - 따라서 실기기에선 @capacitor-community/voice-recorder 등으로 녹음해 m4a/wav 파일을 만들어 업로드
+// Capacitor 패키징 시 네이티브 레코더 플러그인으로 교체하면 더 좋다:
+//   - @capacitor-community/voice-recorder 등으로 m4a/wav를 직접 녹음해 변환 없이 업로드
 //   - 마이크 권한도 Capacitor Permissions / 네이티브 권한 다이얼로그로 처리
 export function useVoiceRecorder() {
   const isRecording = ref(false)

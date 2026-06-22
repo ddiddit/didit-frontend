@@ -72,16 +72,10 @@ const BAR_COUNT = 84
 const bars = ref<number[]>(Array.from({ length: BAR_COUNT }, () => 8))
 let waveTimer: ReturnType<typeof setInterval> | null = null
 
-// 마이크 없이 UI만 확인하는 미리보기(개발 전용)
-const previewMode = ref(false)
-const previewPaused = ref(false)
-const previewElapsed = ref(0)
-let previewTimer: ReturnType<typeof setInterval> | null = null
-
-const isPaused = computed(() => (previewMode.value ? previewPaused.value : recorder.isPaused.value))
+const isPaused = computed(() => recorder.isPaused.value)
 
 const timeLabel = computed(() => {
-  const s = previewMode.value ? previewElapsed.value : recorder.elapsed.value
+  const s = recorder.elapsed.value
   const hh = String(Math.floor(s / 3600)).padStart(2, '0')
   const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0')
   const ss = String(s % 60).padStart(2, '0')
@@ -101,30 +95,7 @@ function stopWave() {
     waveTimer = null
   }
 }
-function startPreviewTimer() {
-  previewTimer = setInterval(() => {
-    previewElapsed.value += 1
-  }, 1000)
-}
-function stopPreviewTimer() {
-  if (previewTimer) {
-    clearInterval(previewTimer)
-    previewTimer = null
-  }
-}
-
 function togglePause() {
-  if (previewMode.value) {
-    previewPaused.value = !previewPaused.value
-    if (previewPaused.value) {
-      stopWave()
-      stopPreviewTimer()
-    } else {
-      startWave()
-      startPreviewTimer()
-    }
-    return
-  }
   if (recorder.isPaused.value) {
     recorder.resume()
     startWave()
@@ -136,11 +107,6 @@ function togglePause() {
 
 async function onSend() {
   stopWave()
-  if (previewMode.value) {
-    show('미리보기 모드라 전송할 음성이 없어요.')
-    emit('cancel')
-    return
-  }
   const blob = await recorder.stop()
   if (blob) emit('done', blob)
   else emit('cancel')
@@ -148,7 +114,6 @@ async function onSend() {
 
 function onCancel() {
   stopWave()
-  stopPreviewTimer()
   recorder.cancel()
   emit('cancel')
 }
@@ -156,15 +121,10 @@ function onCancel() {
 onMounted(async () => {
   const ok = await recorder.start()
   if (!ok) {
-    // 실제 네이티브(Capacitor) 앱이면 안내 후 닫기, 그 외(웹 미리보기 토글)면 UI 유지해 디자인 확인 가능
-    const realNative = !!(globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
-    if (realNative) {
-      show('마이크를 사용할 수 없어요. 권한을 확인해 주세요.')
-      emit('cancel')
-      return
-    }
-    previewMode.value = true
-    startPreviewTimer()
+    // 마이크 권한 거부/장치 없음 — 웹·네이티브 공통으로 안내 후 닫기
+    show('마이크를 사용할 수 없어요. 권한을 확인해 주세요.')
+    emit('cancel')
+    return
   }
   startWave()
 })
@@ -206,7 +166,6 @@ function removeDragListeners() {
 
 onUnmounted(() => {
   stopWave()
-  stopPreviewTimer()
   removeDragListeners()
 })
 </script>
