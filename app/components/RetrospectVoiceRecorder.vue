@@ -47,14 +47,15 @@
           :aria-label="isPaused ? '재생' : '일시정지'"
           @click="togglePause"
         >
-          <Icon :name="isPaused ? 'mingcute:play-fill' : 'mingcute:pause-fill'" class="w-[15px] h-[15px] text-grey-13" />
+          <img v-if="!isPaused" src="/icons/stt-pause.svg" alt="" class="w-3 h-[14px]" />
+          <img v-else src="/icons/stt-play.svg" alt="" class="w-6 h-6" />
         </button>
         <button
           class="w-12 h-12 rounded-3xl bg-grey-3 flex items-center justify-center"
           aria-label="전송"
           @click="onSend"
         >
-          <Icon name="mingcute:send-fill" class="w-6 h-6 text-grey-13" />
+          <img src="/icons/stt-send.svg" alt="" class="w-6 h-6" />
         </button>
       </div>
     </div>
