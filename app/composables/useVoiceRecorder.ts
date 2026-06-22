@@ -68,7 +68,8 @@ export function useVoiceRecorder() {
       elapsed.value = 0
       startTimer()
       return true
-    } catch {
+    } catch (e) {
+      console.warn('[voice] 녹음 시작 실패(마이크 권한/장치 확인):', e)
       cleanup()
       return false
     }
