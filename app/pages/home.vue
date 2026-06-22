@@ -63,14 +63,18 @@
         <div>
           <div
             ref="feedbackSlider"
-            class="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+            class="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory cursor-grab active:cursor-grabbing select-none"
             @scroll="onFeedbackScroll"
+            @mousedown="onSliderDown"
+            @mousemove="onSliderMove"
+            @mouseup="onSliderUp"
+            @mouseleave="onSliderUp"
           >
             <button
               v-for="r in topFeedbacks"
               :key="r.id"
               class="snap-start shrink-0 w-[340px] bg-white rounded-2xl px-[22px] py-5 flex flex-col gap-3 text-left"
-              @click="navigateTo(`/retrospects/${r.id}`)"
+              @click="!isDragging && navigateTo(`/retrospects/${r.id}`)"
             >
               <p class="text-body1 font-semibold text-grey-13 line-clamp-1">{{ r.title }}</p>
               <div class="flex gap-[14px]">
@@ -81,11 +85,13 @@
           </div>
           <!-- dots -->
           <div v-if="topFeedbacks.length > 1" class="flex justify-center gap-[10px] pt-[22px]">
-            <span
+            <button
               v-for="(_, i) in topFeedbacks"
               :key="i"
               class="w-2 h-2 rounded-full transition-colors"
               :class="i === activeFeedback ? 'bg-grey-13' : 'bg-grey-5'"
+              :aria-label="`피드백 ${i + 1}`"
+              @click="goFeedback(i)"
             />
           </div>
         </div>
@@ -203,10 +209,38 @@ const recentList = computed(() => recentRetrospectives.value.slice(0, 3))
 
 const feedbackSlider = ref<HTMLElement | null>(null)
 const activeFeedback = ref(0)
+const STEP = 352 // 카드 w-340 + gap-3(12)
+
 function onFeedbackScroll() {
   const el = feedbackSlider.value
   if (!el) return
-  activeFeedback.value = Math.round(el.scrollLeft / 352) // 카드 w-340 + gap-3
+  activeFeedback.value = Math.round(el.scrollLeft / STEP)
+}
+
+// dot 클릭 → 해당 카드로 이동
+function goFeedback(i: number) {
+  feedbackSlider.value?.scrollTo({ left: i * STEP, behavior: 'smooth' })
+}
+
+// 마우스 드래그로 가로 스크롤 (데스크탑) — 드래그 시 카드 클릭(이동) 방지
+const isDragging = ref(false)
+let dragStartX = 0
+let scrollStartLeft = 0
+function onSliderDown(e: MouseEvent) {
+  isDragging.value = false
+  dragStartX = e.clientX
+  scrollStartLeft = feedbackSlider.value?.scrollLeft ?? 0
+}
+function onSliderMove(e: MouseEvent) {
+  if (!(e.buttons & 1) || !feedbackSlider.value) return
+  const dx = e.clientX - dragStartX
+  if (Math.abs(dx) > 4) isDragging.value = true
+  feedbackSlider.value.scrollLeft = scrollStartLeft - dx
+}
+function onSliderUp() {
+  setTimeout(() => {
+    isDragging.value = false
+  }, 0)
 }
 
 onMounted(async () => {
