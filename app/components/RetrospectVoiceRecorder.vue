@@ -4,9 +4,19 @@
     <!-- 레코더 카드 (figma 2225-7905) -->
     <div
       class="absolute left-5 right-5 z-[60] bg-grey-1 rounded-[36px] flex flex-col items-center pt-3 pb-8"
-      style="bottom: 30px"
+      :style="{
+        bottom: '30px',
+        transform: dragY > 0 ? `translateY(${dragY}px)` : '',
+        transition: dragging ? 'none' : 'transform 0.25s cubic-bezier(0.32,0.72,0,1)',
+      }"
     >
-      <!-- 핸들 -->
+      <!-- 드래그 핸들 영역(상단을 끌어내려 닫기) -->
+      <div
+        class="absolute top-0 left-0 right-0 h-14 z-10 cursor-grab active:cursor-grabbing"
+        @mousedown="onDragDown"
+        @touchstart.passive="onDragDown"
+      />
+      <!-- 핸들 pill -->
       <div class="w-[50px] h-[5px] rounded-[5px] bg-grey-5" />
 
       <!-- 타이머: 빨간 점 + 시간 -->
@@ -47,9 +57,6 @@
           <Icon name="mingcute:send-fill" class="w-6 h-6 text-grey-13" />
         </button>
       </div>
-
-      <!-- 미리보기 모드 안내(마이크 없이 UI 확인) -->
-      <p v-if="previewMode" class="text-caption2 text-grey-6 mt-3">미리보기 모드 · 마이크 없이 UI만</p>
     </div>
   </Teleport>
 </template>
@@ -161,8 +168,44 @@ onMounted(async () => {
   startWave()
 })
 
+// 끌어내려 닫기 (다른 바텀시트와 동일 — 마우스/터치)
+const dragY = ref(0)
+const dragging = ref(false)
+let dragStartY = 0
+
+function pointerY(e: MouseEvent | TouchEvent): number {
+  return 'touches' in e ? (e.touches[0]?.clientY ?? 0) : e.clientY
+}
+function onDragDown(e: MouseEvent | TouchEvent) {
+  dragging.value = true
+  dragStartY = pointerY(e)
+  window.addEventListener('mousemove', onDragMove)
+  window.addEventListener('mouseup', onDragUp)
+  window.addEventListener('touchmove', onDragMove, { passive: false })
+  window.addEventListener('touchend', onDragUp)
+}
+function onDragMove(e: MouseEvent | TouchEvent) {
+  if (!dragging.value) return
+  if (e.cancelable && 'touches' in e) e.preventDefault()
+  dragY.value = Math.max(0, pointerY(e) - dragStartY)
+}
+function onDragUp(e: MouseEvent | TouchEvent) {
+  removeDragListeners()
+  dragging.value = false
+  const dragged = pointerY(e) - dragStartY
+  dragY.value = 0
+  if (dragged > 90) onCancel()
+}
+function removeDragListeners() {
+  window.removeEventListener('mousemove', onDragMove)
+  window.removeEventListener('mouseup', onDragUp)
+  window.removeEventListener('touchmove', onDragMove)
+  window.removeEventListener('touchend', onDragUp)
+}
+
 onUnmounted(() => {
   stopWave()
   stopPreviewTimer()
+  removeDragListeners()
 })
 </script>

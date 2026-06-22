@@ -118,9 +118,16 @@
           >
             <div class="flex flex-col gap-[10px]">
               <div class="flex flex-col gap-[2px]">
-                <span v-if="r.completedAt" class="text-caption1 font-medium text-grey-7">
-                  {{ formatDate(r.completedAt) }}
-                </span>
+                <!-- 프로젝트명 · 날짜 -->
+                <div class="flex items-center gap-[5px]">
+                  <template v-if="r.projectName">
+                    <span class="text-caption1 font-medium text-grey-7">{{ r.projectName }}</span>
+                    <span class="w-[3px] h-[3px] rounded-full bg-grey-5 shrink-0" />
+                  </template>
+                  <span v-if="r.completedAt" class="text-caption1 font-medium text-grey-7">
+                    {{ formatDate(r.completedAt) }}
+                  </span>
+                </div>
                 <p class="text-body2 font-semibold text-grey-13">{{ r.title }}</p>
               </div>
               <p v-if="r.summary" class="text-label1 font-normal text-grey-10 leading-[1.6] line-clamp-3">
@@ -264,7 +271,7 @@ onMounted(async () => {
   track('home_viewed')
   try {
     const [homeRes, notifRes] = await Promise.all([
-      $api.get<ApiResponse<HomeResponse>>('/api/v1/home'),
+      $api.get<ApiResponse<HomeResponse>>('/api/v2/home'),
       $api.get<ApiResponse<NotificationHistory[]>>('/api/v1/notification-histories'),
     ])
     nickname.value = homeRes.data.data.nickname

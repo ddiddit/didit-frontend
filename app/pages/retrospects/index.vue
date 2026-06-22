@@ -399,14 +399,20 @@ async function fetchProjects() {
 async function fetchRetrospects() {
   if (keyword.value || retrospects.value.length === 0) isLoading.value = true
   try {
-    let res
+    let list: Retrospective[]
     if (selectedProjectId.value) {
-      res = await $api.get<ApiResponse<Retrospective[]>>(`/api/v1/projects/${selectedProjectId.value}`)
+      const res = await $api.get<ApiResponse<Retrospective[]>>(`/api/v2/projects/${selectedProjectId.value}`)
+      list = res.data.data
     } else {
-      const params = keyword.value ? `?keyword=${encodeURIComponent(keyword.value)}` : ''
-      res = await $api.get<ApiResponse<Retrospective[]>>(`/api/v1/retrospectives${params}`)
+      const res = await $api.get<ApiResponse<Retrospective[]>>('/api/v2/retrospectives')
+      list = res.data.data
+      // v2 목록은 keyword 미지원 → 검색어가 있으면 제목/요약에서 클라이언트 필터
+      if (keyword.value) {
+        const k = keyword.value.toLowerCase()
+        list = list.filter((r) => r.title?.toLowerCase().includes(k) || r.summary?.toLowerCase().includes(k))
+      }
     }
-    retrospects.value = res.data.data
+    retrospects.value = list
   } catch {
     retrospects.value = []
   } finally {

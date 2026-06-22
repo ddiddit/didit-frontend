@@ -98,14 +98,9 @@
           @input="autoGrow"
           @keydown.enter.exact="onEnterKey"
         />
-        <!-- 음성 입력(네이티브 전용) -->
-        <button
-          v-if="showVoice"
-          class="bg-grey-13 rounded-full w-7 h-7 flex items-center justify-center shrink-0"
-          aria-label="음성 입력"
-          @click="onVoice"
-        >
-          <img src="/icons/voice.svg" alt="" class="w-3.5 h-3.5" />
+        <!-- 음성 입력(네이티브 전용) — voice.svg는 28px 원형 배경+글리프 포함 -->
+        <button v-if="showVoice" class="shrink-0" aria-label="음성 입력" @click="onVoice">
+          <img src="/icons/voice.svg" alt="" class="w-7 h-7" />
         </button>
         <!-- 전송 (빈 값이어도 탭 가능 → 토스트, CHAT_007) -->
         <button
@@ -169,15 +164,38 @@
       </div>
     </Teleport>
 
-    <!-- 마이크 권한 안내 (CHAT_001 / figma 4374-17748) -->
-    <UiPopup
-      v-model="showMicPopup"
-      title="디딧(didit)이(가) 마이크에 접근하려고 합니다."
-      description="회고를 음성으로 기록하기 위해 마이크 접근 권한이 필요해요."
-      confirm-text="허용"
-      cancel-text="허용 안 함"
-      @confirm="onMicAllow"
-    />
+    <!-- 마이크 권한 안내 (figma 4374-17929) -->
+    <Teleport to="#app-container">
+      <Transition name="mic-fade">
+        <div v-if="showMicPopup" class="absolute inset-0 z-50 flex items-center justify-center px-5">
+          <div class="absolute inset-0 bg-black/40" @click="showMicPopup = false" />
+          <div class="relative w-full max-w-[300px] bg-grey-1 rounded-2xl px-5 py-4 flex flex-col gap-[14px]">
+            <div class="flex flex-col items-center gap-2 py-3 text-center">
+              <p class="text-[17px] font-semibold text-grey-13 leading-[1.4] tracking-[-0.02em]">
+                디딧(didit)이(가)<br />마이크에 접근하려고 합니다.
+              </p>
+              <p class="text-[14px] font-normal text-grey-8 leading-[1.6] tracking-[-0.02em]">
+                회고를 음성으로 기록하기 위해<br />마이크 접근 권한이 필요해요.
+              </p>
+            </div>
+            <div class="flex gap-2 pb-1">
+              <button
+                class="flex-1 h-[50px] rounded-xl border border-grey-5 bg-grey-1 text-[15px] font-semibold text-grey-13 active:bg-grey-3 transition-colors"
+                @click="showMicPopup = false"
+              >
+                허용 안 함
+              </button>
+              <button
+                class="flex-1 h-[50px] rounded-xl bg-primary text-[15px] font-semibold text-grey-13 active:opacity-80 transition-opacity"
+                @click="onMicAllow"
+              >
+                허용
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- 음성 레코더 (figma 2225-7905) -->
     <RetrospectVoiceRecorder v-if="showRecorder" @done="onRecorderDone" @cancel="onRecorderCancel" />
@@ -592,4 +610,10 @@ onMounted(() => {
     transform: translateY(0);
   }
 }
+
+/* 마이크 권한 팝업 페이드 */
+.mic-fade-enter-active { transition: opacity 0.2s ease; }
+.mic-fade-leave-active { transition: opacity 0.15s ease; }
+.mic-fade-enter-from,
+.mic-fade-leave-to { opacity: 0; }
 </style>
