@@ -142,15 +142,15 @@ function onCancel() {
 onMounted(async () => {
   const ok = await recorder.start()
   if (!ok) {
-    // 마이크 권한/장치 없음: 개발이면 UI 미리보기 유지(디자인 확인), 실제 앱이면 닫기
-    if (import.meta.dev) {
-      previewMode.value = true
-      startPreviewTimer()
-    } else {
+    // 실제 네이티브(Capacitor) 앱이면 안내 후 닫기, 그 외(웹 미리보기 토글)면 UI 유지해 디자인 확인 가능
+    const realNative = !!(globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
+    if (realNative) {
       show('마이크를 사용할 수 없어요. 권한을 확인해 주세요.')
       emit('cancel')
       return
     }
+    previewMode.value = true
+    startPreviewTimer()
   }
   startWave()
 })

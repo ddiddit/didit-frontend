@@ -7,9 +7,9 @@ export function useIsNative() {
     const cap = (globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
     if (cap?.isNativePlatform?.()) return true
 
-    // [개발용] 웹에서 음성(STT) UI를 확인하고 싶을 때: 주소에 ?native=1 → 켜짐, ?native=0 → 꺼짐(브라우저에 저장).
-    // dev 빌드에서만 동작하므로 프로덕션엔 영향 없음.
-    if (import.meta.dev && import.meta.client) {
+    // 웹에서 음성(STT) UI를 확인하는 토글: 주소에 ?native=1 → 켜짐, ?native=0 → 꺼짐(브라우저에 저장).
+    // 프로덕션 포함 동작(opt-in 쿼리라 일반 사용자에겐 노출되지 않음). 일반 웹 사용자는 기본 false 유지.
+    if (import.meta.client) {
       const q = new URLSearchParams(window.location.search).get('native')
       if (q === '1') localStorage.setItem('forceNative', '1')
       else if (q === '0') localStorage.removeItem('forceNative')
