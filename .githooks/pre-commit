@@ -1,0 +1,19 @@
+#!/bin/sh
+# 앰플리튜드 이벤트 정의서 동기화 체크
+# 스테이징된 코드에서 track() 호출이 추가/삭제됐는데 docs/amplitude-events.md(.html)가
+# 함께 갱신되지 않았으면 커밋을 막는다. (의도적 건너뛰기: git commit --no-verify)
+
+# app/ 하위 스테이징 변경 중 track( 가 추가/삭제된 라인 (diff 헤더 +++/--- 제외)
+event_changed=$(git diff --cached --diff-filter=ACM -- app | grep -E '^[+-][^+-].*track\(')
+
+# 정의서가 스테이징됐는지
+docs_staged=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^docs/amplitude-events\.(md|html)$')
+
+if [ -n "$event_changed" ] && [ -z "$docs_staged" ]; then
+  echo "⚠️  앰플리튜드 track() 호출이 변경됐는데 docs/amplitude-events.md(.html)가 갱신되지 않았습니다."
+  echo "    이벤트 정의서를 함께 갱신한 뒤 다시 커밋하세요."
+  echo "    (의도적으로 건너뛰려면: git commit --no-verify)"
+  exit 1
+fi
+
+exit 0

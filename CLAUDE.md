@@ -73,6 +73,16 @@ AI 기반 회고(retrospective) 앱의 프론트엔드.
 - `app/middleware/auth.ts` — 보호 라우트 (CSR only)
 - 페이지에서 `definePageMeta({ middleware: 'auth' })` 로 적용
 
+## 분석 (Amplitude)
+
+- 이벤트 추적은 `app/composables/useAmplitude.ts`의 `track()` / `identify()` / `reset()` 사용
+- **이벤트 정의서**: `docs/amplitude-events.md` (비개발자 공유용 `docs/amplitude-events.html` 동봉)
+- **이벤트를 추가·삭제하거나 프로퍼티를 바꾸면 `docs/amplitude-events.md`와 `.html`을 반드시 함께 갱신**
+  - `track()` 변경 시 정의서 갱신을 강제하는 pre-commit 훅이 있음 (`.githooks/pre-commit`)
+  - 레포 클론 후 1회 설정 필요: `git config core.hooksPath .githooks`
+- 이벤트명은 `object_action` snake_case, 프로퍼티명도 snake_case
+- 개발 환경(dev)에서는 전송 안 됨 (`app/plugins/amplitude.client.ts`) — 검증은 프로덕션에서
+
 ## 작업 흐름 (SDD)
 
 1. 새 기능 전 `.specs/requirements-{slug}.md` 작성 (`/discover` 커맨드)
