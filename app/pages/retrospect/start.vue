@@ -256,6 +256,11 @@ const questionNo = ref(0) // 화면에 표시한 질문 순번
 const deepAsked = ref(false) // 심화질문을 이미 1회 노출했는지(중복 폴링 방지)
 const lastDeepId = ref<number | null>(null) // 마지막 심화질문 메시지 id(스킵 버튼 노출 대상)
 
+// 앰플리튜드 분석용 — 회고 시작 시각/심화질문 노출·스킵 여부 추적
+const startedAt = ref(0)
+const deepShown = ref(false) // 심화질문이 실제로 화면에 노출됐는지
+const deepSkipped = ref(false) // 심화질문을 스킵했는지
+
 const showExitPopup = ref(false)
 const showRestartPopup = ref(false)
 
@@ -380,10 +385,12 @@ async function init() {
   try {
     const res = await retro.start()
     retrospectiveId.value = res.retrospectiveId
+    startedAt.value = Date.now()
     pushQuestion(res.firstQuestionType, res.firstQuestionContent)
   } catch (e: unknown) {
     // 백엔드 ProblemDetail의 detail 메시지(예: "오늘 회고 횟수를 모두 사용했습니다.")를 그대로 노출
     const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+    track('retrospect_start_failed', { reason: detail ?? 'unknown' })
     show(detail ?? '회고를 시작하지 못했어요. 잠시 후 다시 시도해주세요.')
     navigateTo('/home')
   } finally {
@@ -415,6 +422,7 @@ async function onSend() {
   isBusy.value = true
   try {
     const res = await retro.answer(retrospectiveId.value, text)
+    track('answer_submitted', { question_no: questionNo.value, is_deep: deepShown.value })
     if (res.nextQuestionType === 'Q4_DEEP') {
       // Q3 답변 시 백엔드가 Q4_DEEP(심화질문)을 비동기 생성 → 로딩 후 폴링으로 노출
       await showDeepQuestion()
@@ -454,6 +462,8 @@ async function showDeepQuestion() {
         removeMessage(loadingId)
         if (res.content) {
           pushQuestion('Q4_DEEP', res.content, true)
+          deepShown.value = true
+          track('deep_question_shown')
           return
         }
         break
@@ -472,6 +482,8 @@ async function onSkipDeep() {
   isBusy.value = true
   try {
     await retro.skipDeepQuestion(retrospectiveId.value)
+    deepSkipped.value = true
+    track('deep_question_skipped')
     if (lastDeepId.value !== null) {
       const m = messages.value.find((x) => x.id === lastDeepId.value)
       if (m && m.role === 'didit') m.skippable = false
@@ -487,7 +499,11 @@ async function onSkipDeep() {
 // 회고 완료 → 결과 화면으로 이동 (AI 요약 생성/로딩은 결과 화면에서 처리)
 async function finish() {
   isInputDisabled.value = true
-  track('retrospect_completed')
+  track('retrospect_completed', {
+    answer_count: messages.value.filter((m) => m.role === 'user').length,
+    deep_question_answered: deepShown.value && !deepSkipped.value,
+    duration_sec: startedAt.value ? Math.round((Date.now() - startedAt.value) / 1000) : 0,
+  })
   useState<string>('retrospect:completing-id').value = retrospectiveId.value
   await navigateTo('/retrospect/result')
 }

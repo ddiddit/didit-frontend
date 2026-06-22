@@ -85,7 +85,7 @@ const unreadFlag = useState<boolean>('notifications:hasUnread', () => false)
 watch(hasUnread, value => { unreadFlag.value = value })
 
 onMounted(async () => {
-  track('notification_center_viewed')
+  track('notification_viewed')
   try {
     const res = await $api.get<ApiResponse<NotificationHistory[]>>('/api/v1/notification-histories')
     notifications.value = res.data.data

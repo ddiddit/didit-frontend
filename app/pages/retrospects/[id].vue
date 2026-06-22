@@ -119,6 +119,7 @@ definePageMeta({ middleware: 'auth', layout: false })
 const route = useRoute()
 const retro = useRetrospect()
 const { show } = useToast()
+const { track } = useAmplitude()
 
 const id = computed(() => String(route.params.id))
 const detail = ref<RetrospectiveDetail | null>(null)
@@ -140,6 +141,7 @@ async function loadDetail() {
   isLoading.value = true
   try {
     detail.value = await retro.getDetail(id.value)
+    track('retrospect_viewed', { retrospect_id: id.value })
   } catch {
     detail.value = null
   } finally {
