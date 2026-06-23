@@ -11,12 +11,12 @@
     </div>
 
     <!-- 이메일 영역 -->
-    <div class="px-5 pt-6 pb-3 flex flex-col gap-2">
+    <div class="px-5 pt-6 pb-5 flex flex-col gap-2">
       <p class="text-label1 font-medium text-grey-13">이메일</p>
       <div class="h-[56px] px-4 rounded-xl bg-grey-4 flex items-center">
         <span class="text-body2 font-normal text-grey-6">{{ profile?.email ?? '' }}</span>
       </div>
-      <p class="text-label1 font-normal text-grey-7">{{ loginMethodLabel }}</p>
+      <p class="text-caption1 font-normal text-grey-7">{{ loginMethodLabel }}</p>
     </div>
 
     <div class="mx-5 h-px bg-grey-4" />
@@ -26,7 +26,7 @@
       class="w-full px-5 h-[56px] flex items-center justify-between text-left active:bg-grey-3"
       @click="showLogoutModal = true"
     >
-      <span class="text-body2 font-normal text-grey-13">로그아웃</span>
+      <span class="text-body2 font-medium text-grey-13">로그아웃</span>
       <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6" />
     </button>
 
@@ -37,7 +37,7 @@
       class="w-full px-5 h-[56px] flex items-center justify-between text-left active:bg-grey-3"
       @click="navigateTo('/my/account/withdraw')"
     >
-      <span class="text-body2 font-normal text-grey-13">회원탈퇴</span>
+      <span class="text-body2 font-medium text-grey-13">회원탈퇴</span>
       <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6" />
     </button>
 

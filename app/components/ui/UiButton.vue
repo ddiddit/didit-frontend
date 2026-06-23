@@ -52,7 +52,7 @@ const variantClasses = computed(() => {
   }
   if (props.variant === 'chip') {
     // 직군·나이대·연차 등 선택 칩: font-weight 변경은 transition 안 되므로 즉시 반응
-    if (props.active) return 'transition-none font-bold bg-green-light border border-primary text-grey-13'
+    if (props.active) return 'transition-none font-semibold bg-green-light border border-primary text-grey-13'
     if (props.muted) return 'transition-none font-normal bg-white text-grey-6 border border-grey-5'
     return 'transition-none font-normal bg-white text-grey-13 border border-grey-5'
   }
