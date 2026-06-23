@@ -28,11 +28,11 @@
     </div>
 
     <!-- 문의하기 탭 -->
-    <div v-if="activeTab === 'form'" class="flex-1 overflow-y-auto scrollbar-hide px-5 py-5 flex flex-col gap-6">
+    <div v-if="activeTab === 'form'" class="flex-1 overflow-y-auto scrollbar-hide px-5 pt-6 pb-5 flex flex-col gap-6">
       <!-- 인트로 텍스트 -->
       <div class="flex flex-col gap-1">
         <p class="text-label1 font-semibold text-primary">디딧(didit)을 이용해주셔서 감사합니다!</p>
-        <p class="text-heading2 font-bold text-grey-13">앱 사용 중 불편 사항이 있으신가요?<br />확인 후 신속히 도움을 드리겠습니다.</p>
+        <p class="text-heading2 font-semibold text-grey-13">앱 사용 중 불편 사항이 있으신가요?<br />확인 후 신속히 도움을 드리겠습니다.</p>
       </div>
 
       <!-- 이메일 -->
@@ -45,7 +45,7 @@
 
       <!-- 문의 유형 -->
       <div class="flex flex-col gap-3">
-        <label class="text-body2 font-medium text-grey-10">문의 유형</label>
+        <label class="text-label1 font-medium text-grey-10">문의 유형</label>
         <div class="flex gap-3 flex-wrap">
           <button
             v-for="cat in categories"
@@ -53,7 +53,9 @@
             class="px-4 h-[50px] rounded-xl border text-[15px] leading-[150%] tracking-[-0.02em] transition-colors"
             :class="category === cat.value
               ? 'bg-green-light border-primary text-grey-13 font-normal'
-              : 'bg-white border-grey-5 text-grey-13 font-normal'"
+              : category
+                ? 'bg-white border-grey-5 text-grey-6 font-normal'
+                : 'bg-white border-grey-5 text-grey-13 font-normal'"
             @click="category = cat.value"
           >{{ cat.label }}</button>
         </div>
@@ -61,7 +63,7 @@
 
       <!-- 문의 내용 -->
       <div class="flex flex-col gap-2">
-        <label class="text-body2 font-medium text-grey-10">문의 내용</label>
+        <label class="text-label1 font-medium text-grey-10">문의 내용</label>
         <textarea
           ref="contentRef"
           v-model="content"
@@ -92,12 +94,12 @@
         <p class="text-[14px] font-normal leading-[160%] tracking-[-0.02em] text-grey-9">문의하신 내역이 없어요.</p>
       </div>
       <!-- 아코디언 목록 -->
-      <div v-else class="flex flex-col">
+      <div v-else class="flex flex-col pt-1">
         <template v-for="inq in inquiries" :key="inq.id">
           <div :id="`inquiry-${inq.id}`">
             <!-- 항목 헤더 -->
             <button
-              class="w-full px-5 py-3 flex items-center justify-between text-left gap-3"
+              class="w-full px-5 py-5 flex items-center justify-between text-left gap-3"
               @click="toggleInquiry(inq.id)"
             >
               <div class="flex flex-col gap-1.5 flex-1 min-w-0">
@@ -111,7 +113,7 @@
                 </div>
               </div>
               <img
-                src="/icons/chevron-down.svg" alt=""
+                src="/icons/chevron-down-thin.svg" alt=""
                 class="w-6 h-6 shrink-0 transition-transform duration-200"
                 :class="expandedIds.has(inq.id) ? 'rotate-180' : ''"
               />
