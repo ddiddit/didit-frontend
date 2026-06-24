@@ -47,8 +47,20 @@
       >캘린더</button>
     </div>
 
+    <!-- 검색/태그 결과 칩 (키워드 진입 시 프로젝트 필터 대신 노출, X로 해제) -->
+    <div v-if="activeTab === 'list' && keyword" class="px-5 pb-3 shrink-0">
+      <button
+        class="inline-flex items-center gap-[6px] h-[34px] pl-[11px] pr-2 rounded-[8px] bg-grey-12"
+        style="filter: drop-shadow(0px 0px 7px rgba(0,0,0,0.05));"
+        @click="clearKeyword"
+      >
+        <span class="text-label1 font-semibold text-grey-1 whitespace-nowrap">{{ keywordChipLabel }}</span>
+        <Icon name="material-symbols:close-rounded" class="w-4 h-4 text-grey-6 shrink-0" />
+      </button>
+    </div>
+
     <!-- 프로젝트 필터 칩 (리스트 탭에서만 노출, 스크롤 영역 포함) -->
-    <div v-if="activeTab === 'list'" class="px-5 pb-3 shrink-0">
+    <div v-else-if="activeTab === 'list'" class="px-5 pb-3 shrink-0">
       <div class="relative flex items-center">
         <!-- 스크롤 가능한 칩 목록 -->
         <div
@@ -61,20 +73,20 @@
           @mouseleave="onChipDragEnd"
         >
           <button
-            class="shrink-0 py-[8px] px-[11px] rounded-[8px] text-label1 font-semibold transition-colors duration-200 border"
-            :class="selectedProjectId === null ? 'bg-grey-13 text-grey-1 border-transparent' : 'bg-white text-grey-7 border-grey-5'"
+            class="shrink-0 h-[34px] flex items-center px-[11px] rounded-[8px] text-label1 font-semibold transition-colors duration-200 border shadow-[0_0_7px_rgba(0,0,0,0.05)]"
+            :class="selectedProjectId === null ? 'bg-grey-13 text-grey-1 border-transparent' : 'bg-white text-grey-7 border-transparent'"
             @click.stop="!isChipDragging && selectProject(null)"
           >ALL</button>
           <button
             v-for="project in projects"
             :key="project.id"
             :data-project-id="project.id"
-            class="shrink-0 py-[8px] px-[11px] rounded-[8px] text-label1 font-medium transition-none whitespace-nowrap border"
-            :class="selectedProjectId === project.id ? 'bg-grey-13 text-grey-1 border-transparent' : 'bg-white text-grey-7 border-grey-5'"
+            class="shrink-0 h-[34px] flex items-center px-[11px] rounded-[8px] text-label1 font-medium transition-none whitespace-nowrap border shadow-[0_0_7px_rgba(0,0,0,0.05)]"
+            :class="selectedProjectId === project.id ? 'bg-grey-13 text-grey-1 border-transparent' : 'bg-white text-grey-7 border-transparent'"
             @click.stop="!isChipDragging && selectProject(project.id)"
           >{{ project.name }}</button>
           <button
-            class="shrink-0 py-[8px] px-[11px] rounded-[8px] text-label1 font-medium text-grey-7 bg-white transition-none whitespace-nowrap border border-grey-5"
+            class="shrink-0 h-[34px] flex items-center px-[11px] rounded-[8px] text-label1 font-medium text-grey-7 bg-white transition-none whitespace-nowrap border border-transparent shadow-[0_0_7px_rgba(0,0,0,0.05)]"
             @click.stop="!isChipDragging && navigateTo('/projects')"
           >+프로젝트 추가</button>
         </div>
@@ -329,8 +341,16 @@ const showMoreMenu = ref(false)
 const showProjectPicker = ref(false)
 
 const keyword = computed(() => route.query.keyword as string | undefined)
+// 태그로 진입한 경우(type=tag) 칩에 '#' 접두사로 표시
+const isTagSearch = computed(() => route.query.type === 'tag')
+const keywordChipLabel = computed(() => (isTagSearch.value ? `#${keyword.value}` : keyword.value))
 
 watch(keyword, () => fetchRetrospects(), { immediate: true })
+
+// 검색/태그 결과 칩의 X → 키워드 해제 후 프로젝트 필터 뷰로 복귀
+function clearKeyword() {
+  navigateTo('/retrospects')
+}
 
 // 주(월~일) 단위 날짜 디바이더로 그룹핑 (REC_003 기준, 이번 주 / 일주일 전 / N주 전)
 const groupedRetrospects = computed(() => {
