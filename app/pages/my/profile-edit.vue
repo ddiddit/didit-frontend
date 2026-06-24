@@ -43,7 +43,6 @@
             variant="chip"
             size="md"
             :active="selectedJob === job.value"
-            :muted="selectedJob !== null && selectedJob !== job.value"
             @click="selectedJob = job.value"
           >{{ job.label }}</UiButton>
         </div>
@@ -59,7 +58,6 @@
             variant="chip"
             size="md"
             :active="selectedAge === age.value"
-            :muted="selectedAge !== null && selectedAge !== age.value"
             @click="selectedAge = age.value"
           >{{ age.label }}</UiButton>
         </div>
@@ -75,7 +73,6 @@
             variant="chip"
             size="md"
             :active="selectedExperience === exp.value"
-            :muted="selectedExperience !== null && selectedExperience !== exp.value"
             @click="selectedExperience = exp.value"
           >{{ exp.label }}</UiButton>
         </div>

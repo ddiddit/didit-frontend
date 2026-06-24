@@ -53,9 +53,7 @@
             class="px-4 h-[50px] rounded-xl border text-[15px] leading-[150%] tracking-[-0.02em] transition-colors"
             :class="category === cat.value
               ? 'bg-green-light border-primary text-grey-13 font-normal'
-              : category
-                ? 'bg-white border-grey-5 text-grey-6 font-normal'
-                : 'bg-white border-grey-5 text-grey-13 font-normal'"
+              : 'bg-white border-grey-5 text-grey-13 font-normal'"
             @click="category = cat.value"
           >{{ cat.label }}</button>
         </div>
