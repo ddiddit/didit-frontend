@@ -48,9 +48,7 @@
         >
           <span class="text-label2 font-medium text-grey-13">{{ item }}</span>
           <span class="flex items-center shrink-0 text-grey-6" @click.stop="removeRecent(item)">
-            <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none">
-              <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-            </svg>
+            <Icon name="material-symbols:close-rounded" class="w-4 h-4" />
           </span>
         </button>
       </div>
@@ -134,7 +132,8 @@ function goSearch(keyword: string) {
 }
 
 function goSearchByTag(tagName: string) {
-  navigateTo(`/retrospects?keyword=${encodeURIComponent(tagName)}`)
+  // 태그 진입은 type=tag로 구분 → 결과 페이지 칩에 '#' 접두사로 표시
+  navigateTo(`/retrospects?keyword=${encodeURIComponent(tagName)}&type=tag`)
 }
 
 function clearQuery() {
