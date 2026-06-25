@@ -2,15 +2,22 @@
   "name": "didit-frontend",
   "type": "module",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
+    "cap:sync": "nuxt generate && cap sync",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
     "@amplitude/analytics-browser": "^2.44.1",
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/ios": "^6.2.1",
     "@pinia/nuxt": "^0.11.1",
     "@tanstack/vue-query": "^5.80.2",
     "@vueuse/core": "^13.3.0",
@@ -25,9 +32,11 @@
     "vue-router": "^5.1.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^6.2.1",
     "@nuxt/fonts": "^0.11.4",
     "@nuxt/icon": "^1.12.0",
     "@nuxtjs/tailwindcss": "^6.13.2",
-    "@types/sortablejs": "^1.15.9"
+    "@types/sortablejs": "^1.15.9",
+    "typescript": "^6.0.3"
   }
 }
