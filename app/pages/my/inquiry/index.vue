@@ -165,6 +165,7 @@ definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
 
 const { $api } = useNuxtApp()
+const { track } = useAmplitude()
 const { load: loadProfile } = useProfile()
 
 const userEmail = ref('')
@@ -241,6 +242,7 @@ async function handleSubmit() {
       content: content.value.trim(),
       isAgreed: privacyAgreed.value,
     })
+    track('inquiry_submitted', { category: category.value })
     showSuccessModal.value = true
   } catch {
     // 오류 처리
