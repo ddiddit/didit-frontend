@@ -46,6 +46,10 @@
 | `badge_detail_viewed` | 뱃지 상세 조회 | `badge_name`, `badge_code`, `is_acquired` | `badges/index.vue` |
 | `badge_acquired` | 뱃지 획득 | `badge_name`, `badge_code` | `useBadgeAcquired.ts` |
 | `my_page_viewed` | 마이페이지 진입 | — | `my/index.vue` |
+| `marketing_consent_changed` | 마케팅 수신 동의 토글 | `agreed`(bool) | `my/notification-settings.vue` |
+| `night_push_consent_changed` | 야간 푸시 동의 토글 | `consent`(bool) | `my/notification-settings.vue` |
+| `notification_setting_changed` | 알림 설정 변경(리마인더 시간/전체 토글) | `type`(`reminder_time`\|`enabled`), `value` | `my/notification-settings.vue` |
+| `inquiry_submitted` | 문의 등록 성공 | `category` | `my/inquiry/index.vue` |
 
 ---
 
@@ -81,3 +85,16 @@
 ### 유저 식별 보강
 
 - ✅ 앱 부팅 시 `accessToken`이 있으면 `setUserId` 호출 (`amplitude.client.ts`) — 토큰 자동 로그인 시 리텐션 집계 누락 방지.
+
+### D. 알림 설정 / 문의 이벤트 추가
+
+마이페이지 설정·CS 화면에 추적이 없어 동의율 변화·문의 발생을 집계하지 못하던 구멍을 보강.
+
+| 추가된 이벤트 | 트리거 | 프로퍼티 | 위치 |
+|---|---|---|---|
+| `marketing_consent_changed` | 마케팅 수신 동의 토글 | `agreed`(bool) | `my/notification-settings.vue` |
+| `night_push_consent_changed` | 야간 푸시 동의 토글 | `consent`(bool) | `my/notification-settings.vue` |
+| `notification_setting_changed` | 리마인더 시간 저장 / 알림 전체 토글 | `type`(`reminder_time`\|`enabled`), `value` | `my/notification-settings.vue` |
+| `inquiry_submitted` | 문의 등록 성공 | `category` | `my/inquiry/index.vue` |
+
+- 온보딩에서 1회 수집하던 동의 여부(`marketing_agreed`/`night_push_agreed`)의 **이후 변경**을 추적해 동의율 코호트·이탈 분석이 가능해짐.

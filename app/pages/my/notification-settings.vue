@@ -158,6 +158,7 @@ definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
 const { $api } = useNuxtApp()
 const push = usePushNotifications()
+const { track } = useAmplitude()
 
 const isLoading = ref(true)
 const marketingAgreed = ref(false)
@@ -283,6 +284,7 @@ async function saveTime() {
       enabled: enabled.value,
       reminderTime: newTime,
     })
+    track('notification_setting_changed', { type: 'reminder_time', value: newTime })
   } catch {
     // 오류 처리
   }
@@ -307,6 +309,7 @@ async function toggleMarketing(val: boolean) {
   marketingAgreed.value = val
   try {
     await $api.put('/api/v1/notification-settings/marketing-consent', { agreed: val })
+    track('marketing_consent_changed', { agreed: val })
   } catch { marketingAgreed.value = prev }
 }
 
@@ -330,6 +333,7 @@ async function toggleNightPush(val: boolean) {
   nightPushConsent.value = val
   try {
     await $api.put('/api/v1/notification-settings/night-push-consent', { consent: val })
+    track('night_push_consent_changed', { consent: val })
     // 야간 동의를 끄면, 야간으로 저장된 회고 알림 시간을 낮 시간으로 보정한다.
     // (받지 못하는 시간이 그대로 표시돼 오해를 주지 않도록)
     if (!val && reminderTime.value && isNightTime(reminderTime.value)) {
@@ -351,6 +355,7 @@ async function toggleEnabled(val: boolean) {
       enabled: val,
       reminderTime: reminderTime.value,
     })
+    track('notification_setting_changed', { type: 'enabled', value: val })
     // 켤 때: 브라우저 알림 권한 요청 + FCM 토큰 발급·등록 / 끌 때: 토큰 해제(베스트에포트)
     if (val) {
       await push.register()

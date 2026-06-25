@@ -96,6 +96,10 @@
     <tr><td><code>badge_detail_viewed</code></td><td>뱃지 상세 조회</td><td>badge_name, badge_code, is_acquired</td><td>badges/index.vue</td></tr>
     <tr><td><code>badge_acquired</code></td><td>뱃지 획득</td><td>badge_name, badge_code</td><td>useBadgeAcquired.ts</td></tr>
     <tr><td><code>my_page_viewed</code></td><td>마이페이지 진입</td><td>—</td><td>my/index.vue</td></tr>
+    <tr><td><code>marketing_consent_changed</code></td><td>마케팅 수신 동의 토글</td><td>agreed</td><td>my/notification-settings.vue</td></tr>
+    <tr><td><code>night_push_consent_changed</code></td><td>야간 푸시 동의 토글</td><td>consent</td><td>my/notification-settings.vue</td></tr>
+    <tr><td><code>notification_setting_changed</code></td><td>리마인더 시간 저장 / 알림 전체 토글</td><td>type, value</td><td>my/notification-settings.vue</td></tr>
+    <tr><td><code>inquiry_submitted</code></td><td>문의 등록 성공</td><td>category</td><td>my/inquiry/index.vue</td></tr>
   </tbody>
 </table>
 
@@ -118,6 +122,11 @@
     <tr><td><code>keyword</code></td><td>검색어</td></tr>
     <tr><td><code>result_count</code></td><td>검색 결과 개수</td></tr>
     <tr><td><code>reason</code></td><td>실패/탈퇴 사유</td></tr>
+    <tr><td><code>agreed</code></td><td>마케팅 수신 동의 여부 (true/false)</td></tr>
+    <tr><td><code>consent</code></td><td>야간 푸시 수신 동의 여부 (true/false)</td></tr>
+    <tr><td><code>type</code></td><td>변경된 알림 설정 종류 (reminder_time / enabled). 단, notification_clicked에서는 알림 종류</td></tr>
+    <tr><td><code>value</code></td><td>변경된 알림 설정 값 (시간 문자열 또는 true/false)</td></tr>
+    <tr><td><code>category</code></td><td>문의 유형 (BUG / IMPROVEMENT 등)</td></tr>
   </tbody>
 </table>
 
