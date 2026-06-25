@@ -1,3 +1,5 @@
+import pkg from './package.json'
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   ssr: false,
@@ -31,6 +33,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE ?? 'https://api.didit.ai.kr',
+      // 웹에서 표시할 앱 버전 (앱은 @capacitor/app로 네이티브 버전을 동적으로 읽음)
+      appVersion: pkg.version,
       kakaoJsKey: process.env.NUXT_PUBLIC_KAKAO_JS_KEY ?? '',
       kakaoRestKey: process.env.NUXT_PUBLIC_KAKAO_REST_KEY ?? '',
       // 네이티브 앱 키 (앱 빌드에 박히는 공개키 — 커밋 무방). 네이티브 카카오 로그인용.
