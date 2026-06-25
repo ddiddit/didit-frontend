@@ -23,8 +23,18 @@
 - `.github/workflows/develop.yaml` → develop push 시 **AAB 빌드 → Play 내부테스트(internal) 트랙** 업로드(completed)
 - `.github/workflows/main.yaml` → main push 시 **AAB 빌드 → Play 프로덕션 트랙 draft** 업로드(수동 출시)
 - `versionCode` = `git rev-list --count HEAD` 자동 증가
+- Play 업로드 step은 `PLAY_SERVICE_ACCOUNT_JSON` 시크릿 없으면 **스킵**(빌드만 검증) → CI 초록 유지
 - env·키스토어는 **GitHub Secrets 주입** 방식 (`.github/workflows/SETUP.md` 참고)
-- ✅ `build-web` 잡 CI 통과 확인. `build-app`은 Play 시크릿 전이라 업로드에서만 실패(정상).
+- ✅ `build-web`·`build-app`(AAB 빌드) 모두 CI 통과 확인. Play 업로드만 시크릿 대기로 스킵.
+
+### 버전 자동화 (release-please) — 작동 확인됨
+- `.github/workflows/release-please.yaml` + `release-please-config.json` + `.release-please-manifest.json`
+- main 푸시 시 Conventional Commits 분석 → 릴리스 PR 자동 생성(버전 bump + CHANGELOG)
+- ⚠️ **조직 설정 필요했음**: ddiddit Org → Actions → "Allow GitHub Actions to create and approve pull requests" (이미 켬)
+- 현재 릴리스 PR **#40 (release 1.2.0)** 열림 — 출시 직전 머지
+
+### 앱 버전 동적 표시
+- `@capacitor/app` + `useAppVersion()` 컴포저블 → 마이페이지 "앱 버전"이 네이티브 빌드 버전(앱)/package.json(웹) 자동 표시. (하드코딩 제거)
 
 ### GitHub Secrets (등록 완료)
 - `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`
@@ -51,16 +61,47 @@
    - 구글(Firebase/Cloud): 릴리스 SHA-1 `8F:5E:39:75:52:A7:C5:FB:92:EF:04:65:3E:20:43:ED:8D:C0:CB:3A` + **Play 앱서명 SHA-1**(출시 후 Play Console에서 확인)
    - 카카오: 릴리스 키해시 `j145dVKnxfuS7wRlPiBD7Y3Ayzo=` + Play 앱서명 키해시
 
-### Vercel (웹)
-- **Node 버전 22 확인** (engines `>=22`로 올림). 웹 동작은 그대로(네이티브 분기는 앱에서만).
+### Vercel (웹) — ✅ 확인 완료
+- Vercel Node 버전 **24** 확인됨 → `engines >=22` 충족, **손댈 것 없음**. (웹 동작은 그대로 — 네이티브 분기는 앱에서만)
+
+### 계정 상태
+| 계정 | 상태 |
+|---|---|
+| **구글 플레이** ($25 1회) | ✅ 승인됨. 단 앱 생성 전 **인증 2개 남음**(아래) |
+| **애플 개발자 프로그램** ($99/년) | ✅ 결제 완료 → 활성화 대기 (보통 24~48h) |
+
+**🔴 구글 — 앱 생성 잠금 해제용 인증 2개 (둘 다 실기기 필요):**
+1. **Android 기기 액세스 확인** — Play Console 모바일 앱에 본인 계정 로그인. ⚠️ **에뮬레이터 불가**(실기기 아니라고 거부됨, "use a device running Android 10+"). → **실제 안드폰 필요**(지인 폰 빌려 본인 계정 로그인).
+2. **연락처 전화번호 인증** — 위 1번 완료돼야 버튼 활성화(현재 회색). 그 후 SMS 코드 인증.
+→ 즉 **실제 안드폰 1대 구하는 게 구글 진행의 전제.** 폰 확보 후: 기기인증 → 전화번호인증 → 앱 생성(`kr.ai.didit`) → 내부테스트+테스터 12명.
+
+**🟡 애플 — 활성화 후:** Team ID 확인 → 업체에 [Apple ID + Team ID] 전달 + 전송 요청 → 수락. (웹 애플로그인은 전송 후)
 
 ### iOS (추후)
 - **CocoaPods 설치** 후 `npx cap add ios`로 Cap7 iOS 재생성 (지금 레포에 iOS 없음 — Cap6 제거됨)
 - iOS 네이티브 로그인 설정 (애플 클라이언트ID, 카카오 iOS 스킴 등)
 - **기존 iOS 앱(법인 소유, 번들 `com.swyp.didit`)을 개인 계정으로 App Transfer** → 같은 번들로 Capacitor 빌드 업데이트
-  - 개인 애플 개발자 프로그램($99/년) 필요, 업체에 Transfer 가능여부+시작 요청
+  - 애플 활성화 후: Team ID 확인(developer.apple.com→Membership) + 계약 동의(App Store Connect) → 업체에 Transfer 가능여부+시작 요청(Apple ID·Team ID 전달)
 
 ---
+
+## 🏷 버전 & 번들 전략 (확정)
+
+### 버전: **1.2.0**
+- **이번 개편 릴리스 = 1.2.0** (이전 1.1.0 → 1.2.0). 웹·Android·iOS 모두 1.2.0으로 통일.
+- **release-please**가 main 푸시 시 버전 bump + CHANGELOG 자동 생성.
+  - 1.2.0은 `Release-As: 1.2.0` 커밋으로 강제 지정함.
+  - 현재 릴리스 PR(**#40, "release 1.2.0"**)이 열려 있음 → **실제 출시 직전에 머지**하면 버전 확정 (지금 머지 ❌).
+  - release-please는 **main 기준** (develop→main 머지된 feat/fix 커밋으로 판단).
+- `versionCode`는 CI 자동(커밋 수). UI "앱 버전" 표시는 `@capacitor/app`로 동적(앱=네이티브/웹=package.json).
+
+### 번들 ID (플랫폼별 다름 — 정상)
+| 플랫폼 | 번들 ID | 비고 |
+|---|---|---|
+| **Android** | `kr.ai.didit` | 신규 앱. 카카오·구글·Firebase·키스토어·CI 전부 이걸로 등록 완료 → **그대로 유지** |
+| **iOS** | `com.swyp.didit` | 기존 앱(법인) 이전·업데이트용. iOS 빌드 시 Xcode 번들을 이걸로 설정 |
+- 두 플랫폼 번들이 **달라도 무방**. `capacitor.config.ts` appId는 Android(`kr.ai.didit`) 기준, iOS는 네이티브에서 `com.swyp.didit`로 오버라이드.
+- ⚠️ iOS 이전·출시는 **개인 Apple Developer Program($99/년) 가입 필수** (무료 계정으론 출시·이전 불가).
 
 ## 📌 참고 정보 (시크릿 아님)
 
