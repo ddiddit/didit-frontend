@@ -64,11 +64,17 @@
 ### Vercel (웹) — ✅ 확인 완료
 - Vercel Node 버전 **24** 확인됨 → `engines >=22` 충족, **손댈 것 없음**. (웹 동작은 그대로 — 네이티브 분기는 앱에서만)
 
+### 계정 상태
+| 계정 | 상태 |
+|---|---|
+| **구글 플레이** ($25 1회) | 본인인증(주소증빙) 승인 대기 |
+| **애플 개발자 프로그램** ($99/년) | ✅ **결제 완료** → 활성화 대기 (보통 24~48h) |
+
 ### iOS (추후)
 - **CocoaPods 설치** 후 `npx cap add ios`로 Cap7 iOS 재생성 (지금 레포에 iOS 없음 — Cap6 제거됨)
 - iOS 네이티브 로그인 설정 (애플 클라이언트ID, 카카오 iOS 스킴 등)
 - **기존 iOS 앱(법인 소유, 번들 `com.swyp.didit`)을 개인 계정으로 App Transfer** → 같은 번들로 Capacitor 빌드 업데이트
-  - 개인 애플 개발자 프로그램($99/년) 필요, 업체에 Transfer 가능여부+시작 요청
+  - 애플 활성화 후: Team ID 확인(developer.apple.com→Membership) + 계약 동의(App Store Connect) → 업체에 Transfer 가능여부+시작 요청(Apple ID·Team ID 전달)
 
 ---
 
