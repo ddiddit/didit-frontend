@@ -47,7 +47,8 @@
           </div>
         </button>
 
-        <!-- Apple -->
+        <!-- Apple: 로그인 미동작으로 임시 비활성화 -->
+        <!--
         <button
           class="w-full h-14 bg-gray-900 rounded-xl flex items-center justify-center text-body2 font-medium text-white disabled:opacity-50"
           :disabled="isLoading"
@@ -60,6 +61,7 @@
             <span>Apple로 시작하기</span>
           </div>
         </button>
+        -->
       </div>
 
       <p v-if="errorMessage" class="text-red-400 text-center text-sm mt-4">{{ errorMessage }}</p>
