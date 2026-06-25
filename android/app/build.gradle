@@ -7,6 +7,9 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+// CI에서 ANDROID_VERSION_CODE 주입(커밋 수 기반 자동 증가), 로컬은 1
+def appVersionCode = (System.getenv("ANDROID_VERSION_CODE") ?: "1").toInteger()
+
 android {
     namespace "kr.ai.didit"
     compileSdk rootProject.ext.compileSdkVersion
@@ -14,8 +17,7 @@ android {
         applicationId "kr.ai.didit"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // CI에서 ANDROID_VERSION_CODE 주입(커밋 수 기반 자동 증가), 로컬은 1
-        versionCode (System.getenv("ANDROID_VERSION_CODE") ?: "1").toInteger()
+        versionCode appVersionCode
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
