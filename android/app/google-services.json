@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "370858550739",
+    "project_id": "didit-bd2f1",
+    "storage_bucket": "didit-bd2f1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:370858550739:android:585d79b3826c7eb27abb26",
+        "android_client_info": {
+          "package_name": "kr.ai.didit"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "370858550739-3cruekemk0a3e81btv6vn9mn7vurtcqq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFxAMULqCfBvVm_HHU_8pDHpE6TgMMTnc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "370858550739-3cruekemk0a3e81btv6vn9mn7vurtcqq.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "370858550739-ur4agejj6o03juia1kq8ene8j863uq7f.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.swyp.didit"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

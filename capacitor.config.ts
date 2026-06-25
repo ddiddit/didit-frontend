@@ -7,6 +7,13 @@ const config: CapacitorConfig = {
   appName: 'didit',
   // `npm run generate` 산출물 경로 (Nuxt 정적 빌드)
   webDir: '.output/public',
+  plugins: {
+    // 앱 내 HTTP 요청을 네이티브 계층으로 보내 WebView CORS 우회
+    // (origin이 https://localhost 라 백엔드 CORS에 막히는 문제 해결)
+    CapacitorHttp: {
+      enabled: true,
+    },
+  },
 }
 
 export default config

@@ -1,0 +1,108 @@
+name: production
+
+# main 브랜치: PR=웹 빌드 검증 / push(머지)=운영 AAB 빌드 → Play 프로덕션 트랙(초안) 업로드
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  # PR·push 공통: 웹 정적 빌드 검증 (운영 env)
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Write .env (production)
+        env:
+          ENV_CONTENT: ${{ secrets.ENV_PRODUCTION }}
+        run: printf '%s' "$ENV_CONTENT" > .env
+
+      - name: Build web (nuxt generate)
+        run: npm run generate
+
+  # 머지(push) 시에만: 서명된 운영 AAB 빌드 → Play 프로덕션 트랙 업로드(초안=수동 출시)
+  build-app:
+    needs: build-web
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # versionCode(커밋 수) 계산용 전체 히스토리
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 35
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Write .env (production)
+        env:
+          ENV_CONTENT: ${{ secrets.ENV_PRODUCTION }}
+        run: printf '%s' "$ENV_CONTENT" > .env
+
+      - name: Build web + sync to native
+        run: npm run cap:sync
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_B64" | base64 -d > android/didit-upload.keystore
+
+      - name: Write keystore.properties
+        env:
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          cat > android/keystore.properties << EOF
+          storeFile=${{ github.workspace }}/android/didit-upload.keystore
+          storePassword=$KS_PASS
+          keyAlias=didit
+          keyPassword=$KS_PASS
+          EOF
+
+      - name: Build signed AAB
+        run: |
+          export ANDROID_VERSION_CODE=$(git rev-list --count HEAD)
+          echo "versionCode=$ANDROID_VERSION_CODE"
+          cd android
+          ./gradlew bundleRelease --no-daemon
+
+      # 운영은 자동 라이브 대신 'draft'로 올려, Play Console에서 검토 후 수동 출시
+      - name: Upload to Play (production, draft)
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: kr.ai.didit
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: production
+          status: draft
