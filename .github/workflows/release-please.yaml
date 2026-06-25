@@ -1,0 +1,23 @@
+name: release-please
+
+# main 푸시 시 Conventional Commits 분석 → 버전 bump + CHANGELOG 갱신하는 "릴리스 PR" 자동 생성.
+# 그 PR을 머지하면 GitHub 릴리스/태그가 만들어지고, package.json·android versionName이 함께 올라간다.
+# (feat→MINOR, fix→PATCH, BREAKING CHANGE→MAJOR)
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

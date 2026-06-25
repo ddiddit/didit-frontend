@@ -58,7 +58,7 @@
       </button>
       <div class="h-[48px] pl-3 pr-1.5 flex items-center justify-between">
         <span class="text-body2 font-medium text-grey-10">앱 버전</span>
-        <span class="text-label1 font-medium text-grey-7">1.2.0</span>
+        <span class="text-label1 font-medium text-grey-7">{{ version }}</span>
       </div>
     </div>
 
@@ -125,6 +125,7 @@ definePageMeta({ middleware: 'auth', layout: 'default' })
 
 const { profile, load: loadProfile } = useProfile()
 const { track } = useAmplitude()
+const { version } = useAppVersion()
 
 const jobLabels: Record<JobType, string> = {
   PLANNER: '기획자',
