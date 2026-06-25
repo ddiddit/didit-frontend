@@ -5,11 +5,14 @@
 </template>
 
 <script setup lang="ts">
+import { Capacitor } from '@capacitor/core'
 import type { ApiResponse, AppConfig } from '~/types/api'
+import { getCurrentAppVersion, isVersionLower } from '~/utils/version'
 
 definePageMeta({ layout: false })
 
 const { $api } = useNuxtApp()
+const runtimeConfig = useRuntimeConfig()
 
 onMounted(async () => {
   // 이미 로그인된 경우 스플래시 없이 즉시 이동
@@ -48,6 +51,15 @@ onMounted(async () => {
         { replace: true },
       )
       return
+    }
+
+    // 네이티브 앱이 최소 버전 미만이면 강제 업데이트 화면으로 이동 (웹은 항상 최신이라 제외)
+    if (Capacitor.isNativePlatform() && configResult.minimumVersion) {
+      const current = await getCurrentAppVersion(runtimeConfig.public.appVersion as string)
+      if (isVersionLower(current, configResult.minimumVersion)) {
+        navigateTo('/force-update', { replace: true })
+        return
+      }
     }
 
     const accessToken = localStorage.getItem('accessToken')

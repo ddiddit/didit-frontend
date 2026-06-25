@@ -115,6 +115,6 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: kr.ai.didit
           releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
-          # 내부 테스트 트랙 = 내부 테스터에게 빠르게 제공(검토 거의 없음)
-          track: internal
+          # 비공개 테스트(Alpha) 트랙 = 지정 테스터 그룹에 배포 (나중에 internal로 환원)
+          track: alpha
           status: completed

@@ -360,7 +360,7 @@ async function toggleEnabled(val: boolean) {
     if (val) {
       await push.register()
     } else {
-      await $api.delete('/api/v1/device-tokens', { params: { deviceType: 'WEB' } }).catch(() => {})
+      await $api.delete('/api/v1/device-tokens', { params: { deviceType: push.deviceType() } }).catch(() => {})
     }
   } catch { enabled.value = prev }
 }
