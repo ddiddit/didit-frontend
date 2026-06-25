@@ -33,6 +33,8 @@ export default defineNuxtConfig({
       apiBase: process.env.NUXT_PUBLIC_API_BASE ?? 'https://api.didit.ai.kr',
       kakaoJsKey: process.env.NUXT_PUBLIC_KAKAO_JS_KEY ?? '',
       kakaoRestKey: process.env.NUXT_PUBLIC_KAKAO_REST_KEY ?? '',
+      // 네이티브 앱 키 (앱 빌드에 박히는 공개키 — 커밋 무방). 네이티브 카카오 로그인용.
+      kakaoNativeKey: process.env.NUXT_PUBLIC_KAKAO_NATIVE_KEY ?? 'a2d60240a516c8296d6506cad6ae841b',
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID ?? '',
       appleClientId: process.env.NUXT_PUBLIC_APPLE_CLIENT_ID ?? '',
       amplitudeApiKey: process.env.NUXT_PUBLIC_AMPLITUDE_API_KEY ?? '',

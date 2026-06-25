@@ -14,7 +14,8 @@ android {
         applicationId "kr.ai.didit"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        // CI에서 ANDROID_VERSION_CODE 주입(커밋 수 기반 자동 증가), 로컬은 1
+        versionCode (System.getenv("ANDROID_VERSION_CODE") ?: "1").toInteger()
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -39,6 +40,13 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
         }
+    }
+}
+
+// androidx.browser 1.9.0은 AGP 8.9.1+를 요구 → AGP 8.7.2와 호환되는 1.8.0으로 고정
+configurations.all {
+    resolutionStrategy {
+        force 'androidx.browser:browser:1.8.0'
     }
 }
 

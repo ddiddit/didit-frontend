@@ -47,9 +47,9 @@
           </div>
         </button>
 
-        <!-- Apple: 로그인 미동작으로 임시 비활성화 -->
-        <!--
+        <!-- Apple: 웹·iOS만 노출 (안드로이드 앱은 숨김) -->
         <button
+          v-if="showApple"
           class="w-full h-14 bg-gray-900 rounded-xl flex items-center justify-center text-body2 font-medium text-white disabled:opacity-50"
           :disabled="isLoading"
           @click="loginWithApple"
@@ -61,7 +61,6 @@
             <span>Apple로 시작하기</span>
           </div>
         </button>
-        -->
       </div>
 
       <p v-if="errorMessage" class="text-red-400 text-center text-sm mt-4">{{ errorMessage }}</p>
@@ -70,18 +69,20 @@
 </template>
 
 <script setup lang="ts">
+import { Capacitor } from '@capacitor/core'
+import { SocialLogin } from '@capgo/capacitor-social-login'
+import { CapacitorKakaoLogin } from '@team-lepisode/capacitor-kakao-login'
 import type { ApiResponse, TokenResponse } from '~/types/api'
 
 const { track, identify } = useAmplitude()
 
-// 각 SDK의 최소 타입 선언
-declare const Kakao: {
-  isInitialized: () => boolean
-  init: (key: string) => void
-  Auth: {
-    authorize: (opts: { redirectUri: string }) => void
-  }
-}
+// 플랫폼 판별 — 앱(네이티브)이면 네이티브 SDK, 웹이면 기존 방식
+const platform = Capacitor.getPlatform() // 'web' | 'ios' | 'android'
+const isNative = Capacitor.isNativePlatform()
+// 애플 버튼은 웹·iOS만 노출 (안드로이드 앱은 숨김)
+const showApple = computed(() => platform !== 'android')
+
+// 웹 SDK 최소 타입 선언 (웹에서만 사용)
 declare const google: {
   accounts: {
     id: {
@@ -123,7 +124,18 @@ onMounted(async () => {
     syncWidth.value = `${googleContent.value.offsetWidth}px`
   }
 
-  // Google, Apple SDK 로딩 (카카오는 직접 URL 방식으로 SDK 불필요)
+  if (isNative) {
+    // 앱: 네이티브 SDK 초기화
+    await CapacitorKakaoLogin.initialize({ appKey: config.public.kakaoNativeKey })
+    await SocialLogin.initialize({
+      google: { webClientId: config.public.googleClientId },
+      // 애플은 iOS에서만 (안드로이드는 버튼 자체가 없음)
+      ...(platform === 'ios' ? { apple: { clientId: config.public.appleClientId } } : {}),
+    })
+    return
+  }
+
+  // 웹: Google·Apple SDK 로딩 (카카오는 직접 URL 방식으로 SDK 불필요)
   await Promise.all([
     loadScript('https://accounts.google.com/gsi/client'),
     loadScript('https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js'),
@@ -173,14 +185,41 @@ async function submitLogin(provider: 'KAKAO' | 'GOOGLE' | 'APPLE', oauthToken: s
   }
 }
 
-function loginWithKakao() {
+async function loginWithKakao() {
   errorMessage.value = ''
+  if (isNative) {
+    // 앱: 네이티브 카카오 로그인 → 액세스 토큰
+    try {
+      const res = await CapacitorKakaoLogin.login()
+      await submitLogin('KAKAO', res.accessToken)
+    } catch {
+      errorMessage.value = '카카오 로그인에 실패했습니다.'
+    }
+    return
+  }
+  // 웹: redirect 방식
   const redirectUri = encodeURIComponent(`${window.location.origin}/auth/kakao/callback`)
   window.location.href = `https://kauth.kakao.com/oauth/authorize?client_id=${config.public.kakaoRestKey}&redirect_uri=${redirectUri}&response_type=code`
 }
 
-function loginWithGoogle() {
+async function loginWithGoogle() {
   errorMessage.value = ''
+  if (isNative) {
+    // 앱: 네이티브 구글 로그인 → ID 토큰
+    try {
+      const res = await SocialLogin.login({ provider: 'google', options: {} })
+      const idToken = (res.result as { idToken?: string | null }).idToken
+      if (!idToken) {
+        errorMessage.value = 'Google 로그인에 실패했습니다.'
+        return
+      }
+      await submitLogin('GOOGLE', idToken)
+    } catch {
+      errorMessage.value = 'Google 로그인에 실패했습니다.'
+    }
+    return
+  }
+  // 웹: GIS 원탭/팝업
   google.accounts.id.prompt((notification) => {
     if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
       errorMessage.value = 'Google 로그인 창이 표시되지 않았습니다. 팝업 차단을 해제해주세요.'
@@ -190,6 +229,22 @@ function loginWithGoogle() {
 
 async function loginWithApple() {
   errorMessage.value = ''
+  if (isNative) {
+    // iOS 앱: 네이티브 애플 로그인 → ID 토큰
+    try {
+      const res = await SocialLogin.login({ provider: 'apple', options: { scopes: ['email', 'name'] } })
+      const idToken = (res.result as { idToken?: string | null }).idToken
+      if (!idToken) {
+        errorMessage.value = 'Apple 로그인에 실패했습니다.'
+        return
+      }
+      await submitLogin('APPLE', idToken)
+    } catch {
+      errorMessage.value = 'Apple 로그인에 실패했습니다.'
+    }
+    return
+  }
+  // 웹: AppleID JS SDK 팝업
   AppleID.auth.init({
     clientId: config.public.appleClientId,
     scope: 'name email',

@@ -10,16 +10,19 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "cap:sync": "nuxt generate && cap sync",
+    "cap:sync:prod": "nuxt generate --dotenv .env.production && cap sync",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
     "@amplitude/analytics-browser": "^2.44.1",
-    "@capacitor/android": "^6.2.1",
-    "@capacitor/core": "^6.2.1",
-    "@capacitor/ios": "^6.2.1",
+    "@capacitor/android": "^7.6.7",
+    "@capacitor/core": "^7.6.7",
+    "@capacitor/ios": "^7.6.7",
+    "@capgo/capacitor-social-login": "^7.20.0",
     "@pinia/nuxt": "^0.11.1",
     "@tanstack/vue-query": "^5.80.2",
+    "@team-lepisode/capacitor-kakao-login": "^7.0.0",
     "@vueuse/core": "^13.3.0",
     "@vueuse/integrations": "^13.9.0",
     "@vueuse/nuxt": "^13.3.0",
@@ -32,7 +35,7 @@
     "vue-router": "^5.1.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.2.1",
+    "@capacitor/cli": "^7.6.7",
     "@nuxt/fonts": "^0.11.4",
     "@nuxt/icon": "^1.12.0",
     "@nuxtjs/tailwindcss": "^6.13.2",
