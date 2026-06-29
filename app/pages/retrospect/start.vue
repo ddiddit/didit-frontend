@@ -52,7 +52,7 @@
           <!-- 심화질문 생성 중 (버블 아님: 초록 스피너 + 텍스트, figma 24371) -->
           <div v-else-if="msg.role === 'generating'" class="chat-in flex items-center gap-[10px] mt-5">
             <span class="spinner shrink-0" />
-            <span class="text-label1 font-medium text-grey-13">심화 질문을 생성 중이에요...</span>
+            <span class="text-label1 font-medium text-grey-13">{{ msg.text ?? '심화 질문을 생성 중이에요...' }}</span>
           </div>
 
           <!-- 사용자 답변 -->
@@ -86,6 +86,14 @@
       class="px-5 pt-2.5 bg-grey-1 shrink-0"
       style="padding-bottom: max(16px, env(safe-area-inset-bottom, 16px))"
     >
+      <!-- 질문 불러오기 실패 시 인라인 에러 배너 (figma err3) -->
+      <UiInlineError
+        v-if="chatError"
+        variant="dark"
+        :message="chatError.message"
+        class="mb-2.5"
+        @retry="chatError.retry()"
+      />
       <!-- figma: padding 10/8/10/20, gap 15, radius 22. 여러 줄이면 전송 버튼이 하단 정렬 -->
       <div class="flex items-end gap-[15px] bg-grey-3 rounded-[22px] pl-5 pr-2 py-2.5">
         <textarea
@@ -218,7 +226,8 @@
 </template>
 
 <script setup lang="ts">
-import type { QuestionType } from '~/types/api'
+import type { QuestionType, CompleteRetrospectiveResponse } from '~/types/api'
+import { getApiErrorCode, getApiErrorMessage, isAuthError } from '~/utils/api-error'
 
 definePageMeta({ middleware: 'auth', layout: false })
 
@@ -237,7 +246,7 @@ type ChatMessage =
       typedMain: string // 타이핑으로 점차 노출되는 본문
       showSub: boolean // 본문 타이핑 완료 후 가이드/스킵 노출
     }
-  | { id: number; role: 'generating' }
+  | { id: number; role: 'generating'; text?: string }
   | { id: number; role: 'user'; text: string }
 type DiditMessage = Extract<ChatMessage, { role: 'didit' }>
 
@@ -250,6 +259,11 @@ const retrospectiveId = ref('')
 const messages = ref<ChatMessage[]>([])
 const inputText = ref('')
 const isBusy = ref(false) // API 호출 중(질문 전환/완료) — 입력·전송 잠금
+// 다음 질문 불러오기/결과 생성 실패 시 입력창 위 인라인 에러 배너 (figma 31182 / 31141)
+const chatError = ref<{ message: string; retry: () => void } | null>(null)
+// 결과 화면과 공유: 채팅에서 생성한 결과를 stash, 결과 화면이 재생성 없이 사용
+const completingId = useState<string>('retrospect:completing-id')
+const resultStash = useState<CompleteRetrospectiveResponse | null>('retrospect:result', () => null)
 const isInputDisabled = ref(false) // 더 이상 입력받지 않는 상태(완료 진행 등)
 const typing = ref(false) // 질문 타이핑 애니메이션 중 — 입력 잠금 (CHAT_001)
 const questionNo = ref(0) // 화면에 표시한 질문 순번
@@ -388,10 +402,9 @@ async function init() {
     startedAt.value = Date.now()
     pushQuestion(res.firstQuestionType, res.firstQuestionContent)
   } catch (e: unknown) {
-    // 백엔드 ProblemDetail의 detail 메시지(예: "오늘 회고 횟수를 모두 사용했습니다.")를 그대로 노출
-    const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-    track('retrospect_start_failed', { reason: detail ?? 'unknown' })
-    show(detail ?? '회고를 시작하지 못했어요. 잠시 후 다시 시도해주세요.')
+    // 분석 reason은 안정적인 에러 코드(예: DAILY_LIMIT_EXCEEDED), 화면 문구는 코드별 한국어 메시지
+    track('retrospect_start_failed', { reason: getApiErrorCode(e) ?? 'unknown' })
+    show(getApiErrorMessage(e, '회고를 시작하지 못했어요. 잠시 후 다시 시도해주세요.'))
     navigateTo('/home')
   } finally {
     isBusy.value = false
@@ -419,6 +432,12 @@ async function onSend() {
   // 값이 비워진 뒤(DOM 업데이트 후) 높이를 다시 계산해야 1줄로 초기화됨
   nextTick(autoGrow)
 
+  await submitAnswer(text)
+}
+
+// 답변 전송 + 다음 질문 진행. 실패하면 입력창 위 인라인 배너로 같은 답변 재시도 (figma err3)
+async function submitAnswer(text: string) {
+  chatError.value = null
   isBusy.value = true
   try {
     const res = await retro.answer(retrospectiveId.value, text)
@@ -433,8 +452,12 @@ async function onSend() {
       // 심화질문 답변까지 끝남 → 완료
       await finish()
     }
-  } catch {
-    show('답변 전송에 실패했어요. 다시 시도해주세요.')
+  } catch (e) {
+    if (isAuthError(e)) return // 인증 만료 → 로그인 이동, 배너 X
+    chatError.value = {
+      message: '질문을 불러오지 못했어요.\n다시 시도해 주세요.',
+      retry: () => submitAnswer(text),
+    }
   } finally {
     isBusy.value = false
   }
@@ -496,16 +519,36 @@ async function onSkipDeep() {
   }
 }
 
-// 회고 완료 → 결과 화면으로 이동 (AI 요약 생성/로딩은 결과 화면에서 처리)
+// 회고 완료 → AI 결과 생성을 채팅에서 수행. 실패 시 채팅에 에러 배너(figma 31141), 성공 시 결과 화면 이동.
 async function finish() {
+  chatError.value = null
   isInputDisabled.value = true
-  track('retrospect_completed', {
-    answer_count: messages.value.filter((m) => m.role === 'user').length,
-    deep_question_answered: deepShown.value && !deepSkipped.value,
-    duration_sec: startedAt.value ? Math.round((Date.now() - startedAt.value) / 1000) : 0,
-  })
-  useState<string>('retrospect:completing-id').value = retrospectiveId.value
-  await navigateTo('/retrospect/result')
+  isBusy.value = true
+  const loadingId = nextId()
+  messages.value.push({ id: loadingId, role: 'generating', text: '회고 결과를 정리하고 있어요...' })
+  scrollToBottom()
+  try {
+    const result = await retro.complete(retrospectiveId.value)
+    track('retrospect_completed', {
+      answer_count: messages.value.filter((m) => m.role === 'user').length,
+      deep_question_answered: deepShown.value && !deepSkipped.value,
+      duration_sec: startedAt.value ? Math.round((Date.now() - startedAt.value) / 1000) : 0,
+    })
+    // 생성된 결과를 stash → 결과 화면이 재생성 없이 즉시 표시
+    resultStash.value = result
+    completingId.value = retrospectiveId.value
+    await navigateTo('/retrospect/result')
+  } catch (e) {
+    removeMessage(loadingId)
+    isInputDisabled.value = false
+    if (isAuthError(e)) return // 인증 만료 → 로그인 이동, 배너 X
+    chatError.value = {
+      message: '회고 결과를 생성하지 못했어요.\n다시 시도해 주세요.',
+      retry: finish,
+    }
+  } finally {
+    isBusy.value = false
+  }
 }
 
 function removeMessage(id: number) {

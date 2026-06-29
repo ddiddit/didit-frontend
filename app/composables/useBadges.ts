@@ -83,7 +83,8 @@ export function useBadges() {
     }
   }
 
-  async function load() {
+  // throwOnError=true면 에러를 던진다(useLoadState.run과 함께 에러 화면 분기용)
+  async function load(throwOnError = false) {
     try {
       const [badgeRes, retroCount] = await Promise.all([
         $api.get<ApiResponse<BadgeApiItem[]>>('/api/v1/badges'),
@@ -105,8 +106,9 @@ export function useBadges() {
           current: def.countable ? Math.min(retroCount, def.goal ?? retroCount) : 0,
         }
       })
-    } catch {
+    } catch (e) {
       badges.value = buildDefault()
+      if (throwOnError) throw e
     } finally {
       loaded.value = true
     }

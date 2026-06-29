@@ -157,9 +157,9 @@
     <!-- 리스트 탭 -->
     <template v-if="activeTab === 'list'">
 
-      <!-- 빈 상태 -->
+      <!-- 빈 상태 (조회 실패 시에는 빈 상태 대신 하단 에러 배너) -->
       <div
-        v-if="!isLoading && retrospects.length === 0"
+        v-if="!isLoading && !loadError && retrospects.length === 0"
         class="flex-1 flex flex-col items-center justify-center gap-[6px]"
       >
         <img src="/icons/empty-retrospects.svg" alt="" class="w-[70px] h-[70px] mb-[6px]" />
@@ -212,6 +212,24 @@
           </template>
         </ul>
       </div>
+
+      <!-- 목록 조회 실패: 하단 인라인 에러 배너 (figma 31219, 버튼 없음) -->
+      <UiInlineError
+        v-if="loadError"
+        variant="dark"
+        retry-text=""
+        :message="'회고 내용을 불러오지 못했어요.\n네트워크 상태를 확인 후 다시 시도해 주세요.'"
+        class="absolute bottom-4 left-5 right-5 z-30"
+      />
+
+      <!-- 목록 응답 지연: 일정 시간 이상 로딩 시 하단 배너 + 다시 시도 (figma 31267) -->
+      <UiInlineError
+        v-if="slowLoading"
+        variant="dark"
+        :message="'응답이 오래 걸리고 있어요.\n다시 시도해 주세요.'"
+        class="absolute bottom-4 left-5 right-5 z-30"
+        @retry="fetchRetrospects()"
+      />
     </template>
 
     <!-- 캘린더 탭 -->
@@ -324,6 +342,7 @@
 import type { ApiResponse, CalendarResponse, DailyRetrospective, Project, Retrospective } from '~/types/api'
 import { getTagColor } from '~/utils/tag-color'
 import { parseServerDate } from '~/utils/date'
+import { isAuthError } from '~/utils/api-error'
 
 definePageMeta({ middleware: 'auth', layout: 'default' })
 
@@ -336,6 +355,9 @@ const retrospects = useState<Retrospective[]>('retrospects:list', () => [])
 const projects = useState<Project[]>('projects:list', () => [])
 const activeTab = ref<'list' | 'calendar'>('list')
 const isLoading = ref(retrospects.value.length === 0)
+const loadError = ref(false) // 목록 조회 실패 → 하단 인라인 에러 배너 (figma 31219)
+const slowLoading = ref(false) // 로딩이 길어질 때 응답 지연 배너 (figma 31267)
+let slowTimer: ReturnType<typeof setTimeout> | null = null
 const selectedProjectId = ref<string | null>(null)
 const showMoreMenu = ref(false)
 const showProjectPicker = ref(false)
@@ -416,6 +438,11 @@ async function fetchProjects() {
 
 async function fetchRetrospects() {
   if (keyword.value || retrospects.value.length === 0) isLoading.value = true
+  loadError.value = false
+  // 응답이 5초 이상 걸리면 지연 배너 노출
+  slowLoading.value = false
+  if (slowTimer) clearTimeout(slowTimer)
+  slowTimer = setTimeout(() => { slowLoading.value = true }, 5000)
   try {
     let list: Retrospective[]
     if (selectedProjectId.value) {
@@ -441,10 +468,15 @@ async function fetchRetrospects() {
     if (keyword.value) {
       track('retrospect_searched', { keyword: keyword.value, result_count: list.length })
     }
-  } catch {
-    retrospects.value = []
+  } catch (e) {
+    // 인증 만료는 인터셉터가 로그인으로 보냄 → 배너 X
+    if (isAuthError(e)) return
+    // 기존 목록은 유지(있으면)하고 하단 배너로 실패를 알림 — 빈 상태로 오인 방지
+    loadError.value = true
   } finally {
     isLoading.value = false
+    if (slowTimer) { clearTimeout(slowTimer); slowTimer = null }
+    slowLoading.value = false
   }
 }
 

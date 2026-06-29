@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-white flex flex-col">
+  <div class="h-full bg-white flex flex-col relative">
 
     <!-- 헤더 -->
     <div class="flex items-center px-5 h-[50px] shrink-0">
@@ -9,6 +9,8 @@
       <span class="flex-1 text-center text-body2 font-semibold text-grey-13">문의하기</span>
       <div class="w-6 h-6" />
     </div>
+
+    <UiLoadError :error="loadError" :slow="slowLoading" @retry="reload" />
 
     <!-- 탭 -->
     <div class="flex shrink-0 border-b border-grey-5">
@@ -280,20 +282,23 @@ function formatDate(iso: string): string {
   return `${y}.${m}.${day}`
 }
 
+const { loadError, slowLoading, run } = useLoadState()
+
 async function loadInquiries() {
-  try {
-    const res = await $api.get<ApiResponse<InquiryListItem[]>>('/api/v1/inquiries')
-    inquiries.value = res.data.data.map(i => ({
-      id: i.id,
-      category: i.type,
-      content: i.content,
-      answered: i.status === 'ANSWERED',
-      answer: i.adminAnswer ?? undefined,
-      createdAt: formatDate(i.createdAt),
-    }))
-  } catch {
-    inquiries.value = []
-  }
+  const res = await $api.get<ApiResponse<InquiryListItem[]>>('/api/v1/inquiries')
+  inquiries.value = res.data.data.map(i => ({
+    id: i.id,
+    category: i.type,
+    content: i.content,
+    answered: i.status === 'ANSWERED',
+    answer: i.adminAnswer ?? undefined,
+    createdAt: formatDate(i.createdAt),
+  }))
+}
+
+// 재시도용: 문의 목록만 다시 로드 (에러 화면 분기)
+async function reload() {
+  await run(loadInquiries)
 }
 
 const route = useRoute()
@@ -315,7 +320,7 @@ onMounted(async () => {
   const p = await loadProfile()
   userEmail.value = p?.email ?? ''
 
-  await loadInquiries()
+  await reload()
 
   if (fromNotification) expandLatestAnswered()
 })

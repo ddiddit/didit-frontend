@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-background flex flex-col">
+  <div class="h-full bg-background flex flex-col relative">
 
     <!-- 헤더 -->
     <div class="flex items-center px-5 h-[50px] shrink-0">
@@ -16,6 +16,8 @@
         전체 읽음
       </button>
     </div>
+
+    <UiLoadError :error="loadError" :slow="slowLoading" @retry="reload" />
 
     <!-- 로딩 -->
     <div v-if="isLoading" class="flex-1 flex items-center justify-center">
@@ -75,7 +77,7 @@ definePageMeta({ middleware: 'auth', layout: 'default' })
 const { $api } = useNuxtApp()
 const { track } = useAmplitude()
 
-const isLoading = ref(true)
+const { isLoading, loadError, slowLoading, run } = useLoadState()
 const notifications = ref<NotificationHistory[]>([])
 
 const hasUnread = computed(() => notifications.value.some(n => !n.isRead))
@@ -84,15 +86,16 @@ const hasUnread = computed(() => notifications.value.some(n => !n.isRead))
 const unreadFlag = useState<boolean>('notifications:hasUnread', () => false)
 watch(hasUnread, value => { unreadFlag.value = value })
 
-onMounted(async () => {
-  track('notification_viewed')
-  try {
+async function reload() {
+  await run(async () => {
     const res = await $api.get<ApiResponse<NotificationHistory[]>>('/api/v1/notification-histories')
     notifications.value = res.data.data
-  } catch {
-  } finally {
-    isLoading.value = false
-  }
+  })
+}
+
+onMounted(() => {
+  track('notification_viewed')
+  reload()
 })
 
 function onNotificationClick(item: NotificationHistory) {

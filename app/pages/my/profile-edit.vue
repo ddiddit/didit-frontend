@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-white flex flex-col">
+  <div class="h-full bg-white flex flex-col relative">
 
     <!-- 헤더 -->
     <div class="flex items-center px-5 h-[50px] shrink-0">
@@ -16,6 +16,8 @@
         저장
       </button>
     </div>
+
+    <UiLoadError :error="loadError" :slow="slowLoading" @retry="reload" />
 
     <!-- 본문: 온보딩 STEP 2와 동일한 레이아웃 -->
     <div class="flex-1 px-5 overflow-y-auto scrollbar-hide flex flex-col gap-7 pt-7">
@@ -85,12 +87,14 @@
 
 <script setup lang="ts">
 import type { ApiResponse, JobType, AgeType, ExperienceType, NicknameCheckResponse } from '~/types/api'
+import { getApiErrorMessage, isApiError } from '~/utils/api-error'
 
 definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
 
 const { $api } = useNuxtApp()
-const { profile, load: loadProfile, setProfile } = useProfile()
+const { profile, reload: reloadProfile, setProfile } = useProfile()
+const { loadError, slowLoading, run } = useLoadState()
 
 const nickname = ref('')
 const nicknameStatus = ref<'idle' | 'checking' | 'available' | 'duplicate' | 'invalid'>('idle')
@@ -185,17 +189,21 @@ async function checkNickname() {
   }
 }
 
-onMounted(async () => {
-  const data = await loadProfile()
-  if (!data) return
-  nickname.value = data.nickname ?? ''
-  selectedJob.value = data.job ?? null
-  selectedAge.value = data.age ?? null
-  selectedExperience.value = data.experience ?? null
-  originalNickname.value = nickname.value
-  // 저장된 닉네임은 이미 유효함
-  nicknameStatus.value = 'available'
-})
+async function reload() {
+  await run(async () => {
+    const data = await reloadProfile()
+    if (!data) return
+    nickname.value = data.nickname ?? ''
+    selectedJob.value = data.job ?? null
+    selectedAge.value = data.age ?? null
+    selectedExperience.value = data.experience ?? null
+    originalNickname.value = nickname.value
+    // 저장된 닉네임은 이미 유효함
+    nicknameStatus.value = 'available'
+  })
+}
+
+onMounted(reload)
 
 async function onSave() {
   if (!canSave.value || isSaving.value) return
@@ -218,8 +226,14 @@ async function onSave() {
       })
     }
     navigateTo('/my')
-  } catch {
-    // 오류 처리
+  } catch (e) {
+    // 확인~저장 사이 닉네임 선점 레이스: 인라인 에러로 표시, 그 외엔 안내
+    if (isApiError(e, 'DUPLICATE_NICKNAME')) {
+      nicknameStatus.value = 'duplicate'
+      nicknameMessage.value = '이미 사용 중인 닉네임이에요'
+    } else {
+      alert(getApiErrorMessage(e))
+    }
   } finally {
     isSaving.value = false
   }

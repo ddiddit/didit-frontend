@@ -1,5 +1,7 @@
 <template>
-  <div class="h-full bg-grey-3 flex flex-col overflow-y-auto scrollbar-hide">
+  <div class="h-full bg-grey-3 flex flex-col overflow-y-auto scrollbar-hide relative">
+
+    <UiLoadError :error="loadError" :slow="slowLoading" top="0" @retry="reload" />
 
     <!-- 프로필 섹션 -->
     <button
@@ -123,9 +125,10 @@ import { parseServerDate } from '~/utils/date'
 
 definePageMeta({ middleware: 'auth', layout: 'default' })
 
-const { profile, load: loadProfile } = useProfile()
+const { profile, reload: reloadProfile } = useProfile()
 const { track } = useAmplitude()
 const { version } = useAppVersion()
+const { loadError, slowLoading, run } = useLoadState()
 
 const jobLabels: Record<JobType, string> = {
   PLANNER: '기획자',
@@ -146,9 +149,14 @@ const acquiredBadges = computed(() =>
     }),
 )
 
+async function reload() {
+  await run(async () => {
+    await Promise.all([reloadProfile(), loadBadges(true)])
+  })
+}
+
 onMounted(() => {
   track('my_page_viewed')
-  loadProfile()
-  loadBadges()
+  reload()
 })
 </script>

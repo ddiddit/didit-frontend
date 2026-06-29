@@ -2,6 +2,62 @@ export interface ApiResponse<T> {
   data: T
 }
 
+// 백엔드 공통 에러 코드 (RFC 9457 ProblemDetail의 properties.code)
+// 백엔드 *ErrorCode enum의 name과 1:1 대응 (어드민 전용 코드는 제외)
+export type ApiErrorCode =
+  // 공통
+  | 'INVALID_REQUEST'
+  | 'NOT_FOUND'
+  | 'INTERNAL_SERVER_ERROR'
+  // 인증/회원
+  | 'USER_NOT_FOUND'
+  | 'USER_CONSENT_NOT_FOUND'
+  | 'WITHDRAWN_USER'
+  | 'INVALID_REFRESH_TOKEN'
+  | 'EXPIRED_REFRESH_TOKEN'
+  | 'UNSUPPORTED_OAUTH_PROVIDER'
+  | 'DUPLICATE_NICKNAME'
+  | 'OAUTH_USER_INFO_FAILED'
+  // 프로젝트/태그
+  | 'DUPLICATED_PROJECT_NAME'
+  | 'PROJECT_NOT_FOUND'
+  | 'PROJECT_LIMIT_EXCEEDED'
+  | 'DUPLICATED_TAG_NAME'
+  | 'TAG_NOT_FOUND'
+  | 'INVALID_TAG_NAME'
+  | 'RETRO_TAG_NOT_FOUND'
+  // 알림
+  | 'NOTIFICATION_SETTING_NOT_FOUND'
+  | 'NOTIFICATION_HISTORY_NOT_FOUND'
+  // 문의
+  | 'INQUIRY_NOT_FOUND'
+  // 공지
+  | 'NOTICE_NOT_FOUND'
+  | 'NOTICE_FORBIDDEN'
+  // 회고
+  | 'RETROSPECTIVE_NOT_FOUND'
+  | 'RETROSPECTIVE_ALREADY_COMPLETED'
+  | 'RETROSPECTIVE_NOT_IN_PROGRESS'
+  | 'DAILY_LIMIT_EXCEEDED'
+  | 'SUMMARY_NOT_GENERATED'
+  | 'SPEECH_EMPTY_FILE'
+  | 'SPEECH_UNSUPPORTED_FILE'
+  | 'SPEECH_EMPTY_RESULT'
+  | 'SPEECH_TRANSCRIPTION_FAILED'
+
+// 백엔드 공통 에러 응답 (application/problem+json)
+export interface ApiErrorResponse {
+  type: string
+  title: string
+  status: number
+  detail: string
+  instance: string
+  properties: {
+    timestamp: string
+    code: ApiErrorCode
+  }
+}
+
 // 앱 설정
 export interface AppConfig {
   maintenanceMode: boolean

@@ -73,6 +73,7 @@ import { Capacitor } from '@capacitor/core'
 import { SocialLogin } from '@capgo/capacitor-social-login'
 import { CapacitorKakaoLogin } from '@team-lepisode/capacitor-kakao-login'
 import type { ApiResponse, TokenResponse } from '~/types/api'
+import { getApiErrorMessage } from '~/utils/api-error'
 
 const { track, identify } = useAmplitude()
 
@@ -177,9 +178,10 @@ async function submitLogin(provider: 'KAKAO' | 'GOOGLE' | 'APPLE', oauthToken: s
 
     const dest = data.data.isNewUser || !data.data.isOnboardingCompleted ? '/onboarding' : '/home'
     navigateTo(dest, { replace: true })
-  } catch {
+  } catch (e) {
     track('login_failed', { provider: provider.toLowerCase() })
-    errorMessage.value = '로그인에 실패했습니다. 다시 시도해주세요.'
+    // 백엔드 에러 코드(WITHDRAWN_USER, OAUTH_USER_INFO_FAILED 등)에 맞는 문구 노출
+    errorMessage.value = getApiErrorMessage(e, '로그인에 실패했습니다. 다시 시도해주세요.')
   } finally {
     isLoading.value = false
   }

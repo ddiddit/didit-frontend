@@ -259,6 +259,47 @@
 
 ---
 
+### UiErrorState
+
+경로: `app/components/ui/UiErrorState.vue`
+
+상황별 **전체 화면 에러**(아이콘 + 제목 + 설명 + 버튼). 부모가 높이를 주면 그 영역을 채워 중앙 정렬.
+
+| prop         | 타입                                  | 기본값      |
+|--------------|---------------------------------------|------------|
+| `variant`    | `'network'` \| `'server'` \| `'generic'` | `'generic'` |
+| `icon`       | string (@nuxt/icon)                   | variant 기본값 |
+| `title`      | string                                | variant 기본값 |
+| `description`| string                                | variant 기본값 |
+| `actionText` | string (빈 문자열이면 버튼 숨김)        | variant 기본값 |
+
+- emit: `action` (버튼 클릭)
+- variant 기본값: `network` = "인터넷이 연결되어 있지 않아요" + 다시 시도 / `server` = "일시적인 오류가 발생했어요" + 문의하기
+- 아이콘은 임시로 `material-symbols` 사용 — 피그마 픽셀 일러스트 에셋으로 교체 예정
+- 사용 예: `home.vue`에서 헤더 아래~탭바 위를 덮는 레이어로 로드 실패 표시
+
+---
+
+### UiInlineError
+
+경로: `app/components/ui/UiInlineError.vue`
+
+**인라인 에러 배너 + 다시 시도**. 화면 일부(입력창 위·목록 하단 등)에 띄움.
+
+| prop        | 타입                  | 기본값      |
+|-------------|----------------------|------------|
+| `message`   | string (`\n` 줄바꿈 가능) | —          |
+| `retryText` | string               | `'다시 시도'` |
+| `variant`   | `'dark'` \| `'light'` | `'dark'`   |
+
+- emit: `retry` (다시 시도 클릭)
+- `dark`: `bg-grey-10` + 흰 글씨 + 흰색 버튼 (회고 진행 채팅)
+- `light`: `bg-grey-1 shadow-card` + 어두운 글씨 + 초록 텍스트 버튼 (목록 등)
+- 좌측 아이콘: `material-symbols:error-outline-rounded` (`text-danger`)
+- 사용 예: `retrospect/start.vue` 입력창 위 "질문을 불러오지 못했어요"
+
+---
+
 ### UiProgressBar
 
 경로: `app/components/ui/UiProgressBar.vue`

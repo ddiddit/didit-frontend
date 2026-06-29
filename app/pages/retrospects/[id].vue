@@ -47,10 +47,15 @@
       />
     </div>
 
-    <!-- 빈/에러 -->
-    <div v-else class="flex-1 flex items-center justify-center px-8 text-center">
-      <p class="text-body3 text-grey-7">회고를 불러올 수 없어요.</p>
-    </div>
+    <!-- 에러: 회고 조회 실패 (figma 회고 결과 조회 실패). 인증 만료는 제외(로그인 이동) -->
+    <UiErrorState
+      v-else-if="!authFailed"
+      icon="/icons/error-reload.svg"
+      title="회고 내용을 불러오지 못했어요"
+      description="다시 시도해 주세요."
+      action-text="다시 시도"
+      @action="loadDetail"
+    />
 
     <!-- 메뉴 외부 클릭 닫기 -->
     <div v-if="menuOpen" class="fixed inset-0 z-10" @click="menuOpen = false" />
@@ -113,6 +118,7 @@
 
 <script setup lang="ts">
 import type { RetrospectiveDetail, Tag } from '~/types/api'
+import { isAuthError } from '~/utils/api-error'
 
 definePageMeta({ middleware: 'auth', layout: false })
 
@@ -124,6 +130,7 @@ const { track } = useAmplitude()
 const id = computed(() => String(route.params.id))
 const detail = ref<RetrospectiveDetail | null>(null)
 const isLoading = ref(true)
+const authFailed = ref(false) // 인증 만료 시 에러 화면 대신 로그인 리다이렉트(인터셉터)
 const menuOpen = ref(false)
 const showDeletePopup = ref(false)
 const isDeleting = ref(false)
@@ -139,11 +146,14 @@ const canSaveTitle = computed(() => editTitle.value.trim().length > 0)
 
 async function loadDetail() {
   isLoading.value = true
+  authFailed.value = false
   try {
     detail.value = await retro.getDetail(id.value)
     track('retrospect_viewed', { retrospect_id: id.value })
-  } catch {
-    detail.value = null
+  } catch (e) {
+    // 인증 만료는 인터셉터가 로그인으로 보냄 → 에러 화면 X
+    if (isAuthError(e)) { authFailed.value = true; return }
+    detail.value = null // 실패 시 에러 화면(UiErrorState) 노출 → 다시 시도 시 재호출
   } finally {
     isLoading.value = false
   }

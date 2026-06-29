@@ -222,6 +222,7 @@
 <script setup lang="ts">
 import { useDebounceFn } from '@vueuse/core'
 import type { ApiResponse, JobType, AgeType, ExperienceType, NicknameCheckResponse } from '~/types/api'
+import { getApiErrorMessage, isApiError } from '~/utils/api-error'
 
 definePageMeta({ layout: false })
 
@@ -450,8 +451,15 @@ async function submitOnboarding() {
       night_push_agreed: agreements.nightPush,
     })
     navigateTo('/home', { replace: true })
-  } catch {
-    alert('온보딩 처리 중 오류가 발생했어요. 다시 시도해주세요.')
+  } catch (e) {
+    // 확인~제출 사이에 닉네임이 선점되는 레이스: 닉네임 단계로 인라인 에러 표시
+    if (isApiError(e, 'DUPLICATE_NICKNAME')) {
+      nicknameStatus.value = 'duplicate'
+      nicknameMessage.value = '이미 사용 중인 닉네임이에요'
+      step.value = 2
+    } else {
+      alert(getApiErrorMessage(e, '온보딩 처리 중 오류가 발생했어요. 다시 시도해주세요.'))
+    }
   } finally {
     isSubmitting.value = false
   }

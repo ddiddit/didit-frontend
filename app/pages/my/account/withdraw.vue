@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-white flex flex-col">
+  <div class="h-full bg-white flex flex-col relative">
 
     <!-- 헤더 -->
     <div class="flex items-center px-5 h-[50px] shrink-0">
@@ -9,6 +9,8 @@
       <span class="flex-1 text-center text-body2 font-semibold text-grey-13">회원탈퇴</span>
       <div class="w-6 h-6" />
     </div>
+
+    <UiLoadError :error="loadError" :slow="slowLoading" @retry="reload" />
 
     <!-- 본문 -->
     <div class="flex-1 overflow-y-auto scrollbar-hide px-5 py-6 flex flex-col gap-8">
@@ -105,8 +107,9 @@ definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
 const { $api } = useNuxtApp()
 const authStore = useAuthStore()
-const { load: loadProfile } = useProfile()
+const { reload: reloadProfile } = useProfile()
 const { track, reset } = useAmplitude()
+const { loadError, slowLoading, run } = useLoadState()
 
 const nickname = ref('')
 // value는 백엔드 WithdrawalReason enum과 일치시킨다.
@@ -132,10 +135,14 @@ const canSubmit = computed(() =>
   && (selectedReason.value !== 'OTHER' || reasonDetail.value.trim().length > 0),
 )
 
-onMounted(async () => {
-  const p = await loadProfile()
-  nickname.value = p?.nickname ?? ''
-})
+async function reload() {
+  await run(async () => {
+    const p = await reloadProfile()
+    nickname.value = p?.nickname ?? ''
+  })
+}
+
+onMounted(reload)
 
 async function handleWithdraw() {
   if (!canSubmit.value || isWithdrawing.value) return

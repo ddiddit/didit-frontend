@@ -10,6 +10,8 @@
       <div class="w-6 h-6" />
     </div>
 
+    <UiLoadError :error="loadError" :slow="slowLoading" @retry="reload" />
+
     <!-- 빈 상태 -->
     <div
       v-if="!isLoading && localProjects.length === 0"
@@ -145,7 +147,7 @@ interface LocalProject {
 }
 
 const projects = useState<Project[]>('projects:list', () => [])
-const isLoading = ref(false)
+const { isLoading, loadError, slowLoading, run } = useLoadState()
 const localProjects = ref<LocalProject[]>([])
 const pendingDelete = ref<LocalProject | null>(null)
 const isSubmitting = ref(false)
@@ -195,10 +197,8 @@ const hasNewProjects = computed(() =>
   localProjects.value.some(p => p.isNew && p.name.trim().length > 0)
 )
 
-onMounted(async () => {
-  track('project_list_viewed')
-  isLoading.value = true
-  try {
+async function reload() {
+  await run(async () => {
     const res = await $api.get<ApiResponse<Project[]>>('/api/v1/projects')
     projects.value = res.data.data
     localProjects.value = projects.value.map(p => ({
@@ -208,11 +208,12 @@ onMounted(async () => {
       isNew: false,
       isEditing: false,
     }))
-  } catch {
-    localProjects.value = []
-  } finally {
-    isLoading.value = false
-  }
+  })
+}
+
+onMounted(() => {
+  track('project_list_viewed')
+  reload()
 })
 
 function onContainerTouch(e: TouchEvent) {

@@ -14,6 +14,14 @@
       </button>
     </header>
 
+    <!-- 로드 실패: 헤더 아래~탭바 위를 덮는 전체 화면 에러 -->
+    <UiErrorState
+      v-if="loadError"
+      :variant="loadError"
+      class="absolute inset-x-0 bottom-0 top-[50px] bg-background"
+      @action="loadError === 'network' ? loadHome() : navigateTo('/my/inquiry')"
+    />
+
     <!-- 인사말 (로딩/빈 상태에서만 고정; 회고 있으면 아래 스크롤 영역 안에 포함) -->
     <div v-if="isLoading || recentRetrospectives.length === 0" class="px-5 shrink-0">
       <template v-if="isLoading">
@@ -200,6 +208,7 @@
 import type { ApiResponse, HomeResponse, NotificationHistory } from '~/types/api'
 import { getTagColor } from '~/utils/tag-color'
 import { parseServerDate } from '~/utils/date'
+import { toErrorVariant, isAuthError } from '~/utils/api-error'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -283,8 +292,12 @@ function goFeedback(i: number) {
   activeFeedback.value = i
 }
 
-onMounted(async () => {
-  track('home_viewed')
+// 로드 실패 시 보여줄 전체 화면 에러 (네트워크 끊김 / 서버 오류 / 알 수 없는 오류)
+const loadError = ref<'network' | 'server' | 'generic' | null>(null)
+
+async function loadHome() {
+  loadError.value = null
+  isLoading.value = !homeLoaded.value
   try {
     const [homeRes, notifRes] = await Promise.all([
       $api.get<ApiResponse<HomeResponse>>('/api/v2/home'),
@@ -295,11 +308,19 @@ onMounted(async () => {
     todayRetrospectiveCount.value = homeRes.data.data.todayRetrospectiveCount
     hasUnread.value = notifRes.data.data.some(n => !n.isRead)
     homeLoaded.value = true
-  } catch {
-    // 401/403은 axios 인터셉터가 처리
+  } catch (e) {
+    // 인증 만료는 인터셉터가 로그인으로 보냄 → 에러 화면 X
+    if (isAuthError(e)) return
+    // 그 외엔 캐시가 없을 때만 에러 화면 노출
+    if (!homeLoaded.value) loadError.value = toErrorVariant(e)
   } finally {
     isLoading.value = false
   }
+}
+
+onMounted(() => {
+  track('home_viewed')
+  loadHome()
 })
 
 function goToNotifications() {

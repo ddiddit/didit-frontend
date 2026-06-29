@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-white flex flex-col">
+  <div class="h-full bg-white flex flex-col relative">
 
     <!-- 헤더 -->
     <div class="flex items-center px-5 h-[50px] shrink-0">
@@ -9,6 +9,8 @@
       <span class="flex-1 text-center text-body2 font-semibold text-grey-13">공지사항</span>
       <div class="w-6 h-6" />
     </div>
+
+    <UiLoadError :error="loadError" :slow="slowLoading" @retry="reload" />
 
     <!-- 목록 -->
     <div class="flex-1 overflow-y-auto scrollbar-hide">
@@ -39,16 +41,14 @@ definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 const { $api } = useNuxtApp()
 
 const notices = ref<NoticeListItem[]>([])
-const isLoading = ref(true)
+const { isLoading, loadError, slowLoading, run } = useLoadState()
 
-onMounted(async () => {
-  try {
+async function reload() {
+  await run(async () => {
     const res = await $api.get<ApiResponse<NoticeListItem[]>>('/api/v1/notices')
     notices.value = res.data.data
-  } catch {
-    notices.value = []
-  } finally {
-    isLoading.value = false
-  }
-})
+  })
+}
+
+onMounted(reload)
 </script>
