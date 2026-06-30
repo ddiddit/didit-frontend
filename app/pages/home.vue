@@ -1,8 +1,9 @@
 <template>
   <div class="h-full bg-background flex flex-col relative">
 
-    <!-- 헤더: H:50, 벨 아이콘만 우측 -->
+    <!-- 헤더: H:50, 벨 아이콘만 우측 (빈 화면에서만 고정 노출 — 로딩 중엔 숨김) -->
     <header
+      v-if="!isLoading && recentRetrospectives.length === 0"
       class="flex items-center justify-end px-5 h-[50px] shrink-0"
     >
       <button @click="goToNotifications">
@@ -65,7 +66,16 @@
       v-else-if="!isLoading && recentRetrospectives.length > 0"
       class="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-24"
     >
-      <UiScrollFade />
+      <!-- 헤더: 알림벨 (콘텐츠와 함께 스크롤) -->
+      <header class="flex items-center justify-end px-5 h-[50px]">
+        <button @click="goToNotifications">
+          <img
+            :src="hasUnread ? '/icons/bell-on.svg' : '/icons/bell-off.svg'"
+            alt="알림"
+            class="w-6 h-6"
+          />
+        </button>
+      </header>
 
       <!-- 인사말 (스크롤 영역 포함) -->
       <h1 class="px-5 text-title3 font-semibold text-grey-13 leading-[1.4]">
