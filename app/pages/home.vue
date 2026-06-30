@@ -65,6 +65,8 @@
       v-else-if="!isLoading && recentRetrospectives.length > 0"
       class="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-24"
     >
+      <UiScrollFade />
+
       <!-- 인사말 (스크롤 영역 포함) -->
       <h1 class="px-5 text-title3 font-semibold text-grey-13 leading-[1.4]">
         {{ nickname }}님,<br />
