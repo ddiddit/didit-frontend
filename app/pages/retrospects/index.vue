@@ -177,7 +177,11 @@
         <ul class="flex flex-col px-5 py-3">
           <template v-for="group in groupedRetrospects" :key="group.label || 'this-week'">
             <!-- 주 단위 디바이더 (이번 주는 미표시) -->
-            <li v-if="group.label" class="text-center text-label2 font-medium text-grey-7 py-3">{{ group.label }}</li>
+            <li v-if="group.label" class="relative flex items-center justify-center py-3">
+              <!-- 전체 폭 구분선 (라벨이 bg-background로 가운데를 가림) -->
+              <span class="absolute inset-x-0 h-px bg-grey-5" aria-hidden="true" />
+              <span class="relative bg-background px-5 text-caption1 font-medium text-grey-7">{{ group.label }}</span>
+            </li>
             <li
               v-for="item in group.items"
               :key="item.id"
