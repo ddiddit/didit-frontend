@@ -147,7 +147,7 @@
     </template>
 
     <!-- ── 다음/완료 버튼: 하단 항상 50px ── -->
-    <div class="px-5 pt-9 shrink-0" style="padding-bottom: max(50px, env(safe-area-inset-bottom, 50px));">
+    <div class="px-5 pt-9 shrink-0" style="padding-bottom: calc(max(50px, env(safe-area-inset-bottom, 50px)) + 6px);">
       <UiButton
         :disabled="!isNextEnabled || isSubmitting"
         :loading="isSubmitting"

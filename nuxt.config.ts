@@ -62,7 +62,7 @@ export default defineNuxtConfig({
     head: {
       title: 'didit',
       meta: [
-        { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover' },
         { name: 'theme-color', content: '#ffffff' },
         // 모바일 브라우저가 이메일·전화번호 등을 자동 링크(밑줄)로 인식하지 않도록
         { name: 'format-detection', content: 'telephone=no, email=no, address=no' },
