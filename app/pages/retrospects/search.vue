@@ -64,6 +64,18 @@
       </div>
     </div>
 
+    <!-- 태그 로드 실패: 검색은 그대로 쓸 수 있으므로 태그 영역만 비차단 재시도 -->
+    <div v-else-if="tagsError" class="px-5 mt-[30px] shrink-0">
+      <span class="text-label1 font-semibold text-grey-13 block mb-3">태그</span>
+      <button
+        class="flex items-center gap-1 text-caption1 font-medium text-grey-7"
+        @click="fetchTags"
+      >
+        <Icon name="material-symbols:refresh-rounded" class="w-4 h-4" />
+        태그를 불러오지 못했어요. 다시 시도
+      </button>
+    </div>
+
     <!-- 빈 상태 -->
     <div
       v-if="recentSearches.length === 0 && tags.length === 0"
@@ -94,6 +106,7 @@ const RECENT_KEY = 'recentSearches'
 const MAX_RECENT = 10
 const recentSearches = ref<string[]>([])
 const tags = ref<Tag[]>([])
+const tagsError = ref(false)
 
 onMounted(async () => {
   track('retrospect_search_viewed')
@@ -104,11 +117,13 @@ onMounted(async () => {
 })
 
 async function fetchTags() {
+  tagsError.value = false
   try {
     const res = await $api.get<{ data: Tag[] }>('/api/v1/tags')
     tags.value = res.data.data
   } catch {
     tags.value = []
+    tagsError.value = true
   }
 }
 
