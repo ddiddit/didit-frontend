@@ -2,6 +2,62 @@ export interface ApiResponse<T> {
   data: T
 }
 
+// 백엔드 공통 에러 코드 (RFC 9457 ProblemDetail의 properties.code)
+// 백엔드 *ErrorCode enum의 name과 1:1 대응 (어드민 전용 코드는 제외)
+export type ApiErrorCode =
+  // 공통
+  | 'INVALID_REQUEST'
+  | 'NOT_FOUND'
+  | 'INTERNAL_SERVER_ERROR'
+  // 인증/회원
+  | 'USER_NOT_FOUND'
+  | 'USER_CONSENT_NOT_FOUND'
+  | 'WITHDRAWN_USER'
+  | 'INVALID_REFRESH_TOKEN'
+  | 'EXPIRED_REFRESH_TOKEN'
+  | 'UNSUPPORTED_OAUTH_PROVIDER'
+  | 'DUPLICATE_NICKNAME'
+  | 'OAUTH_USER_INFO_FAILED'
+  // 프로젝트/태그
+  | 'DUPLICATED_PROJECT_NAME'
+  | 'PROJECT_NOT_FOUND'
+  | 'PROJECT_LIMIT_EXCEEDED'
+  | 'DUPLICATED_TAG_NAME'
+  | 'TAG_NOT_FOUND'
+  | 'INVALID_TAG_NAME'
+  | 'RETRO_TAG_NOT_FOUND'
+  // 알림
+  | 'NOTIFICATION_SETTING_NOT_FOUND'
+  | 'NOTIFICATION_HISTORY_NOT_FOUND'
+  // 문의
+  | 'INQUIRY_NOT_FOUND'
+  // 공지
+  | 'NOTICE_NOT_FOUND'
+  | 'NOTICE_FORBIDDEN'
+  // 회고
+  | 'RETROSPECTIVE_NOT_FOUND'
+  | 'RETROSPECTIVE_ALREADY_COMPLETED'
+  | 'RETROSPECTIVE_NOT_IN_PROGRESS'
+  | 'DAILY_LIMIT_EXCEEDED'
+  | 'SUMMARY_NOT_GENERATED'
+  | 'SPEECH_EMPTY_FILE'
+  | 'SPEECH_UNSUPPORTED_FILE'
+  | 'SPEECH_EMPTY_RESULT'
+  | 'SPEECH_TRANSCRIPTION_FAILED'
+
+// 백엔드 공통 에러 응답 (application/problem+json)
+export interface ApiErrorResponse {
+  type: string
+  title: string
+  status: number
+  detail: string
+  instance: string
+  properties: {
+    timestamp: string
+    code: ApiErrorCode
+  }
+}
+
 // 앱 설정
 export interface AppConfig {
   maintenanceMode: boolean
@@ -37,7 +93,7 @@ export interface UserProfile {
   age: AgeType | null
   experience: ExperienceType | null
   provider: 'KAKAO' | 'GOOGLE' | 'APPLE'
-  level?: number
+  currentLevel: number
 }
 
 export interface NicknameCheckResponse {
@@ -57,6 +113,9 @@ export interface OnboardingRequest {
 export interface HomeResponse {
   nickname: string
   todayRetrospectiveCount: number
+  hasUnreadNotification: boolean
+  // /api/v1/missions/current 와 동일 구조 — 홈 1콜로 미션/레벨까지 수신
+  mission: CurrentMissionResponse
   recentRetrospectives: RecentRetrospective[]
 }
 
@@ -67,6 +126,44 @@ export interface RecentRetrospective {
   completedAt: string | null
   projectName: string | null
   tags: Tag[]
+}
+
+// Mission / Level (게이미피케이션) — GET /api/v1/missions/current
+export type MissionType = 'FIRST_RETRO' | 'TIME_LIMITED' | 'CONSECUTIVE_WEEK' | 'CUMULATIVE_RETRO'
+
+// 연속 주 미션에서만 내려옴 (월~일 7요소)
+export interface WeekDayStatus {
+  day: string
+  isCompleted: boolean
+}
+
+export interface WeeklyRetroStatus {
+  weekDays: WeekDayStatus[]
+}
+
+// 미션 상세 (최고 레벨 등에서는 mission = null)
+export interface MissionDetail {
+  type: MissionType
+  title: string
+  description: string
+  progress: number
+  target: number
+  remainingDays: number | null
+  cta: string
+}
+
+// 팝업 신호 (백엔드가 레벨업/실패 시 1회 내려줌)
+export type MissionPopupType = 'LEVEL_UP' | 'FAILURE'
+export interface MissionPopup {
+  exists: boolean
+  type: MissionPopupType | null
+}
+
+export interface CurrentMissionResponse {
+  currentLevel: number
+  mission: MissionDetail | null
+  weeklyStatus: WeeklyRetroStatus | null
+  popup: MissionPopup
 }
 
 // Retrospective

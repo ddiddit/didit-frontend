@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-white flex flex-col">
+  <div class="h-full bg-white flex flex-col relative">
 
     <!-- 헤더 -->
     <div class="flex items-center px-5 h-[50px] shrink-0">
@@ -9,6 +9,8 @@
       <span class="flex-1 text-center text-body2 font-semibold text-grey-13">목표 달성 배지</span>
       <div class="w-6 h-6" />
     </div>
+
+    <UiLoadError :error="loadError" :slow="slowLoading" @retry="reload" />
 
     <div class="flex-1 overflow-y-auto scrollbar-hide">
       <!-- 안내 배너 (radius 16, padding 24/18) -->
@@ -139,6 +141,11 @@ definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
 const { badges, recentBadge, load } = useBadges()
 const { track } = useAmplitude()
+const { loadError, slowLoading, run } = useLoadState()
+
+async function reload() {
+  await run(() => load(true))
+}
 
 const selected = ref<BadgeView | null>(null)
 
@@ -203,7 +210,7 @@ function formatAcquiredDate(date: string | null): string {
 
 onMounted(() => {
   track('badge_list_viewed')
-  load()
+  reload()
 })
 </script>
 

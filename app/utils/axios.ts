@@ -21,7 +21,11 @@ export const createApiClient = (baseURL: string) => {
     pendingQueue = []
   }
 
+  // 여러 요청이 동시에 401이 나도 한 번만 로그인으로 보냄
+  let isRedirecting = false
   function redirectToLogin() {
+    if (isRedirecting) return
+    isRedirecting = true
     localStorage.clear()
     window.location.href = '/login'
   }
@@ -37,6 +41,16 @@ export const createApiClient = (baseURL: string) => {
     async (error) => {
       const original = error.config
       const status = error.response?.status
+      const code = error.response?.data?.properties?.code
+
+      // 탈퇴 회원(403)은 갱신해도 소용없음 → 바로 로그인으로
+      if (code === 'WITHDRAWN_USER') {
+        redirectToLogin()
+        return Promise.reject(error)
+      }
+
+      // 토큰 갱신: 401(리프레시 만료) + 403(액세스 토큰 무효 시 백엔드가 주는 상태)에서 시도.
+      // (백엔드는 잘못/만료된 access token에 401이 아니라 403을 반환함)
       if ((status !== 401 && status !== 403) || original._retry) {
         return Promise.reject(error)
       }

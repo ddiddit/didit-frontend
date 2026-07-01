@@ -13,6 +13,13 @@ const config: CapacitorConfig = {
     CapacitorHttp: {
       enabled: true,
     },
+    // 상태바: 앱 배경색(bg-background, #F6F6F6)에 맞춰 통일.
+    // 투명 오버레이 + 밝은 배경용 어두운 아이콘 (런타임 status-bar.client.ts와 동일값)
+    StatusBar: {
+      overlaysWebView: true,
+      style: 'LIGHT',
+      backgroundColor: '#F6F6F6',
+    },
   },
 }
 

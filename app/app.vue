@@ -71,7 +71,7 @@
       <!-- 앱 영역: 모바일/태블릿=전체 너비, 데스크탑=390px 패널+그림자 -->
       <div
         id="app-container"
-        class="w-full desktop:w-[390px] desktop:flex-shrink-0 h-dvh overflow-hidden flex flex-col bg-background relative"
+        class="w-full desktop:w-[390px] desktop:flex-shrink-0 h-dvh overflow-hidden flex flex-col bg-background relative safe-top"
         :style="isDesktop ? 'box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 8px 16px rgba(0,0,0,0.06), 0 24px 48px rgba(0,0,0,0.08);' : ''"
       >
         <NuxtLayout>

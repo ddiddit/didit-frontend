@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "370858550739-crfg5st7gsk3b79c5mc0vae51vjhboak.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "kr.ai.didit",
+            "certificate_hash": "8c93c0a956c4ca332255ca78874dd11f0930ce34"
+          }
+        },
+        {
           "client_id": "370858550739-3cruekemk0a3e81btv6vn9mn7vurtcqq.apps.googleusercontent.com",
           "client_type": 3
         }

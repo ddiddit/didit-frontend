@@ -88,6 +88,7 @@
 <script setup lang="ts">
 import type { Tag } from '~/types/api'
 import { getTagColorClasses } from '~/utils/tag-color'
+import { getApiErrorMessage } from '~/utils/api-error'
 
 const props = defineProps<{
   retrospectiveId: string
@@ -162,8 +163,9 @@ async function onEnter(e: KeyboardEvent) {
     allTags.value.push(created)
     selected.value.push(created)
     input.value = ''
-  } catch {
-    show('태그를 추가하지 못했어요. 잠시 후 다시 시도해주세요.')
+  } catch (e) {
+    // 중복·형식 오류(DUPLICATED_TAG_NAME, INVALID_TAG_NAME 등) 코드별 문구
+    show(getApiErrorMessage(e, '태그를 추가하지 못했어요. 잠시 후 다시 시도해주세요.'))
   }
 }
 

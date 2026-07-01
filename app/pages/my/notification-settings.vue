@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-white flex flex-col">
+  <div class="h-full bg-white flex flex-col relative">
 
     <!-- 헤더 -->
     <div class="flex items-center px-5 h-[50px] shrink-0">
@@ -9,6 +9,8 @@
       <span class="flex-1 text-center text-body2 font-semibold text-grey-13">알림 설정</span>
       <div class="w-6 h-6" />
     </div>
+
+    <UiLoadError :error="loadError" :slow="slowLoading" @retry="reload" />
 
     <!-- 로딩 -->
     <div v-if="isLoading" class="flex-1 flex items-center justify-center">
@@ -160,7 +162,7 @@ const { $api } = useNuxtApp()
 const push = usePushNotifications()
 const { track } = useAmplitude()
 
-const isLoading = ref(true)
+const { isLoading, loadError, slowLoading, run } = useLoadState()
 const marketingAgreed = ref(false)
 const nightPushConsent = ref(false)
 const enabled = ref(false)
@@ -290,19 +292,17 @@ async function saveTime() {
   }
 }
 
-onMounted(async () => {
-  try {
+async function reload() {
+  await run(async () => {
     const res = await $api.get<ApiResponse<NotificationSetting>>('/api/v1/notification-settings')
     marketingAgreed.value = res.data.data.marketingAgreed
     nightPushConsent.value = res.data.data.nightPushConsent
     enabled.value = res.data.data.enabled
     reminderTime.value = res.data.data.reminderTime
-  } catch {
-    // 오류 처리
-  } finally {
-    isLoading.value = false
-  }
-})
+  })
+}
+
+onMounted(reload)
 
 async function toggleMarketing(val: boolean) {
   const prev = marketingAgreed.value
@@ -360,7 +360,7 @@ async function toggleEnabled(val: boolean) {
     if (val) {
       await push.register()
     } else {
-      await $api.delete('/api/v1/device-tokens', { params: { deviceType: 'WEB' } }).catch(() => {})
+      await $api.delete('/api/v1/device-tokens', { params: { deviceType: push.deviceType() } }).catch(() => {})
     }
   } catch { enabled.value = prev }
 }

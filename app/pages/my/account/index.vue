@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-white flex flex-col">
+  <div class="h-full bg-white flex flex-col relative">
 
     <!-- 헤더 -->
     <div class="flex items-center px-5 h-[50px] shrink-0">
@@ -9,6 +9,8 @@
       <span class="flex-1 text-center text-body2 font-semibold text-grey-13">계정 관리</span>
       <div class="w-6 h-6" />
     </div>
+
+    <UiLoadError :error="loadError" :slow="slowLoading" @retry="reload" />
 
     <!-- 이메일 영역 -->
     <div class="px-5 pt-6 pb-5 flex flex-col gap-2">
@@ -58,8 +60,13 @@ definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
 
 const authStore = useAuthStore()
-const { profile, load: loadProfile } = useProfile()
+const { profile, reload: reloadProfile } = useProfile()
 const { track } = useAmplitude()
+const { loadError, slowLoading, run } = useLoadState()
+
+async function reload() {
+  await run(() => reloadProfile().then(() => {}))
+}
 
 const showLogoutModal = ref(false)
 
@@ -71,9 +78,7 @@ const loginMethodLabel = computed(() => {
   return ''
 })
 
-onMounted(() => {
-  loadProfile()
-})
+onMounted(reload)
 
 async function handleLogout() {
   showLogoutModal.value = false

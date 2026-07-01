@@ -28,10 +28,17 @@ export function useProfile() {
     return inflight.value
   }
 
+  // load와 달리 에러를 그대로 던진다(useLoadState.run과 함께 써서 에러 화면 분기용).
+  async function reload(): Promise<UserProfile | null> {
+    const res = await $api.get<ApiResponse<UserProfile>>('/api/v2/users/profile')
+    profile.value = res.data.data
+    return profile.value
+  }
+
   // 프로필 수정(PATCH) 후 캐시를 갱신해 다른 페이지가 재요청 없이 최신값을 쓰게 한다.
   function setProfile(p: UserProfile) {
     profile.value = p
   }
 
-  return { profile, load, setProfile }
+  return { profile, load, reload, setProfile }
 }

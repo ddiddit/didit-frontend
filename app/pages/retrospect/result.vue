@@ -16,9 +16,9 @@
       </p>
     </div>
 
-    <!-- 에러 -->
+    <!-- 에러: 결과 생성 실패 (figma 31141) -->
     <div v-else-if="isError" class="flex-1 flex flex-col items-center justify-center px-8 text-center gap-5">
-      <p class="text-body2 font-semibold text-grey-13">회고 결과를 만들지 못했어요</p>
+      <p class="text-body2 font-semibold text-grey-13">회고 결과를 생성하지 못했어요</p>
       <UiButton size="md" class="w-auto px-6" @click="generate">다시 시도</UiButton>
     </div>
 
@@ -74,6 +74,7 @@
 
 <script setup lang="ts">
 import type { CompleteRetrospectiveResponse, Tag } from '~/types/api'
+import { isAuthError } from '~/utils/api-error'
 
 definePageMeta({ middleware: 'auth', layout: false })
 
@@ -85,6 +86,8 @@ const { fetchUnnotified } = useBadges()
 const { show: showBadge } = useBadgeAcquired()
 
 const completingId = useState<string>('retrospect:completing-id')
+// 채팅(start.vue)에서 이미 생성한 결과 — 있으면 재생성 없이 사용
+const resultStash = useState<CompleteRetrospectiveResponse | null>('retrospect:result', () => null)
 
 const isLoading = ref(true)
 const isError = ref(false)
@@ -114,14 +117,24 @@ async function generate() {
     navigateTo('/home')
     return
   }
+  // 채팅에서 생성을 마치고 넘어온 경우: stash된 결과를 그대로 사용(중복 생성 방지)
+  if (resultStash.value) {
+    result.value = resultStash.value
+    title.value = resultStash.value.title
+    resultStash.value = null
+    isLoading.value = false
+    return
+  }
+  // 직접 진입/재시도 등 stash가 없을 때만 생성 (폴백)
   isLoading.value = true
   isError.value = false
   try {
     const res = await retro.complete(completingId.value)
     result.value = res
     title.value = res.title
-  } catch {
-    isError.value = true
+  } catch (e) {
+    // 인증 만료는 인터셉터가 로그인으로 보냄 → 에러 화면 X
+    if (!isAuthError(e)) isError.value = true
   } finally {
     isLoading.value = false
   }

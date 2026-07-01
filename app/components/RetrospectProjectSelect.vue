@@ -80,6 +80,7 @@
 
 <script setup lang="ts">
 import type { Project } from '~/types/api'
+import { getApiErrorMessage } from '~/utils/api-error'
 
 const props = defineProps<{
   retrospectiveId: string
@@ -142,8 +143,8 @@ async function onNewProjectEnter(e: KeyboardEvent) {
     adding.value = false
     newProjectName.value = ''
   } catch (err: unknown) {
-    const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-    show(detail ?? '프로젝트를 추가하지 못했어요. 잠시 후 다시 시도해주세요.')
+    // 중복 이름·개수 초과(DUPLICATED_PROJECT_NAME, PROJECT_LIMIT_EXCEEDED 등) 코드별 문구
+    show(getApiErrorMessage(err, '프로젝트를 추가하지 못했어요. 잠시 후 다시 시도해주세요.'))
   }
 }
 

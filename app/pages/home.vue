@@ -1,8 +1,36 @@
 <template>
   <div class="h-full bg-background flex flex-col relative">
 
-    <!-- 헤더: H:50, 벨 아이콘만 우측 -->
+    <!-- 미션 완료(레벨업) 팝업 -->
+    <Teleport to="#app-container">
+      <div v-if="showLevelUpPopup && mission" class="absolute inset-0 z-[55] flex items-center justify-center px-5">
+        <div class="absolute inset-0 bg-black/40" />
+        <HomeMissionPopup
+          :level="mission.currentLevel"
+          :message="levelUpMessage"
+          :loading="popupConfirming"
+          class="relative"
+          @confirm="confirmLevelUp"
+        />
+      </div>
+    </Teleport>
+
+    <!-- 미션 실패 팝업 -->
+    <Teleport to="#app-container">
+      <div v-if="showFailurePopup && mission" class="absolute inset-0 z-[55] flex items-center justify-center px-5">
+        <div class="absolute inset-0 bg-black/40" />
+        <HomeMissionFailurePopup
+          :message="failureMessage"
+          :loading="popupConfirming"
+          class="relative"
+          @retry="retryMission"
+        />
+      </div>
+    </Teleport>
+
+    <!-- 헤더: H:50, 벨 아이콘만 우측 (빈 화면에서만 고정 노출 — 로딩 중엔 숨김) -->
     <header
+      v-if="!isLoading && recentRetrospectives.length === 0"
       class="flex items-center justify-end px-5 h-[50px] shrink-0"
     >
       <button @click="goToNotifications">
@@ -13,6 +41,14 @@
         />
       </button>
     </header>
+
+    <!-- 로드 실패: 헤더 아래~탭바 위를 덮는 전체 화면 에러 -->
+    <UiErrorState
+      v-if="loadError"
+      :variant="loadError"
+      class="absolute inset-x-0 bottom-0 top-[50px] bg-background"
+      @action="loadError === 'network' ? loadHome() : navigateTo('/my/inquiry')"
+    />
 
     <!-- 인사말 (로딩/빈 상태에서만 고정; 회고 있으면 아래 스크롤 영역 안에 포함) -->
     <div v-if="isLoading || recentRetrospectives.length === 0" class="px-5 shrink-0">
@@ -57,93 +93,56 @@
       v-else-if="!isLoading && recentRetrospectives.length > 0"
       class="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-24"
     >
+      <!-- 헤더: 알림벨 (콘텐츠와 함께 스크롤) -->
+      <header class="flex items-center justify-end px-5 h-[50px]">
+        <button @click="goToNotifications">
+          <img
+            :src="hasUnread ? '/icons/bell-on.svg' : '/icons/bell-off.svg'"
+            alt="알림"
+            class="w-6 h-6"
+          />
+        </button>
+      </header>
+
       <!-- 인사말 (스크롤 영역 포함) -->
       <h1 class="px-5 text-title3 font-semibold text-grey-13 leading-[1.4]">
         {{ nickname }}님,<br />
         {{ greetingMessage }}
       </h1>
 
-      <!-- 최근 제안 받은 피드백 (회고 요약, 최대 3) — transform 캐러셀(모든 카드 좌측 정렬 + 우측 peek) -->
-      <div v-if="topFeedbacks.length > 0" class="mt-6 mb-[30px]">
-        <p class="px-5 text-body2 font-semibold text-grey-9 mb-[14px]">최근 제안 받은 피드백</p>
-        <div class="overflow-hidden">
-          <div
-            class="flex gap-3 pl-5 select-none cursor-grab active:cursor-grabbing"
-            :style="trackStyle"
-            @mousedown="onSliderDown"
-            @mousemove="onSliderMove"
-            @mouseup="onSliderUp"
-            @mouseleave="onSliderUp"
-            @touchstart.passive="onSliderDown"
-            @touchmove.passive="onSliderMove"
-            @touchend="onSliderUp"
-          >
-            <button
-              v-for="r in topFeedbacks"
-              :key="r.id"
-              class="shrink-0 w-[340px] bg-white rounded-2xl px-[22px] py-5 flex flex-col gap-3 text-left"
-              @click="!wasDrag && navigateTo(`/retrospects/${r.id}`)"
-            >
-              <div class="flex flex-col gap-1 w-full">
-                <p class="text-body1 font-semibold text-grey-13 line-clamp-1">{{ r.title }}</p>
-                <!-- 프로젝트명: 없어도 빈 줄로 자리를 확보해 카드 높이를 일정하게 유지 -->
-                <p class="min-h-[20px] text-label1 font-medium text-green-hover line-clamp-1">{{ r.projectName || ' ' }}</p>
-              </div>
-              <div class="flex gap-[14px] w-full">
-                <div class="w-1 self-stretch rounded bg-grey-4 shrink-0" />
-                <!-- 본문은 항상 5줄(15px×1.6×5=120px) 높이를 확보 → 4줄/5줄 카드 높이 통일 -->
-                <p class="flex-1 min-h-[120px] text-body3-reading text-grey-13 line-clamp-5 whitespace-pre-line">{{ r.summary }}</p>
-              </div>
-            </button>
-          </div>
-        </div>
-        <!-- dots -->
-        <div v-if="topFeedbacks.length > 1" class="flex justify-center gap-[10px] pt-[22px]">
-          <button
-            v-for="(_, i) in topFeedbacks"
-            :key="i"
-            class="w-2 h-2 rounded-full transition-colors"
-            :class="i === activeFeedback ? 'bg-grey-13' : 'bg-grey-5'"
-            :aria-label="`피드백 ${i + 1}`"
-            @click="goFeedback(i)"
-          />
-        </div>
-      </div>
+      <!-- 미션/레벨 카드 — 비면 첫 회고(Lv.1 달성) 기본 카드 -->
+      <HomeMissionCard
+        :data="displayMission"
+        :first-mission="displayMission.currentLevel === 0"
+        class="mt-5 mx-5"
+        @start="startRetrospect"
+      />
 
-      <!-- 나의 최근 회고 (프로젝트명·날짜·제목) -->
-      <div class="flex flex-col gap-[14px] px-5">
-        <p class="text-body2 font-semibold text-grey-9">나의 최근 회고</p>
-        <div class="flex flex-col gap-3">
-          <button
-            v-for="r in recentList"
-            :key="r.id"
-            class="bg-white rounded-2xl text-left"
-            style="padding: 22px 22px 20px"
-            @click="navigateTo(`/retrospects/${r.id}`)"
-          >
-            <div class="flex flex-col gap-[10px]">
-              <div class="flex flex-col gap-[2px]">
-                <!-- 프로젝트명 · 날짜 -->
+      <!-- 최근 제안 받은 행동 (단일 카드 + 구분선) — Figma 새 홈 UI: 날짜·제목·프로젝트·태그 -->
+      <div v-if="recentList.length > 0" class="mt-8 px-5">
+        <p class="text-[16px] font-semibold text-grey-10 leading-[1.5] tracking-[-0.02em]">최근 제안 받은 행동</p>
+        <p class="text-[14px] font-medium text-grey-7 leading-[1.4] tracking-[-0.02em] mt-[3px]">제안 받은 피드백을 업무에 적용해보세요</p>
+        <div class="mt-3.5 bg-white rounded-[18px] px-5 py-[22px] flex flex-col gap-[14px]">
+          <template v-for="(r, i) in recentList" :key="r.id">
+            <button class="flex items-center gap-3 text-left w-full" @click="navigateTo(`/retrospects/${r.id}`)">
+              <div class="shrink-0 w-[42px] h-[42px] rounded-[10px] bg-grey-4 flex items-center justify-center">
+                <span class="text-[12px] font-semibold text-grey-7 leading-[1.36]">{{ r.completedAt ? formatDate(r.completedAt) : '' }}</span>
+              </div>
+              <div class="flex-1 min-w-0 flex flex-col gap-1">
+                <!-- 상단: 피드백 (최대 2줄) -->
+                <p class="text-[15px] font-medium text-grey-13 leading-[1.5] tracking-[-0.02em] line-clamp-2">{{ r.summary || r.title }}</p>
+                <!-- 하단: 프로젝트명 · 회고제목 (자유회고는 제목만) -->
                 <div class="flex items-center gap-[5px]">
                   <template v-if="r.projectName">
-                    <span class="text-caption1 font-medium text-grey-7">{{ r.projectName }}</span>
+                    <span class="text-[12px] font-medium text-green-hover leading-[1.36] tracking-[-0.02em] shrink-0">{{ r.projectName }}</span>
                     <span class="w-[3px] h-[3px] rounded-full bg-grey-5 shrink-0" />
                   </template>
-                  <span v-if="r.completedAt" class="text-caption1 font-medium text-grey-7">
-                    {{ formatDate(r.completedAt) }}
-                  </span>
+                  <span class="text-[12px] font-medium text-grey-7 leading-[1.36] tracking-[-0.02em] truncate">{{ r.title }}</span>
                 </div>
-                <p class="text-body2 font-semibold text-grey-13">{{ r.title }}</p>
               </div>
-              <p v-if="r.summary" class="text-label1 font-normal text-grey-10 leading-[1.6] line-clamp-3">
-                {{ r.summary }}
-              </p>
-              <!-- 태그 (UiTag로 통일 — 화면 간 동일 색상) -->
-              <div v-if="r.tags && r.tags.length > 0" class="flex flex-wrap gap-[6px]">
-                <UiTag v-for="tag in r.tags" :key="tag.id" :color="getTagColor(tag.id)">#{{ tag.name }}</UiTag>
-              </div>
-            </div>
-          </button>
+            </button>
+            <div v-if="i < recentList.length - 1" class="h-px bg-grey-3" />
+          </template>
         </div>
       </div>
     </div>
@@ -197,23 +196,42 @@
 </template>
 
 <script setup lang="ts">
-import type { ApiResponse, HomeResponse, NotificationHistory } from '~/types/api'
+import type { ApiResponse, HomeResponse, CurrentMissionResponse } from '~/types/api'
 import { getTagColor } from '~/utils/tag-color'
 import { parseServerDate } from '~/utils/date'
+import { toErrorVariant, isAuthError } from '~/utils/api-error'
 
 definePageMeta({ middleware: 'auth' })
 
 const { $api } = useNuxtApp()
 const { track } = useAmplitude()
 
-// 닉네임은 authoritative한 프로필(/api/v2/users/profile)에서 사용.
-// (/api/v2/home 의 nickname 은 갱신이 안 돼 stale 할 수 있어 마이페이지와 불일치하던 문제)
-const { profile, load: loadProfile } = useProfile()
-const nickname = computed(() => profile.value?.nickname ?? '')
+// 닉네임은 홈 응답(/api/v2/home)에서 사용 — 백엔드가 홈 1콜로 nickname·mission까지 반환
+const nickname = useState<string>('home:nickname', () => '')
 
 // 페이지 이동 후 재방문 시 깜빡임 없도록 SPA 전체에서 상태 유지
 const recentRetrospectives = useState<HomeResponse['recentRetrospectives']>('home:retrospectives', () => [])
 const todayRetrospectiveCount = useState<number>('home:todayCount', () => 0)
+const mission = useState<CurrentMissionResponse | null>('home:mission', () => null)
+// 백엔드가 미션을 비워 줄 때(레벨 0 등) 보여줄 기본 미션 — 첫 회고 작성하기(= Lv.1 달성 미션)
+const FIRST_MISSION: CurrentMissionResponse = {
+  currentLevel: 0,
+  mission: {
+    type: 'FIRST_RETRO',
+    title: '첫 회고 작성하기',
+    description: '첫 회고를 작성해보세요',
+    progress: 0,
+    target: 1,
+    remainingDays: null,
+    cta: '회고 남기기',
+  },
+  weeklyStatus: null,
+  popup: { exists: false, type: null },
+}
+// 미션이 비어 있으면 기본(첫 회고) 카드로 대체 — 카드가 항상 레벨에 맞게 뜨도록
+const displayMission = computed<CurrentMissionResponse>(() =>
+  mission.value?.mission ? mission.value : FIRST_MISSION,
+)
 // 알림 미읽음 여부는 알림 페이지와 상태를 공유 (읽음 처리 시 벨 아이콘 즉시 갱신)
 const hasUnread = useState<boolean>('notifications:hasUnread', () => false)
 
@@ -236,7 +254,7 @@ function formatDate(dateStr: string): string {
 
 // 최근 회고 최대 3개 — 피드백 슬라이더(요약 있는 것)와 최근 회고 리스트에 사용
 const topFeedbacks = computed(() => recentRetrospectives.value.filter((r) => r.summary).slice(0, 3))
-const recentList = computed(() => recentRetrospectives.value.slice(0, 3))
+const recentList = computed(() => recentRetrospectives.value.slice(0, 5))
 
 // 피드백 캐러셀 (transform 방식 — 모든 카드 좌측 정렬 + 우측 peek, 마우스/터치 드래그)
 const STEP = 352 // 카드 w-340 + gap-3(12)
@@ -283,23 +301,135 @@ function goFeedback(i: number) {
   activeFeedback.value = i
 }
 
-onMounted(async () => {
-  track('home_viewed')
+// 로드 실패 시 보여줄 전체 화면 에러 (네트워크 끊김 / 서버 오류 / 알 수 없는 오류)
+const loadError = ref<'network' | 'server' | 'generic' | null>(null)
+
+async function loadHome() {
+  loadError.value = null
+  isLoading.value = !homeLoaded.value
   try {
-    const [homeRes, notifRes] = await Promise.all([
-      $api.get<ApiResponse<HomeResponse>>('/api/v2/home'),
-      $api.get<ApiResponse<NotificationHistory[]>>('/api/v1/notification-histories'),
-      loadProfile(),
-    ])
-    recentRetrospectives.value = homeRes.data.data.recentRetrospectives
-    todayRetrospectiveCount.value = homeRes.data.data.todayRetrospectiveCount
-    hasUnread.value = notifRes.data.data.some(n => !n.isRead)
+    // /api/v2/home 한 번이면 nickname·mission·알림까지 전부 받음
+    const { data } = await $api.get<ApiResponse<HomeResponse>>('/api/v2/home')
+    const home = data.data
+    nickname.value = home.nickname
+    recentRetrospectives.value = home.recentRetrospectives
+    todayRetrospectiveCount.value = home.todayRetrospectiveCount
+    hasUnread.value = home.hasUnreadNotification
+    mission.value = home.mission
+    evaluateMissionPopup()
     homeLoaded.value = true
-  } catch {
-    // 401/403은 axios 인터셉터가 처리
+  } catch (e) {
+    // 인증 만료는 인터셉터가 로그인으로 보냄 → 에러 화면 X
+    if (isAuthError(e)) return
+    // 그 외엔 캐시가 없을 때만 에러 화면 노출
+    if (!homeLoaded.value) loadError.value = toErrorVariant(e)
   } finally {
     isLoading.value = false
   }
+}
+
+// ── 미션 완료(레벨업) 팝업 ─────────────────────────────
+const showLevelUpPopup = ref(false)
+const showFailurePopup = ref(false)
+const popupConfirming = ref(false)
+// 배지 획득 팝업과 조율 (배지 먼저 → 닫히면 미션 레벨업 팝업)
+const { badge: acquiredBadge } = useBadgeAcquired()
+const missionPopupPending = ref(false)
+
+// 레벨업 축하 메시지 (백엔드 PopupStatus에 문구가 없어 프론트에서 매핑)
+const LEVEL_UP_MESSAGES: Record<number, string> = {
+  2: '한 주 동안 꾸준히 회고를 작성했네요.\n작은 기록이 좋은 습관의 시작이 될 수 있어요.',
+  3: '꾸준히 기록하는 습관이 만들어졌네요.\n다음 회고도 차근차근 이어가 보세요.',
+  4: '3번의 회고를 작성했어요.\n계속해서 나만의 회고 루틴을 이어가 보세요.',
+  5: '꾸준히 기록하는 습관이 만들어졌네요.\n다음 회고도 차근차근 이어가 보세요.',
+  6: '5번의 회고를 작성했어요.\n기록하는 습관이 조금씩 자리를 잡고 있어요.',
+  7: '꾸준히 기록하는 습관이 만들어졌네요.\n다음 회고도 차근차근 이어가 보세요.',
+  8: '7번의 회고를 작성했어요.\n꾸준히 쌓아온 기록이 성장의 기반이 돼요.',
+  9: '꾸준히 기록하는 습관이 만들어졌네요.\n다음 회고도 차근차근 이어가 보세요.',
+  10: '10번의 회고를 작성하고 최고 레벨에 도달했어요.\n앞으로도 꾸준히 회고를 남겨보세요!',
+}
+const levelUpMessage = computed(() => LEVEL_UP_MESSAGES[mission.value?.currentLevel ?? 0] ?? '미션을 완료했어요!')
+
+// 백엔드 getPopupStatus 미러: 미확인 레벨업이면 완료 팝업 노출
+// (Lv.1 첫 미션은 levelUpPopupShown=true로 생성돼 안 뜸)
+function evaluateMissionPopup() {
+  const m = mission.value
+  if (!m) {
+    showLevelUpPopup.value = false
+    showFailurePopup.value = false
+    missionPopupPending.value = false
+    return
+  }
+  // 1) 레벨업(완료) 우선 — popup.type === 'LEVEL_UP' (왕관 이미지는 Lv.2부터)
+  if (m.popup.exists && m.popup.type === 'LEVEL_UP' && m.currentLevel >= 2) {
+    showFailurePopup.value = false
+    // 배지 획득 팝업이 떠 있으면 닫힐 때까지 대기 (겹침 방지)
+    if (acquiredBadge.value) {
+      missionPopupPending.value = true
+      showLevelUpPopup.value = false
+      return
+    }
+    showLevelUpPopup.value = true
+    return
+  }
+  // 2) 미션 실패
+  if (m.popup.exists && m.popup.type === 'FAILURE') {
+    showLevelUpPopup.value = false
+    showFailurePopup.value = true
+    return
+  }
+  showLevelUpPopup.value = false
+  showFailurePopup.value = false
+  missionPopupPending.value = false
+}
+
+// 대기 중이던 미션 팝업: 배지 팝업이 닫히면 그때 노출
+watch(acquiredBadge, (b) => {
+  if (!b && missionPopupPending.value) {
+    missionPopupPending.value = false
+    showLevelUpPopup.value = true
+  }
+})
+
+async function confirmLevelUp() {
+  if (popupConfirming.value) return
+  popupConfirming.value = true
+  try {
+    await $api.post('/api/v1/missions/level-up/confirm')
+    const { data } = await $api.get<ApiResponse<CurrentMissionResponse>>('/api/v1/missions/current')
+    mission.value = data.data
+  } catch { /* 실패해도 팝업은 닫아 사용자를 막지 않음 */ }
+  showLevelUpPopup.value = false
+  popupConfirming.value = false
+  evaluateMissionPopup() // 연속 레벨업이면 다음 완료 팝업 이어서 노출
+}
+
+// 미션 실패 메시지 (백엔드 미제공 → 프론트 매핑). 실패는 기한제/연속주만 발생
+const failureMessage = computed(() => {
+  const m = mission.value?.mission
+  if (!m) return ''
+  if (m.type === 'CONSECUTIVE_WEEK') {
+    return `이번 주에 회고를 작성하지 않아\n연속 기록이 초기화되었어요.\n다시 ${m.target}주 연속 회고에 도전해보세요.`
+  }
+  return `일주일 내에 회고 ${m.target}회를 완료하지 못했어요.\n다시 도전해볼까요?`
+})
+
+async function retryMission() {
+  if (popupConfirming.value) return
+  popupConfirming.value = true
+  try {
+    await $api.post('/api/v1/missions/retry')
+    const { data } = await $api.get<ApiResponse<CurrentMissionResponse>>('/api/v1/missions/current')
+    mission.value = data.data
+  } catch { /* 실패해도 팝업은 닫음 */ }
+  showFailurePopup.value = false
+  popupConfirming.value = false
+  evaluateMissionPopup()
+}
+
+onMounted(() => {
+  track('home_viewed')
+  loadHome()
 })
 
 function goToNotifications() {

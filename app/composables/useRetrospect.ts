@@ -12,7 +12,9 @@ import { toUploadableAudio } from '~/utils/audio'
 // 회고 진행 플로우 API 레이어.
 // 대부분 mutation 성격이라 캐싱하지 않고, AI 생성(완료/심화질문/STT)은
 // 기본 10초 타임아웃으로 부족할 수 있어 요청별로 더 길게 설정한다.
-const AI_TIMEOUT = 60_000
+// 백엔드 RestClient 읽기 타임아웃(60초)보다 약간 길게 둬서, 서버가 먼저 끊고
+// 정상 에러 응답(problem+json)을 주도록 한다(클라이언트가 먼저 abort하지 않게).
+const AI_TIMEOUT = 65_000
 
 export function useRetrospect() {
   const { $api } = useNuxtApp()
