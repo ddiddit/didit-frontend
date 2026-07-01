@@ -212,12 +212,16 @@ async function loginWithGoogle() {
       const res = await SocialLogin.login({ provider: 'google', options: {} })
       const idToken = (res.result as { idToken?: string | null }).idToken
       if (!idToken) {
-        errorMessage.value = 'Google 로그인에 실패했습니다.'
+        // 진단용: idToken 미발급 (원인 확인 후 되돌릴 것)
+        errorMessage.value = 'Google 로그인 실패: idToken 없음 (native)'
         return
       }
       await submitLogin('GOOGLE', idToken)
-    } catch {
-      errorMessage.value = 'Google 로그인에 실패했습니다.'
+    } catch (e) {
+      // 진단용: 실제 네이티브 에러를 화면에 노출 (원인 확인 후 되돌릴 것)
+      const detail = e instanceof Error ? `${e.name}: ${e.message}` : JSON.stringify(e)
+      errorMessage.value = `Google 로그인 실패(native): ${detail}`
+      console.error('[google-login]', e)
     }
     return
   }
