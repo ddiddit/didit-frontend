@@ -16,9 +16,9 @@
       </p>
     </div>
 
-    <!-- 에러: 결과 생성 실패 (figma 31141) -->
-    <div v-else-if="isError" class="flex-1 flex flex-col items-center justify-center px-8 text-center gap-5">
-      <p class="text-body2 font-semibold text-grey-13">회고 결과를 생성하지 못했어요</p>
+    <!-- 에러: 결과 생성 실패 (figma 31141) — 네트워크 끊김은 문구 구분 -->
+    <div v-else-if="errorVariant" class="flex-1 flex flex-col items-center justify-center px-8 text-center gap-5">
+      <p class="text-body2 font-semibold text-grey-13 whitespace-pre-line">{{ errorTitle }}</p>
       <UiButton size="md" class="w-auto px-6" @click="generate">다시 시도</UiButton>
     </div>
 
@@ -74,7 +74,7 @@
 
 <script setup lang="ts">
 import type { CompleteRetrospectiveResponse, Tag } from '~/types/api'
-import { isAuthError } from '~/utils/api-error'
+import { isAuthError, toErrorVariant } from '~/utils/api-error'
 
 definePageMeta({ middleware: 'auth', layout: false })
 
@@ -90,8 +90,15 @@ const completingId = useState<string>('retrospect:completing-id')
 const resultStash = useState<CompleteRetrospectiveResponse | null>('retrospect:result', () => null)
 
 const isLoading = ref(true)
-const isError = ref(false)
+const errorVariant = ref<'network' | 'server' | 'generic' | null>(null)
 const isSaving = ref(false)
+
+// 네트워크 끊김은 '연결 확인' 안내, 그 외(서버/알수없음)는 '생성 실패'로 표시
+const errorTitle = computed(() =>
+  errorVariant.value === 'network'
+    ? '인터넷 연결을 확인해 주세요.\n연결 후 다시 시도해 주세요.'
+    : '회고 결과를 생성하지 못했어요',
+)
 const result = ref<CompleteRetrospectiveResponse | null>(null)
 const title = ref('')
 
@@ -127,14 +134,14 @@ async function generate() {
   }
   // 직접 진입/재시도 등 stash가 없을 때만 생성 (폴백)
   isLoading.value = true
-  isError.value = false
+  errorVariant.value = null
   try {
     const res = await retro.complete(completingId.value)
     result.value = res
     title.value = res.title
   } catch (e) {
     // 인증 만료는 인터셉터가 로그인으로 보냄 → 에러 화면 X
-    if (!isAuthError(e)) isError.value = true
+    if (!isAuthError(e)) errorVariant.value = toErrorVariant(e)
   } finally {
     isLoading.value = false
   }

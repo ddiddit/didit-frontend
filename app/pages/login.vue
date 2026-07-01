@@ -62,8 +62,6 @@
           </div>
         </button>
       </div>
-
-      <p v-if="errorMessage" class="text-red-400 text-center text-sm mt-4">{{ errorMessage }}</p>
     </div>
   </div>
 </template>
@@ -111,7 +109,7 @@ const config = useRuntimeConfig()
 const googleContent = ref<HTMLElement | null>(null)
 const syncWidth = ref('')
 const isLoading = ref(false)
-const errorMessage = ref('')
+const { show: showToast } = useToast()
 
 onMounted(async () => {
   // accessToken과 refreshToken이 모두 있을 때만 자동 로그인
@@ -160,9 +158,19 @@ function loadScript(src: string): Promise<void> {
   })
 }
 
+// 사용자가 로그인 창을 뒤로가기·바깥 탭·창 닫기로 취소한 경우 판별
+// (취소는 실패가 아니므로 에러 문구를 노출하지 않기 위함)
+function isUserCancelled(e: unknown): boolean {
+  const err = (e ?? {}) as { error?: unknown; message?: unknown; code?: unknown }
+  const text = [err.error, err.message, err.code, typeof e === 'string' ? e : '']
+    .map((v) => String(v ?? ''))
+    .join(' ')
+    .toLowerCase()
+  return /cancel|취소|dismiss|popup_closed|closed_by_user|user_trigger/.test(text)
+}
+
 async function submitLogin(provider: 'KAKAO' | 'GOOGLE' | 'APPLE', oauthToken: string) {
   isLoading.value = true
-  errorMessage.value = ''
   try {
     const { data } = await $api.post<ApiResponse<TokenResponse>>('/api/v1/auth/login', { provider, oauthToken })
     localStorage.setItem('accessToken', data.data.accessToken)
@@ -181,21 +189,22 @@ async function submitLogin(provider: 'KAKAO' | 'GOOGLE' | 'APPLE', oauthToken: s
   } catch (e) {
     track('login_failed', { provider: provider.toLowerCase() })
     // 백엔드 에러 코드(WITHDRAWN_USER, OAUTH_USER_INFO_FAILED 등)에 맞는 문구 노출
-    errorMessage.value = getApiErrorMessage(e, '로그인에 실패했습니다. 다시 시도해주세요.')
+    showToast(getApiErrorMessage(e, '로그인에 실패했어요. 다시 시도해 주세요.'))
   } finally {
     isLoading.value = false
   }
 }
 
 async function loginWithKakao() {
-  errorMessage.value = ''
   if (isNative) {
     // 앱: 네이티브 카카오 로그인 → 액세스 토큰
     try {
       const res = await CapacitorKakaoLogin.login()
       await submitLogin('KAKAO', res.accessToken)
-    } catch {
-      errorMessage.value = '카카오 로그인에 실패했습니다.'
+    } catch (e) {
+      // 사용자가 취소한 경우는 실패가 아니므로 무시
+      if (isUserCancelled(e)) return
+      showToast('카카오 로그인에 실패했어요. 다시 시도해 주세요.')
     }
     return
   }
@@ -205,48 +214,47 @@ async function loginWithKakao() {
 }
 
 async function loginWithGoogle() {
-  errorMessage.value = ''
   if (isNative) {
     // 앱: 네이티브 구글 로그인 → ID 토큰
     try {
       const res = await SocialLogin.login({ provider: 'google', options: {} })
       const idToken = (res.result as { idToken?: string | null }).idToken
       if (!idToken) {
-        // 진단용: idToken 미발급 (원인 확인 후 되돌릴 것)
-        errorMessage.value = 'Google 로그인 실패: idToken 없음 (native)'
+        showToast('Google 로그인에 실패했어요. 다시 시도해 주세요.')
         return
       }
       await submitLogin('GOOGLE', idToken)
     } catch (e) {
-      // 진단용: 실제 네이티브 에러를 화면에 노출 (원인 확인 후 되돌릴 것)
-      const detail = e instanceof Error ? `${e.name}: ${e.message}` : JSON.stringify(e)
-      errorMessage.value = `Google 로그인 실패(native): ${detail}`
+      // 사용자가 취소한 경우는 실패가 아니므로 무시
+      if (isUserCancelled(e)) return
       console.error('[google-login]', e)
+      showToast('Google 로그인에 실패했어요. 다시 시도해 주세요.')
     }
     return
   }
   // 웹: GIS 원탭/팝업
   google.accounts.id.prompt((notification) => {
     if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-      errorMessage.value = 'Google 로그인 창이 표시되지 않았습니다. 팝업 차단을 해제해주세요.'
+      showToast('Google 로그인 창이 표시되지 않았어요. 팝업 차단을 해제해 주세요.')
     }
   })
 }
 
 async function loginWithApple() {
-  errorMessage.value = ''
   if (isNative) {
     // iOS 앱: 네이티브 애플 로그인 → ID 토큰
     try {
       const res = await SocialLogin.login({ provider: 'apple', options: { scopes: ['email', 'name'] } })
       const idToken = (res.result as { idToken?: string | null }).idToken
       if (!idToken) {
-        errorMessage.value = 'Apple 로그인에 실패했습니다.'
+        showToast('Apple 로그인에 실패했어요. 다시 시도해 주세요.')
         return
       }
       await submitLogin('APPLE', idToken)
-    } catch {
-      errorMessage.value = 'Apple 로그인에 실패했습니다.'
+    } catch (e) {
+      // 사용자가 취소한 경우는 실패가 아니므로 무시
+      if (isUserCancelled(e)) return
+      showToast('Apple 로그인에 실패했어요. 다시 시도해 주세요.')
     }
     return
   }
@@ -260,8 +268,9 @@ async function loginWithApple() {
   try {
     const result = await AppleID.auth.signIn()
     await submitLogin('APPLE', result.authorization.id_token)
-  } catch {
-    errorMessage.value = 'Apple 로그인에 실패했습니다.'
+  } catch (e) {
+    if (isUserCancelled(e)) return
+    showToast('Apple 로그인에 실패했어요. 다시 시도해 주세요.')
   }
 }
 </script>
