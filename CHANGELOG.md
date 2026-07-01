@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/ddiddit/didit-frontend/compare/v1.2.0...v1.3.0) (2026-07-01)
+
+
+### Features
+
+* **error:** 회고 결과·검색 페이지 로드 실패 처리 보강 ([b3a2aa1](https://github.com/ddiddit/didit-frontend/commit/b3a2aa120b3f8fe38a0ab77dff5dd1c6d55682b4))
+
+
+### Bug Fixes
+
+* **login:** 로그인 취소는 실패 처리하지 않고 실패 시 토스트로 안내 ([166ca48](https://github.com/ddiddit/didit-frontend/commit/166ca4864c3a3f21f34ffb9c76a88239479889bd))
+
 ## [1.2.0](https://github.com/ddiddit/didit-frontend/compare/v1.0.0...v1.2.0) (2026-07-01)
 
 
