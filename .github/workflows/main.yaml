@@ -1,6 +1,8 @@
 name: production
 
-# main 브랜치: PR=웹 빌드 검증 / push(머지)=운영 AAB 빌드 → Play 프로덕션 트랙(초안) 업로드
+# main 브랜치: PR=웹 빌드 검증 / push(머지)=운영 AAB 빌드 → 아티팩트 보관
+# (Play 프로덕션 자동 업로드는 중단: 첫 출시 전이라 precondition 미충족 + develop 비공개(alpha) 배포와 Play Edit 충돌.
+#  첫 프로덕션 출시는 아티팩트 AAB로 Play Console에서 수동 진행. 정식 출시 후 자동 업로드 복구 가능.)
 on:
   pull_request:
     branches:
@@ -100,13 +102,21 @@ jobs:
           cd android
           ./gradlew bundleRelease --no-daemon
 
-      # 운영은 자동 라이브 대신 'draft'로 올려, Play Console에서 검토 후 수동 출시
-      - name: Upload to Play (production, draft)
-        if: env.PLAY_JSON != '' # Play 시크릿 등록 전엔 업로드 스킵(빌드만 검증)
-        uses: r0adkll/upload-google-play@v1
+      # 프로덕션 자동 업로드는 중단(첫 출시 전 precondition 미충족 + develop 비공개 배포와 Play Edit 충돌).
+      # 대신 운영(production env) AAB를 아티팩트로 보관 → 첫 프로덕션 출시는 이 파일로 Play Console에서 수동 진행.
+      # 정식 출시 후 자동 업로드를 되살리려면 아래 r0adkll 스텝을 복구 (track: production, status: draft).
+      - name: Upload AAB artifact (production)
+        uses: actions/upload-artifact@v4
         with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: kr.ai.didit
-          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
-          track: production
-          status: draft
+          name: app-release-aab-production
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+      # - name: Upload to Play (production, draft)
+      #   if: env.PLAY_JSON != ''
+      #   uses: r0adkll/upload-google-play@v1
+      #   with:
+      #     serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+      #     packageName: kr.ai.didit
+      #     releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+      #     track: production
+      #     status: draft
