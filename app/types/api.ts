@@ -93,7 +93,7 @@ export interface UserProfile {
   age: AgeType | null
   experience: ExperienceType | null
   provider: 'KAKAO' | 'GOOGLE' | 'APPLE'
-  level?: number
+  currentLevel: number
 }
 
 export interface NicknameCheckResponse {
@@ -113,6 +113,9 @@ export interface OnboardingRequest {
 export interface HomeResponse {
   nickname: string
   todayRetrospectiveCount: number
+  hasUnreadNotification: boolean
+  // /api/v1/missions/current 와 동일 구조 — 홈 1콜로 미션/레벨까지 수신
+  mission: CurrentMissionResponse
   recentRetrospectives: RecentRetrospective[]
 }
 
@@ -123,6 +126,44 @@ export interface RecentRetrospective {
   completedAt: string | null
   projectName: string | null
   tags: Tag[]
+}
+
+// Mission / Level (게이미피케이션) — GET /api/v1/missions/current
+export type MissionType = 'FIRST_RETRO' | 'TIME_LIMITED' | 'CONSECUTIVE_WEEK' | 'CUMULATIVE_RETRO'
+
+// 연속 주 미션에서만 내려옴 (월~일 7요소)
+export interface WeekDayStatus {
+  day: string
+  isCompleted: boolean
+}
+
+export interface WeeklyRetroStatus {
+  weekDays: WeekDayStatus[]
+}
+
+// 미션 상세 (최고 레벨 등에서는 mission = null)
+export interface MissionDetail {
+  type: MissionType
+  title: string
+  description: string
+  progress: number
+  target: number
+  remainingDays: number | null
+  cta: string
+}
+
+// 팝업 신호 (백엔드가 레벨업/실패 시 1회 내려줌)
+export type MissionPopupType = 'LEVEL_UP' | 'FAILURE'
+export interface MissionPopup {
+  exists: boolean
+  type: MissionPopupType | null
+}
+
+export interface CurrentMissionResponse {
+  currentLevel: number
+  mission: MissionDetail | null
+  weeklyStatus: WeeklyRetroStatus | null
+  popup: MissionPopup
 }
 
 // Retrospective

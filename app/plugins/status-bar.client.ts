@@ -47,6 +47,6 @@ export default defineNuxtPlugin((nuxtApp) => {
   }
 
   // 페이지 전환 완료·최초 마운트 후 한 프레임 뒤 동기화 (렌더 반영 대기)
-  nuxtApp.hook('page:finish', () => requestAnimationFrame(syncStatusBar))
-  nuxtApp.hook('app:mounted', () => requestAnimationFrame(syncStatusBar))
+  nuxtApp.hook('page:finish', () => { requestAnimationFrame(syncStatusBar) })
+  nuxtApp.hook('app:mounted', () => { requestAnimationFrame(syncStatusBar) })
 })

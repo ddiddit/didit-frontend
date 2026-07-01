@@ -14,7 +14,10 @@
         <div class="flex items-center gap-[7px]">
           <p class="text-heading1 font-semibold text-grey-13 truncate">{{ profile?.nickname ?? '' }}</p>
           <!-- 레벨 배지 -->
-          <span class="shrink-0 px-[6px] py-[3px] rounded-[6px] bg-[rgba(90,141,238,0.15)] text-[#5A8DEE] text-[11px] font-semibold leading-[130%] tracking-[-0.02em]">Lv.{{ profile?.level ?? 1 }}</span>
+          <span
+            class="shrink-0 inline-flex items-center px-[6px] py-[3px] rounded-[6px] text-[11px] font-semibold leading-[1.3] tracking-[-0.02em]"
+            :style="{ backgroundColor: levelTheme(profile?.currentLevel ?? 1).light, color: levelTheme(profile?.currentLevel ?? 1).accent }"
+          >Lv.{{ profile?.currentLevel ?? 1 }}</span>
         </div>
       </div>
       <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6 shrink-0" />
@@ -122,6 +125,7 @@
 <script setup lang="ts">
 import type { JobType } from '~/types/api'
 import { parseServerDate } from '~/utils/date'
+import { levelTheme } from '~/utils/levelTheme'
 
 definePageMeta({ middleware: 'auth', layout: 'default' })
 
