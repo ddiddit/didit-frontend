@@ -284,9 +284,8 @@ const jobs = [
 
 // 0.2초 디바운스로 중복 체크 호출
 const debouncedCheckNickname = useDebounceFn(async () => {
-  const value = nickname.value.trim()
-  if (value.length < 2 || /[^가-힣a-zA-Z]/.test(value)) return
-  await checkNickname()
+  if (nickname.value.trim().length < 2) return
+  await checkNickname() // 형식 오류 문구는 checkNickname에서 표시
 }, 200)
 
 // 실시간 중복 체크 (문자 타입 검사는 디바운스 후 수행 — IME 조합 중 오류 방지)
@@ -304,8 +303,7 @@ watch(nickname, (value) => {
 
 // 엔터키로 즉시 중복 체크
 async function onNicknameEnter() {
-  const value = nickname.value.trim()
-  if (value.length < 2 || /[^가-힣a-zA-Z]/.test(value)) return
+  if (nickname.value.trim().length < 2) return
   if (nicknameStatus.value === 'checking' || nicknameStatus.value === 'available') return
   await checkNickname()
 }
