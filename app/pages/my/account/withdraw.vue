@@ -63,7 +63,7 @@
     </div>
 
     <!-- 하단 액션 (동의 + 버튼, 간격 12) -->
-    <div class="shrink-0 bg-white px-5 pt-3 pb-[50px] flex flex-col gap-3">
+    <div class="shrink-0 bg-white px-5 pt-3 flex flex-col gap-3 safe-bottom">
       <!-- 동의 체크박스 -->
       <div class="flex items-center gap-2 cursor-pointer" @click="agreed = !agreed">
         <UiCheckbox

@@ -89,12 +89,15 @@
 const { width } = useWindowSize()
 const isDesktop = computed(() => width.value >= 980)
 
+const { isNative } = useIsNative()
+
 // 로그인 상태면 서버의 푸시 동의(enabled)를 보고 권한·토큰을 자동 동기화한다.
 // (이미 동의한 사용자가 토글을 껐다 켜야만 권한 팝업이 뜨던 문제 해결)
 onMounted(() => {
-  if (import.meta.client && localStorage.getItem('accessToken')) {
-    usePushNotifications().syncIfConsented()
-  }
+  if (!import.meta.client) return
+  // 네이티브(앱)에서만 하단 CTA가 시스템 바에 맞춰 붙도록 루트 클래스 부여 (.safe-bottom 분기)
+  if (isNative.value) document.documentElement.classList.add('is-native')
+  if (localStorage.getItem('accessToken')) usePushNotifications().syncIfConsented()
 })
 
 const features = [
