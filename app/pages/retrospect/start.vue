@@ -1,5 +1,8 @@
 <template>
-  <div class="h-full bg-white flex flex-col">
+  <div
+    class="h-full bg-white flex flex-col overflow-hidden"
+    :style="keyboardOpen ? { height: `calc(100% - ${keyboardHeight}px)` } : undefined"
+  >
     <!-- 헤더: 뒤로가기 + 다시 시작 -->
     <div class="flex items-center justify-between h-[50px] px-5 shrink-0">
       <button class="p-1 -ml-1" aria-label="뒤로" @click="onBack">
@@ -84,7 +87,7 @@
     <!-- 입력 바 -->
     <div
       class="px-5 pt-2.5 bg-grey-1 shrink-0"
-      :style="{ paddingBottom: keyboardOpen ? '10px' : 'max(16px, env(safe-area-inset-bottom, 16px))' }"
+      :style="{ paddingBottom: keyboardOpen ? '8px' : 'max(16px, env(safe-area-inset-bottom, 16px))' }"
     >
       <!-- 질문 불러오기 실패 시 인라인 에러 배너 (figma err3) -->
       <UiInlineError
@@ -226,8 +229,6 @@
 </template>
 
 <script setup lang="ts">
-import type { PluginListenerHandle } from '@capacitor/core'
-import { Keyboard } from '@capacitor/keyboard'
 import type { QuestionType, CompleteRetrospectiveResponse } from '~/types/api'
 import { getApiErrorCode, getApiErrorMessage, isAuthError } from '~/utils/api-error'
 
@@ -643,23 +644,31 @@ async function onConfirmRestart() {
   }
 }
 
-// 키보드가 열리면 입력창 하단 safe-area 여백을 줄여 키보드에 밀착시킴 (뜨는 간격 제거)
+// 안드로이드 WebView는 키보드가 떠도 레이아웃 높이(dvh)를 줄이지 않아 하단 입력창이
+// 키보드에 가려진다. visualViewport로 실제 보이는 영역 높이를 받아 채팅 화면을 그만큼 줄여
+// 입력창이 키보드 바로 위에 오게 한다.
 const keyboardOpen = ref(false)
-let kbShow: PluginListenerHandle | undefined
-let kbHide: PluginListenerHandle | undefined
+const keyboardHeight = ref(0)
 
-onMounted(async () => {
+function onViewportChange() {
+  const vv = window.visualViewport
+  if (!vv) return
+  const kb = window.innerHeight - vv.height
+  keyboardHeight.value = kb > 100 ? kb : 0
+  keyboardOpen.value = kb > 100
+}
+
+onMounted(() => {
   loadProfile()
   init()
-  if (isNative.value) {
-    kbShow = await Keyboard.addListener('keyboardWillShow', () => { keyboardOpen.value = true })
-    kbHide = await Keyboard.addListener('keyboardWillHide', () => { keyboardOpen.value = false })
+  if (import.meta.client && window.visualViewport) {
+    window.visualViewport.addEventListener('resize', onViewportChange)
+    onViewportChange()
   }
 })
 
 onUnmounted(() => {
-  kbShow?.remove()
-  kbHide?.remove()
+  window.visualViewport?.removeEventListener('resize', onViewportChange)
 })
 </script>
 
