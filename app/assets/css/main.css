@@ -27,7 +27,7 @@
     padding-bottom: 50px;
   }
   .is-native .safe-bottom {
-    padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
   }
 
   .safe-top {
