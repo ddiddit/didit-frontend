@@ -1,13 +1,17 @@
 <template>
-  <!-- 데스크탑: 회색 배경 위에 두 패널이 가운데 정렬 -->
-  <div class="min-h-dvh bg-background desktop:bg-white desktop:flex desktop:justify-center desktop:items-start">
+  <!-- 태블릿(600px+)부터 바깥은 흰 배경 → 중앙 앱 패널이 액자처럼 보이도록. 네이티브는 항상 단일 패널 -->
+  <div
+    class="min-h-dvh bg-background tablet:bg-white"
+    :class="!isNative && 'desktop:flex desktop:justify-center desktop:items-start'"
+  >
     <NuxtRouteAnnouncer />
 
     <!-- 두 패널 묶음 -->
     <div class="flex min-h-dvh">
 
-      <!-- 왼쪽 랜딩 패널 (980px 이상) -->
+      <!-- 왼쪽 랜딩 패널 (웹 980px 이상 전용 — 네이티브 앱에선 노출 안 함) -->
       <aside
+        v-if="!isNative"
         class="hidden desktop:flex flex-col justify-center
                w-[440px] flex-shrink-0 min-h-dvh
                bg-white border-r border-gray-100 p-10 gap-10"
@@ -68,11 +72,13 @@
         </div>
       </aside>
 
-      <!-- 앱 영역: 모바일/태블릿=전체 너비, 데스크탑=390px 패널+그림자 -->
+      <!-- 앱 영역: 폰=전체 너비, 태블릿(600px+)=500px 레터박스 중앙 정렬, 웹 데스크탑=390px 패널+그림자 -->
+      <!-- 500px: UI가 390 기준 설계된 단일 컬럼 카드·채팅형이라 600은 카드가 퍼져 보임 -->
       <div
         id="app-container"
-        class="w-full desktop:w-[390px] desktop:flex-shrink-0 h-dvh overflow-hidden flex flex-col bg-background relative safe-top"
-        :style="isDesktop ? 'box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 8px 16px rgba(0,0,0,0.06), 0 24px 48px rgba(0,0,0,0.08);' : ''"
+        class="w-full tablet:max-w-[500px] tablet:mx-auto h-dvh overflow-hidden flex flex-col bg-background relative safe-top"
+        :class="!isNative && 'desktop:max-w-none desktop:mx-0 desktop:w-[390px] desktop:flex-shrink-0'"
+        :style="isTablet ? 'box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 8px 16px rgba(0,0,0,0.06), 0 24px 48px rgba(0,0,0,0.08);' : ''"
       >
         <NuxtLayout>
           <NuxtPage />
@@ -87,16 +93,16 @@
 
 <script setup lang="ts">
 const { width } = useWindowSize()
-const isDesktop = computed(() => width.value >= 980)
+// 600px 이상(태블릿·데스크탑)이면 앱 패널에 그림자를 줘 레터박스가 액자처럼 보이게 함
+const isTablet = computed(() => width.value >= 600)
 
+// 네이티브 앱에선 랜딩 패널·데스크탑 패널 레이아웃을 쓰지 않음 (항상 단일 앱 패널)
 const { isNative } = useIsNative()
 
 // 로그인 상태면 서버의 푸시 동의(enabled)를 보고 권한·토큰을 자동 동기화한다.
 // (이미 동의한 사용자가 토글을 껐다 켜야만 권한 팝업이 뜨던 문제 해결)
 onMounted(() => {
   if (!import.meta.client) return
-  // 네이티브(앱)에서만 하단 CTA가 시스템 바에 맞춰 붙도록 루트 클래스 부여 (.safe-bottom 분기)
-  if (isNative.value) document.documentElement.classList.add('is-native')
   if (localStorage.getItem('accessToken')) usePushNotifications().syncIfConsented()
 })
 

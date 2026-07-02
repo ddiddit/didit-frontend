@@ -5,7 +5,7 @@
   >
     <div
       class="flex items-center justify-around"
-      style="padding-top: 12px; padding-bottom: max(28px, env(safe-area-inset-bottom, 28px));"
+      style="padding-top: 12px; padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));"
     >
       <NuxtLink
         v-for="tab in tabs"
