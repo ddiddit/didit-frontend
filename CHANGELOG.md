@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.3.0](https://github.com/ddiddit/didit-frontend/compare/v1.2.0...v1.3.0) (2026-07-02)
+
+
+### Features
+
+* **error:** 회고 결과·검색 페이지 로드 실패 처리 보강 ([b3a2aa1](https://github.com/ddiddit/didit-frontend/commit/b3a2aa120b3f8fe38a0ab77dff5dd1c6d55682b4))
+
+
+### Bug Fixes
+
+* **android:** 키보드 표시 시 WebView 리사이즈되도록 adjustResize 추가 ([a4b1cb1](https://github.com/ddiddit/didit-frontend/commit/a4b1cb13b06be39dc4d30bcc53433af841ca33d4))
+* **app:** 키보드 열릴 때 채팅 입력창이 가려지는 문제 수정 ([51f6d7f](https://github.com/ddiddit/didit-frontend/commit/51f6d7f4b55dc0cd00ce45aecd2e8c3ceb808793))
+* **layout:** 하단 여백 통일 및 태블릿 레터박스 대응 ([afa0a0a](https://github.com/ddiddit/didit-frontend/commit/afa0a0a0f2e094eff8289784dbbb51a52f7a563b))
+* **login:** 로그인 취소는 실패 처리하지 않고 실패 시 토스트로 안내 ([166ca48](https://github.com/ddiddit/didit-frontend/commit/166ca4864c3a3f21f34ffb9c76a88239479889bd))
+* **profile:** 닉네임 형식 오류 시 안내 문구 노출 (온보딩·프로필수정) ([e85fa13](https://github.com/ddiddit/didit-frontend/commit/e85fa13cedef61223c0e950c47b1426fd3ffe18e))
+* **retrospect:** 키보드 열릴 때 채팅 입력창을 키보드에 밀착 ([5bf27ec](https://github.com/ddiddit/didit-frontend/commit/5bf27ec89d53eec55a73b1dc51b1d759a109693e))
+* **retrospect:** 키보드 열릴 때 채팅 입력창이 가려지는 문제 해결 ([0a388ec](https://github.com/ddiddit/didit-frontend/commit/0a388ec9ec2b529e01590fceace8f920486bfbbc))
+* **retrospect:** 키보드 열림 시 채팅 입력창 위치 처리 개선 ([48ceb21](https://github.com/ddiddit/didit-frontend/commit/48ceb21dcde1802d213b11f1289f3cf1b305998e))
+* **toast:** 토스트 피그마 디자인 적용 (로그인 에러 아이콘·두 줄) ([2d3e9f1](https://github.com/ddiddit/didit-frontend/commit/2d3e9f1254fc31d64be2e03dbe022caedee7a8a6))
+* **ui:** 하단 CTA 여백을 앱에선 기기별 safe-area로 자동조절 ([3d83b73](https://github.com/ddiddit/didit-frontend/commit/3d83b739ef1c10fae733efed40a85ec0b739c5b6))
+* 키보드 가림·토스트 디자인·하단 CTA safe-area ([bb03433](https://github.com/ddiddit/didit-frontend/commit/bb034333e9863dc67bf991473e0386a0b50e842c))
+* 하단 CTA safe-area 자동조절 + 닉네임 형식 오류 안내 ([b8e9ec7](https://github.com/ddiddit/didit-frontend/commit/b8e9ec7b7f9c5e7fa95e41f0dfd72aa0eb36fb62))
+
+
+### Reverts
+
+* 1.3.0 릴리스 되돌리기 (1.2.0 유지) ([ed23459](https://github.com/ddiddit/didit-frontend/commit/ed23459c1f6e5e04d9dd6e572a9a1831d9d27f83))
+
 ## [1.2.0](https://github.com/ddiddit/didit-frontend/compare/v1.0.0...v1.2.0) (2026-07-01)
 
 
