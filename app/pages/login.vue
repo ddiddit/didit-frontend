@@ -109,7 +109,9 @@ const config = useRuntimeConfig()
 const googleContent = ref<HTMLElement | null>(null)
 const syncWidth = ref('')
 const isLoading = ref(false)
-const { show: showToast } = useToast()
+// 로그인 실패·안내 토스트는 notice 아이콘 표시 (피그마 8088:31255)
+const { show } = useToast()
+const showToast = (msg: string) => show(msg, { icon: true })
 
 onMounted(async () => {
   // accessToken과 refreshToken이 모두 있을 때만 자동 로그인
@@ -235,7 +237,7 @@ async function loginWithGoogle() {
   // 웹: GIS 원탭/팝업
   google.accounts.id.prompt((notification) => {
     if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-      showToast('Google 로그인 창이 표시되지 않았어요. 팝업 차단을 해제해 주세요.')
+      showToast('Google 로그인 창이 표시되지 않았어요.\n팝업 차단을 해제해 주세요.')
     }
   })
 }
