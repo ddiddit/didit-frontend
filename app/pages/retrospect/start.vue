@@ -1,5 +1,8 @@
 <template>
-  <div class="h-full bg-white flex flex-col">
+  <div
+    class="h-full bg-white flex flex-col overflow-hidden"
+    :style="keyboardOpen ? { height: `calc(100% - ${keyboardHeight}px)` } : undefined"
+  >
     <!-- 헤더: 뒤로가기 + 다시 시작 -->
     <div class="flex items-center justify-between h-[50px] px-5 shrink-0">
       <button class="p-1 -ml-1" aria-label="뒤로" @click="onBack">
@@ -84,7 +87,7 @@
     <!-- 입력 바 -->
     <div
       class="px-5 pt-2.5 bg-grey-1 shrink-0"
-      style="padding-bottom: max(16px, env(safe-area-inset-bottom, 16px))"
+      :style="{ paddingBottom: keyboardOpen ? '16px' : 'max(16px, env(safe-area-inset-bottom, 16px))' }"
     >
       <!-- 질문 불러오기 실패 시 인라인 에러 배너 (figma err3) -->
       <UiInlineError
@@ -226,6 +229,8 @@
 </template>
 
 <script setup lang="ts">
+import type { PluginListenerHandle } from '@capacitor/core'
+import { Keyboard } from '@capacitor/keyboard'
 import type { QuestionType, CompleteRetrospectiveResponse } from '~/types/api'
 import { getApiErrorCode, getApiErrorMessage, isAuthError } from '~/utils/api-error'
 
@@ -641,9 +646,34 @@ async function onConfirmRestart() {
   }
 }
 
-onMounted(() => {
+// 안드로이드 WebView는 키보드가 떠도 레이아웃 높이(dvh)를 줄이지 않아 하단 입력창이
+// 키보드에 가려진다. visualViewport로 실제 보이는 영역 높이를 받아 채팅 화면을 그만큼 줄여
+// 입력창이 키보드 바로 위에 오게 한다.
+// OS가 알려주는 키보드 전체 높이(추천줄·툴바 포함)를 받아 채팅 화면을 그만큼 줄인다.
+// visualViewport는 추천줄 높이를 누락하므로 네이티브 키보드 높이를 쓴다.
+const keyboardOpen = ref(false)
+const keyboardHeight = ref(0)
+let kbShow: PluginListenerHandle | undefined
+let kbHide: PluginListenerHandle | undefined
+
+function applyKeyboardHeight(raw: number) {
+  // 일부 기기는 물리 px로 주므로 CSS px로 정규화
+  const h = raw > window.innerHeight ? raw / window.devicePixelRatio : raw
+  keyboardHeight.value = h > 0 ? h : 0
+  keyboardOpen.value = keyboardHeight.value > 0
+}
+
+onMounted(async () => {
   loadProfile()
   init()
+  if (!import.meta.client || !isNative.value) return
+  kbShow = await Keyboard.addListener('keyboardWillShow', info => applyKeyboardHeight(info.keyboardHeight))
+  kbHide = await Keyboard.addListener('keyboardWillHide', () => { keyboardHeight.value = 0; keyboardOpen.value = false })
+})
+
+onUnmounted(() => {
+  kbShow?.remove()
+  kbHide?.remove()
 })
 </script>
 

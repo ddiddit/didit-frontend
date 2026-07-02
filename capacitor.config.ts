@@ -20,6 +20,11 @@ const config: CapacitorConfig = {
       style: 'LIGHT',
       backgroundColor: '#F6F6F6',
     },
+    // 키보드 리사이즈는 네이티브가 아닌 앱에서 직접 처리(visualViewport 기반).
+    // native 모드는 visualViewport를 비정상(offsetTop 왜곡)으로 만들어 레이아웃이 꼬여서 none으로 둔다.
+    Keyboard: {
+      resize: 'none',
+    },
   },
 }
 
