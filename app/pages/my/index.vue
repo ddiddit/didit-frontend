@@ -32,8 +32,8 @@
         <span class="text-body2 font-medium text-grey-10">목표 달성 배지</span>
         <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6" />
       </button>
-      <!-- 획득 배지 미리보기: 최대 2개, 2열 그리드 -->
-      <div v-if="acquiredBadges.length > 0" class="mt-2 mb-2 px-2 grid grid-cols-2 gap-[10px]">
+      <!-- 획득 배지 미리보기: 최대 2개. 열 고정 대신 카드 최소폭(140px) 기준 auto-fill → 넓은 화면에서 카드가 늘어나지 않음 -->
+      <div v-if="acquiredBadges.length > 0" class="mt-2 mb-2 px-2 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-[10px]">
         <div
           v-for="b in acquiredBadges.slice(0, 2)"
           :key="b.code"

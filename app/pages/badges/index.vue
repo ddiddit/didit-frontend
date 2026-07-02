@@ -32,9 +32,9 @@
         <div class="mx-5 mt-[34px] h-px bg-[#EEEEEE]" />
       </template>
 
-      <!-- 배지 그리드 (2열, 가로간격 22 / 세로간격 34) -->
+      <!-- 배지 그리드 (가로간격 22 / 세로간격 34) — 열 고정 대신 카드 최소폭(140px) 기준 auto-fill: 폰 2열, 태블릿 3열 자동 -->
       <!-- 최근 배지 섹션이 없을 때는 상단 여백을 줄여 피그마와 맞춤 -->
-      <div :class="['px-5 pb-10 grid grid-cols-2 gap-x-[22px] gap-y-[34px]', recentBadge ? 'pt-6' : 'pt-1']">
+      <div :class="['px-5 pb-10 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-x-[22px] gap-y-[34px]', recentBadge ? 'pt-6' : 'pt-1']">
         <button
           v-for="badge in badges"
           :key="badge.code"

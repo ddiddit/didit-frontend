@@ -22,12 +22,9 @@
 }
 
 @layer utilities {
-  /* 하단 CTA 여백: 웹은 고정 50px, 네이티브 앱(.is-native)은 시스템 바 + 16px 자동조절 */
+  /* 하단 CTA 여백: 바텀 8px + 기기 하단 영역(웹은 env가 0이라 8px 고정) */
   .safe-bottom {
-    padding-bottom: 50px;
-  }
-  .is-native .safe-bottom {
-    padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
   }
 
   .safe-top {

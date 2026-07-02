@@ -68,6 +68,7 @@ export default {
       screens: {
         xs: '375px',
         sm: '390px',
+        tablet: '600px',
         desktop: '980px',
       },
       maxWidth: {
