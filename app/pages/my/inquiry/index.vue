@@ -136,7 +136,7 @@
     </div>
 
     <!-- 문의하기 탭 하단 버튼 -->
-    <div v-if="activeTab === 'form'" class="px-5 pb-8 pt-3 shrink-0">
+    <div v-if="activeTab === 'form'" class="px-5 pt-3 shrink-0 safe-bottom">
       <button
         class="w-full h-[60px] rounded-xl text-body2 font-semibold transition-colors"
         :class="(canSubmit && !isSubmitting) ? 'bg-primary text-grey-13 active:opacity-80' : 'bg-grey-5 text-grey-6'"

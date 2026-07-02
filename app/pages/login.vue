@@ -12,7 +12,7 @@
     </div>
 
     <!-- 하단: 소셜 로그인 버튼 -->
-    <div class="px-5" style="padding-bottom: calc(max(50px, env(safe-area-inset-bottom, 50px)) + 6px);">
+    <div class="px-5 safe-bottom">
       <p class="text-label1 text-center mb-5" style="color: #1B6345;">SNS 계정으로 간편 회원가입</p>
 
       <div class="flex flex-col gap-[10px]">

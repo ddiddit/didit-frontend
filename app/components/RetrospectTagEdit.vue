@@ -58,7 +58,7 @@
     </div>
 
     <!-- 하단 -->
-    <div class="px-5 shrink-0" style="padding-bottom: max(50px, env(safe-area-inset-bottom, 50px))">
+    <div class="px-5 shrink-0 safe-bottom">
       <p class="text-center text-label2 font-medium text-grey-7 mb-4">
         태그는 최대 2개까지 선택 가능합니다.
       </p>

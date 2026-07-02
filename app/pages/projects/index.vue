@@ -91,7 +91,7 @@
     </div>
 
     <!-- 하단 저장 영역 -->
-    <div v-if="!isLoading && localProjects.length > 0" class="shrink-0 px-5 pt-3 bg-white" style="padding-bottom: max(50px, env(safe-area-inset-bottom, 50px));">
+    <div v-if="!isLoading && localProjects.length > 0" class="shrink-0 px-5 pt-3 bg-white safe-bottom">
       <p class="text-center text-label2 font-medium text-grey-7 mb-5">프로젝트는 최대 10개까지 생성 가능합니다</p>
       <UiButton
         :disabled="!hasNewProjects"
