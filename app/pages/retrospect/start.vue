@@ -84,7 +84,7 @@
     <!-- 입력 바 -->
     <div
       class="px-5 pt-2.5 bg-grey-1 shrink-0"
-      style="padding-bottom: max(16px, env(safe-area-inset-bottom, 16px))"
+      :style="{ paddingBottom: keyboardOpen ? '10px' : 'max(16px, env(safe-area-inset-bottom, 16px))' }"
     >
       <!-- 질문 불러오기 실패 시 인라인 에러 배너 (figma err3) -->
       <UiInlineError
@@ -226,6 +226,8 @@
 </template>
 
 <script setup lang="ts">
+import type { PluginListenerHandle } from '@capacitor/core'
+import { Keyboard } from '@capacitor/keyboard'
 import type { QuestionType, CompleteRetrospectiveResponse } from '~/types/api'
 import { getApiErrorCode, getApiErrorMessage, isAuthError } from '~/utils/api-error'
 
@@ -641,9 +643,23 @@ async function onConfirmRestart() {
   }
 }
 
-onMounted(() => {
+// 키보드가 열리면 입력창 하단 safe-area 여백을 줄여 키보드에 밀착시킴 (뜨는 간격 제거)
+const keyboardOpen = ref(false)
+let kbShow: PluginListenerHandle | undefined
+let kbHide: PluginListenerHandle | undefined
+
+onMounted(async () => {
   loadProfile()
   init()
+  if (isNative.value) {
+    kbShow = await Keyboard.addListener('keyboardWillShow', () => { keyboardOpen.value = true })
+    kbHide = await Keyboard.addListener('keyboardWillHide', () => { keyboardOpen.value = false })
+  }
+})
+
+onUnmounted(() => {
+  kbShow?.remove()
+  kbHide?.remove()
 })
 </script>
 
