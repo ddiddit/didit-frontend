@@ -311,7 +311,9 @@ const hasAnswered = computed(() => messages.value.some((m) => m.role === 'user')
 const voiceSupported = computed(
   () => isNative.value || (import.meta.client && !!navigator.mediaDevices?.getUserMedia),
 )
-const showVoice = computed(() => voiceSupported.value && inputText.value.trim().length === 0)
+// 한글 IME 조합 중에는 v-model(inputText)이 갱신되지 않아, DOM 값을 직접 추적해 즉시 반영
+const hasInput = ref(false)
+const showVoice = computed(() => voiceSupported.value && !hasInput.value)
 const exitDescription = computed(() =>
   hasAnswered.value
     ? '지금까지 작성한 내용은 저장되지 않으며, 오늘 회고 횟수 1회가 차감돼요.'
@@ -357,6 +359,8 @@ function autoGrow() {
   el.style.height = 'auto'
   el.style.height = `${Math.min(el.scrollHeight, 120)}px`
   isMultiline.value = el.scrollHeight > 40
+  // 조합 중 글자를 포함해 실제 입력 유무 판단 (IME 대응)
+  hasInput.value = el.value.trim().length > 0
 }
 
 // 질문 순번 계산: questionType('Q1'..)에서 숫자 추출, 없으면 카운터 증가
@@ -642,6 +646,7 @@ async function onConfirmRestart() {
     retrospectiveId.value = res.retrospectiveId
     messages.value = []
     inputText.value = ''
+    hasInput.value = false
     questionNo.value = 0
     deepAsked.value = false
     lastDeepId.value = null

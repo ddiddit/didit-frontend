@@ -29,69 +29,28 @@
       </div>
     </Teleport>
 
-    <!-- 헤더: H:50, 벨 아이콘만 우측 (빈 화면에서만 고정 노출 — 로딩 중엔 숨김) -->
-    <header
-      v-if="!isLoading && recentRetrospectives.length === 0"
-      class="flex items-center justify-end px-5 h-[50px] shrink-0"
-    >
-      <button @click="goToNotifications">
-        <img
-          :src="hasUnread ? '/icons/bell-on.svg' : '/icons/bell-off.svg'"
-          alt="알림"
-          class="w-6 h-6"
-        />
-      </button>
-    </header>
-
-    <!-- 로드 실패: 헤더 아래~탭바 위를 덮는 전체 화면 에러 -->
+    <!-- 로드 실패: 전체 화면 에러 -->
     <UiErrorState
       v-if="loadError"
       :variant="loadError"
-      class="absolute inset-x-0 bottom-0 top-[50px] bg-background"
+      class="absolute inset-0 bg-background"
       @action="loadError === 'network' ? loadHome() : navigateTo('/my/inquiry')"
     />
 
-    <!-- 인사말 (로딩/빈 상태에서만 고정; 회고 있으면 아래 스크롤 영역 안에 포함) -->
-    <div v-if="isLoading || recentRetrospectives.length === 0" class="px-5 shrink-0">
-      <template v-if="isLoading">
+    <!-- 로딩 스켈레톤: 헤더(벨) + 인사말 -->
+    <template v-else-if="isLoading">
+      <header class="flex items-center justify-end px-5 h-[50px] shrink-0">
+        <span class="w-6 h-6 rounded-full bg-grey-4 animate-pulse" />
+      </header>
+      <div class="px-5 shrink-0">
         <span class="inline-block w-24 h-6 bg-grey-4 rounded animate-pulse mb-1 block" />
         <span class="inline-block w-52 h-6 bg-grey-4 rounded animate-pulse block" />
-      </template>
-      <h1 v-else class="text-title3 font-semibold text-grey-13 leading-[1.4]">
-        {{ nickname }}님,<br />
-        {{ greetingMessage }}
-      </h1>
-    </div>
-
-    <!-- 빈 상태: 세로 중앙 정렬 -->
-    <div
-      v-if="!isLoading && recentRetrospectives.length === 0"
-      class="flex-1 flex flex-col items-center justify-center gap-[40px] pb-16"
-    >
-      <!-- 아이콘 + 텍스트 그룹 -->
-      <div class="flex flex-col items-center gap-3">
-        <img src="/icons/empty-home.svg" alt="" class="w-[70px] h-[70px] rounded-[12px]" />
-        <div class="flex flex-col items-center gap-[6px]">
-          <p class="text-heading2 font-semibold text-grey-13">아직 작성한 회고가 없어요</p>
-          <p class="text-label1-reading font-normal text-grey-9 text-center">
-            회고를 시작하고<br />오늘의 일을 기록해 보세요!
-          </p>
-        </div>
       </div>
+    </template>
 
-      <!-- 회고 시작하기 버튼 -->
-      <button
-        class="flex items-center gap-1 pl-[12px] pr-[18px] py-[9px] bg-primary rounded-xl"
-        @click="startRetrospect"
-      >
-        <img src="/icons/add.svg" alt="" class="w-6 h-6" />
-        <span class="text-body2 font-semibold text-grey-13">회고 시작하기</span>
-      </button>
-    </div>
-
-    <!-- 회고 있음: 인사말 + 피드백 슬라이더 + 나의 최근 회고 (전체 스크롤) -->
+    <!-- 콘텐츠: 회고 유무와 무관하게 항상 인사말 + 미션 카드 노출 (회고 없으면 Lv.1 첫 회고 카드) -->
     <div
-      v-else-if="!isLoading && recentRetrospectives.length > 0"
+      v-else
       class="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-24"
     >
       <!-- 헤더: 알림벨 (콘텐츠와 함께 스크롤) -->
@@ -111,8 +70,15 @@
         {{ greetingMessage }}
       </h1>
 
+      <!-- 최고 레벨: 진행할 미션이 없어 이번 주 회고 현황만 노출 -->
+      <HomeMissionMaxCard
+        v-if="isMaxLevel"
+        :weekly-status="mission?.weeklyStatus"
+        class="mt-5 mx-5"
+      />
       <!-- 미션/레벨 카드 — 비면 첫 회고(Lv.1 달성) 기본 카드 -->
       <HomeMissionCard
+        v-else
         :data="displayMission"
         :disabled="isCompleted"
         class="mt-5 mx-5"
@@ -148,9 +114,9 @@
       </div>
     </div>
 
-    <!-- FAB + 툴팁: 회고 있을 때만 표시 -->
+    <!-- FAB + 툴팁: 로딩/에러가 아니면 항상 표시 -->
     <div
-      v-if="!isLoading && recentRetrospectives.length > 0"
+      v-if="!isLoading && !loadError"
       class="absolute right-5 flex items-center gap-[14px]"
       style="bottom: 16px;"
     >
@@ -229,6 +195,11 @@ const FIRST_MISSION: CurrentMissionResponse = {
   weeklyStatus: null,
   popup: { exists: false, type: null },
 }
+// 최고 레벨: 백엔드가 mission=null + currentLevel=10으로 내려줌 (진행할 미션 없음)
+const MAX_LEVEL = 10
+const isMaxLevel = computed(
+  () => mission.value != null && mission.value.mission == null && mission.value.currentLevel >= MAX_LEVEL,
+)
 // 미션이 비어 있으면 기본(첫 회고) 카드로 대체 — 카드가 항상 레벨에 맞게 뜨도록
 const displayMission = computed<CurrentMissionResponse>(() =>
   mission.value?.mission ? mission.value : FIRST_MISSION,

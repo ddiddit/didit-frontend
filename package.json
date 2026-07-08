@@ -9,6 +9,9 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
+    "dev:host": "nuxt dev --host 0.0.0.0",
+    "cap:live:android": "cap run android --live-reload --external --port 3000",
+    "cap:live:ios": "cap run ios --live-reload --external --port 3000",
     "generate": "nuxt generate",
     "cap:sync": "nuxt generate && cap sync",
     "cap:sync:prod": "nuxt generate --dotenv .env.production && cap sync",

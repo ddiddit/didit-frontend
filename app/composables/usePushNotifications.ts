@@ -9,6 +9,10 @@ import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messagi
 // 리스너 중복 바인딩 방지 — 컴포저블이 여러 곳(app.vue·알림 설정)에서 호출돼도 앱 전체에서 1회만
 let nativeListenersBound = false
 
+// 알림 탭으로 앱이 콜드 스타트되면 딥링크가 스플래시(index.vue)의 홈 이동에 덮여 사라진다.
+// 이 경우 링크를 여기 담아두고, index.vue가 인증 확인 후 consumePendingDeepLink()로 소비한다.
+let pendingDeepLink: string | null = null
+
 export function usePushNotifications() {
   const config = useRuntimeConfig().public.firebase
   const { $api } = useNuxtApp()
@@ -47,10 +51,17 @@ export function usePushNotifications() {
       const body = notification.body ?? notification.data?.body ?? ''
       show(body || title)
     })
-    // 알림 탭 시 백엔드가 data.link로 내려준 화면으로 이동 ('/'는 index가 로그인 상태 보고 홈으로 분기)
+    // 알림 탭 시 백엔드가 data.link로 내려준 화면으로 이동.
+    // 콜드 스타트(아직 스플래시 '/')면 pendingDeepLink에 담아 index.vue가 인증 확인 후 이동하고,
+    // 앱 실행 중(웜)이면 현재 라우터로 바로 이동한다.
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
       const link = action.notification.data?.link
-      if (typeof link === 'string' && link.startsWith('/')) router.push(link)
+      if (typeof link !== 'string' || !link.startsWith('/')) return
+      if (router.currentRoute.value.path === '/') {
+        pendingDeepLink = link
+      } else {
+        router.push(link)
+      }
     })
   }
 
@@ -177,5 +188,12 @@ export function usePushNotifications() {
     }
   }
 
-  return { register, listenForeground, syncIfConsented, deviceType, bindNativeListeners }
+  // 스플래시(index.vue)가 인증 확인 후 호출 — 알림 탭으로 콜드 스타트된 경우 대기 중인 딥링크를 꺼내 소비한다
+  function consumePendingDeepLink(): string | null {
+    const link = pendingDeepLink
+    pendingDeepLink = null
+    return link
+  }
+
+  return { register, listenForeground, syncIfConsented, deviceType, bindNativeListeners, consumePendingDeepLink }
 }
