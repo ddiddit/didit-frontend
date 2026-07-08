@@ -60,6 +60,12 @@
         >
           <!-- 연결선 (첫~마지막 스탬프 중심) -->
           <div class="absolute left-[18px] right-[18px] top-[18px] h-[2px] bg-grey-3" />
+          <!-- 완료 구간 연결선: 완료된 마지막 스탬프까지 테마 색으로 채움 -->
+          <div
+            v-if="rowFillFrac(row) > 0"
+            class="absolute left-[18px] top-[18px] h-[2px]"
+            :style="{ width: `calc((100% - 36px) * ${rowFillFrac(row)})`, backgroundColor: theme.fill }"
+          />
           <div v-for="n in row" :key="n" class="relative flex flex-col items-center gap-1.5 shrink-0 w-9">
             <!-- 스탬프 (Figma): 완료=accent 원+#353535 체크 / 미완료=#F1F1F1 원+#C6C6C6 체크 -->
             <svg width="36" height="36" viewBox="0 0 36 36" fill="none" class="shrink-0">
@@ -132,6 +138,14 @@ const circleRows = computed(() => {
 
 // 카드에는 '진행 중인 미션'의 레벨을 표시 — 백엔드 currentLevel은 달성한 레벨이라 +1 (레벨 0 없음, 모든 유저 Lv.1부터)
 const missionLevel = computed(() => props.data.currentLevel + 1)
+
+// 완료 구간 연결선 비율: 해당 줄에서 완료된 스탬프 수 기준 (첫 스탬프 중심 → 마지막 완료 스탬프 중심)
+function rowFillFrac(row: number[]): number {
+  const p = m.value?.progress ?? 0
+  const done = Math.min(Math.max(p - (row[0] ?? 1) + 1, 0), row.length)
+  if (done <= 1 || row.length <= 1) return 0
+  return (done - 1) / (row.length - 1)
+}
 
 // 레벨별 색상은 공용 유틸(levelTheme)에서 — 미션카드·마이페이지 공유
 const theme = computed(() => levelTheme(missionLevel.value))
