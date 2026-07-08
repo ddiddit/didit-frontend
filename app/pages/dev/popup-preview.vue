@@ -28,10 +28,21 @@
     </div>
 
     <!-- 프리뷰 컨트롤 -->
-    <div class="absolute top-2 left-1/2 -translate-x-1/2 z-[60] flex gap-2">
-      <button class="px-3 py-1.5 rounded-lg bg-grey-13 text-grey-1 text-label2 font-semibold" @click="popup = 'levelup'">완료 팝업</button>
-      <button class="px-3 py-1.5 rounded-lg bg-grey-13 text-grey-1 text-label2 font-semibold" @click="popup = 'failure'">실패 팝업</button>
-      <button class="px-3 py-1.5 rounded-lg bg-grey-5 text-grey-13 text-label2 font-semibold" @click="popup = null">닫기</button>
+    <div class="absolute top-2 inset-x-0 z-[60] flex flex-col gap-2 px-3">
+      <div class="flex gap-2 justify-center">
+        <button class="px-3 py-1.5 rounded-lg bg-grey-13 text-grey-1 text-label2 font-semibold" @click="popup = 'levelup'">완료 팝업</button>
+        <button class="px-3 py-1.5 rounded-lg bg-grey-13 text-grey-1 text-label2 font-semibold" @click="popup = 'failure'">실패 팝업</button>
+        <button class="px-3 py-1.5 rounded-lg bg-grey-5 text-grey-13 text-label2 font-semibold" @click="closeAll">닫기</button>
+      </div>
+      <!-- 배지별 획득 팝업 -->
+      <div class="flex gap-1.5 overflow-x-auto scrollbar-hide">
+        <button
+          v-for="b in BADGE_CATALOG"
+          :key="b.code"
+          class="shrink-0 px-2.5 py-1.5 rounded-lg bg-white border border-grey-5 text-caption1 font-semibold text-grey-10 whitespace-nowrap"
+          @click="showBadge(b)"
+        >{{ b.name }}</button>
+      </div>
     </div>
 
     <!-- 미션 완료(레벨업) 팝업 — home.vue와 동일한 오버레이 구성 -->
@@ -64,11 +75,26 @@
 </template>
 
 <script setup lang="ts">
-// 개발 전용 팝업 디자인 프리뷰 — 미션 완료/실패 팝업을 실제 컴포넌트로 확인
+import { BADGE_CATALOG, type BadgeDef } from '~/composables/useBadges'
+
+// 개발 전용 팝업 디자인 프리뷰 — 미션 완료/실패·배지 획득 팝업을 실제 컴포넌트로 확인
 definePageMeta({ layout: false })
 
 // 프로덕션에서는 접근 차단
 if (!import.meta.dev) navigateTo('/home')
 
 const popup = ref<'levelup' | 'failure' | null>('levelup')
+
+// 배지 획득 팝업 — 전역 UiBadgeAcquiredPopup(useBadgeAcquired)로 표시
+const { show, hide } = useBadgeAcquired()
+
+function showBadge(def: BadgeDef) {
+  popup.value = null
+  show({ ...def, image: `/badges/${def.code}.svg`, acquired: true, acquiredAt: null, current: 0 })
+}
+
+function closeAll() {
+  popup.value = null
+  hide()
+}
 </script>

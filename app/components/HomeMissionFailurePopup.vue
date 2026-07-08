@@ -1,22 +1,22 @@
 <template>
   <!-- 미션 실패 팝업 (Figma 28123/6050): 제목 → 아이콘 → 메시지 → 다시 도전하기 -->
-  <div class="popup-pop w-full max-w-[300px] mx-auto bg-white rounded-2xl px-5 pt-6 pb-5 flex flex-col items-center shadow-[0_4px_20px_0_rgba(0,0,0,0.1)]">
+  <div class="popup-pop w-full max-w-[300px] mx-auto bg-white rounded-2xl px-5 pt-7 pb-5 flex flex-col items-center shadow-[0_4px_20px_0_rgba(0,0,0,0.1)]">
     <!-- 제목 -->
     <p class="text-[17px] font-semibold text-grey-13 text-center tracking-[-0.02em]" style="line-height:140%">
       회고 미션 실패
     </p>
     <!-- 실패 아이콘 (Figma Icon.svg — 회색 픽셀 경고) -->
-    <img src="/icons/mission-fail.svg" alt="" class="w-16 h-16 mt-4" aria-hidden="true" />
+    <img src="/icons/mission-fail.svg" alt="" class="w-16 h-16 mt-3" aria-hidden="true" />
     <!-- 메시지 -->
     <p
-      class="text-[14px] font-medium text-grey-8 text-center whitespace-pre-line tracking-[-0.02em] mt-3.5"
+      class="text-[14px] font-normal text-grey-8 text-center whitespace-pre-line tracking-[-0.02em] mt-3"
       style="line-height:160%"
     >
       {{ message }}
     </p>
-    <!-- 다시 도전하기 -->
+    <!-- 다시 도전하기 (문구와 26px 간격 — 완료 팝업과 동일) -->
     <button
-      class="w-full h-[50px] rounded-xl bg-primary text-[15px] font-semibold text-grey-13 tracking-[-0.02em] transition-opacity active:opacity-80 disabled:opacity-60 mt-5"
+      class="w-full h-[50px] rounded-xl bg-primary text-[15px] font-semibold text-grey-13 tracking-[-0.02em] transition-opacity active:opacity-80 disabled:opacity-60 mt-[26px]"
       :disabled="loading"
       @click="emit('retry')"
     >

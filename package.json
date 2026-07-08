@@ -24,6 +24,7 @@
     "@capacitor/keyboard": "^7.0.6",
     "@capacitor/push-notifications": "^7.0.6",
     "@capacitor/status-bar": "^7.0.6",
+    "@capacitor/text-zoom": "^7.0.4",
     "@capgo/capacitor-social-login": "^7.20.0",
     "@pinia/nuxt": "^0.11.1",
     "@tanstack/vue-query": "^5.80.2",
