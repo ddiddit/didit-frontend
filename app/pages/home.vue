@@ -4,7 +4,7 @@
     <!-- 미션 완료(레벨업) 팝업 -->
     <Teleport to="#app-container">
       <div v-if="showLevelUpPopup && mission" class="absolute inset-0 z-[55] flex items-center justify-center px-5" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
-        <div class="absolute inset-0 bg-black/40" />
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-[5px]" />
         <HomeMissionPopup
           :level="mission.currentLevel"
           :message="levelUpMessage"
@@ -18,7 +18,7 @@
     <!-- 미션 실패 팝업 -->
     <Teleport to="#app-container">
       <div v-if="showFailurePopup && mission" class="absolute inset-0 z-[55] flex items-center justify-center px-5" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
-        <div class="absolute inset-0 bg-black/40" />
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-[5px]" />
         <HomeMissionFailurePopup
           :message="failureMessage"
           :loading="popupConfirming"
