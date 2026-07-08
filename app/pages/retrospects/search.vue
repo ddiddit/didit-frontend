@@ -95,7 +95,8 @@
 import type { Tag } from '~/types/api'
 import { getTagColor } from '~/utils/tag-color'
 
-definePageMeta({ middleware: 'auth', layout: 'default' })
+// 검색 화면은 하단 탭바 미노출 (figma 5938-20726)
+definePageMeta({ middleware: 'auth', layout: false })
 
 const { $api } = useNuxtApp()
 const { track } = useAmplitude()
