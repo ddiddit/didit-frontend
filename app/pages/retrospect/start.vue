@@ -123,7 +123,17 @@
           aria-label="전송"
           @click="onSend"
         >
-          <Icon name="famicons:arrow-up-sharp" class="w-4 h-4 text-grey-1" />
+          <!-- 인라인 SVG(비동기 아이콘 resolve 제거) — 검은 원만 뜨는 첫 마운트 깜빡임 방지. 모양은 famicons:arrow-up-sharp와 동일 -->
+          <svg viewBox="0 0 512 512" class="w-4 h-4 text-grey-1" aria-hidden="true">
+            <path
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="square"
+              stroke-miterlimit="10"
+              stroke-width="48"
+              d="M112 244l144-144 144 144M256 120v292"
+            />
+          </svg>
         </button>
       </div>
     </div>
@@ -213,7 +223,40 @@
     </Teleport>
 
     <!-- 음성 레코더 (figma 2225-7905) -->
-    <RetrospectVoiceRecorder v-if="showRecorder" @done="onRecorderDone" @cancel="onRecorderCancel" />
+    <RetrospectVoiceRecorder v-if="showRecorder" @done="onRecorderDone" @cancel="onRecorderCancel" @blocked="onMicBlocked" />
+
+    <!-- 마이크 권한 영구 거부 → 설정 유도 (OS 다이얼로그가 더는 안 뜨는 상태) -->
+    <Teleport to="#app-container">
+      <Transition name="mic-fade">
+        <div v-if="showMicBlockedPopup" class="absolute inset-0 z-50 flex items-center justify-center px-5" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
+          <div class="absolute inset-0 bg-black/40" @click="showMicBlockedPopup = false" />
+          <div class="relative w-full max-w-[300px] bg-grey-1 rounded-2xl px-5 py-4 flex flex-col gap-[14px]">
+            <div class="flex flex-col items-center gap-2 py-3 text-center">
+              <p class="text-[17px] font-semibold text-grey-13 leading-[1.4] tracking-[-0.02em]">
+                마이크 권한이<br />꺼져 있어요.
+              </p>
+              <p class="text-[14px] font-normal text-grey-8 leading-[1.6] tracking-[-0.02em]">
+                음성으로 회고를 기록하려면<br />설정에서 마이크 권한을 켜주세요.
+              </p>
+            </div>
+            <div class="flex gap-2 pb-1">
+              <button
+                class="flex-1 h-[50px] rounded-xl border border-grey-5 bg-grey-1 text-[15px] font-semibold text-grey-13 active:bg-grey-3 transition-colors"
+                @click="showMicBlockedPopup = false"
+              >
+                닫기
+              </button>
+              <button
+                class="flex-1 h-[50px] rounded-xl bg-primary text-[15px] font-semibold text-grey-13 active:opacity-80 transition-opacity"
+                @click="onOpenAppSettings"
+              >
+                설정으로 이동
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- 음성 → 텍스트 변환 중 (figma 2229-8319) -->
     <Teleport to="#app-container">
@@ -236,6 +279,7 @@
 import { Capacitor } from '@capacitor/core'
 import type { PluginListenerHandle } from '@capacitor/core'
 import { Keyboard } from '@capacitor/keyboard'
+import { NativeSettings, AndroidSettings, IOSSettings } from 'capacitor-native-settings'
 import type { QuestionType, CompleteRetrospectiveResponse } from '~/types/api'
 import { getApiErrorCode, getApiErrorMessage, isAuthError } from '~/utils/api-error'
 
@@ -290,6 +334,7 @@ const showRestartPopup = ref(false)
 
 // 음성 입력(STT) — 웹·네이티브 모두 지원
 const showMicPopup = ref(false) // 마이크 권한 안내 팝업 (CHAT_001)
+const showMicBlockedPopup = ref(false) // 마이크 권한 영구 거부 → 설정 유도 팝업
 const micExplained = ref(false) // 안내 팝업을 이미 거쳤는지
 const showRecorder = ref(false) // 녹음 레코더 노출
 const isTranscribing = ref(false) // 음성 → 텍스트 변환 중
@@ -608,6 +653,21 @@ async function onRecorderDone(blob: Blob) {
 }
 function onRecorderCancel() {
   showRecorder.value = false
+}
+// 마이크 권한 영구 거부 → 레코더 닫고 설정 유도 팝업 노출
+function onMicBlocked() {
+  showRecorder.value = false
+  showMicBlockedPopup.value = true
+}
+// OS 앱 설정 화면으로 이동 (사용자가 직접 마이크 권한 토글). 웹에선 무동작.
+async function onOpenAppSettings() {
+  showMicBlockedPopup.value = false
+  if (!isNative.value) return
+  if (Capacitor.getPlatform() === 'ios') {
+    await NativeSettings.openIOS({ option: IOSSettings.App })
+  } else {
+    await NativeSettings.openAndroid({ option: AndroidSettings.ApplicationDetails })
+  }
 }
 
 function onBack() {

@@ -54,6 +54,10 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- 회고 음성 입력(STT) — WebView getUserMedia가 런타임 권한 다이얼로그를 띄우려면 선언 필요 -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
     <!-- 광고 미사용: 일부 SDK(Firebase 등)가 자동 병합하는 광고 ID 권한 제거 -->
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />
 </manifest>
