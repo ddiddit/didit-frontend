@@ -229,6 +229,7 @@
 </template>
 
 <script setup lang="ts">
+import { Capacitor } from '@capacitor/core'
 import type { PluginListenerHandle } from '@capacitor/core'
 import { Keyboard } from '@capacitor/keyboard'
 import type { QuestionType, CompleteRetrospectiveResponse } from '~/types/api'
@@ -646,11 +647,10 @@ async function onConfirmRestart() {
   }
 }
 
-// 안드로이드 WebView는 키보드가 떠도 레이아웃 높이(dvh)를 줄이지 않아 하단 입력창이
-// 키보드에 가려진다. visualViewport로 실제 보이는 영역 높이를 받아 채팅 화면을 그만큼 줄여
-// 입력창이 키보드 바로 위에 오게 한다.
-// OS가 알려주는 키보드 전체 높이(추천줄·툴바 포함)를 받아 채팅 화면을 그만큼 줄인다.
-// visualViewport는 추천줄 높이를 누락하므로 네이티브 키보드 높이를 쓴다.
+// [iOS 전용] iOS는 리사이즈 모드 none(keyboard.client.ts)이라 키보드가 떠도 레이아웃이
+// 줄지 않아, OS가 알려주는 키보드 전체 높이(추천줄·툴바 포함)만큼 화면을 JS로 줄인다.
+// (visualViewport는 추천줄 높이를 누락하므로 네이티브 키보드 높이를 쓴다)
+// 안드로이드는 adjustResize(capacitor.config resize 'body')로 WebView 자체가 줄어 JS 보정 불필요.
 const keyboardOpen = ref(false)
 const keyboardHeight = ref(0)
 let kbShow: PluginListenerHandle | undefined
@@ -666,7 +666,7 @@ function applyKeyboardHeight(raw: number) {
 onMounted(async () => {
   loadProfile()
   init()
-  if (!import.meta.client || !isNative.value) return
+  if (!import.meta.client || !isNative.value || Capacitor.getPlatform() !== 'ios') return
   kbShow = await Keyboard.addListener('keyboardWillShow', info => applyKeyboardHeight(info.keyboardHeight))
   kbHide = await Keyboard.addListener('keyboardWillHide', () => { keyboardHeight.value = 0; keyboardOpen.value = false })
 })
