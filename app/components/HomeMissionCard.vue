@@ -93,9 +93,11 @@
       </div>
     </template>
 
-    <!-- CTA: 회고 남기기 -->
+    <!-- CTA: 회고 남기기 (오늘 회고 횟수 소진 시 비활성 — FAB와 동일) -->
     <button
-      class="w-full py-3 rounded-xl bg-primary text-[16px] font-semibold text-grey-13 tracking-[-0.02em] transition-opacity active:opacity-80"
+      class="w-full py-3 rounded-xl text-[16px] font-semibold tracking-[-0.02em] transition-opacity"
+      :class="disabled ? 'bg-grey-5 text-grey-6 cursor-not-allowed' : 'bg-primary text-grey-13 active:opacity-80'"
+      :disabled="disabled"
       @click="emit('start')"
     >
       {{ m?.cta ?? '회고 남기기' }}
@@ -107,7 +109,7 @@
 import { levelTheme } from '~/utils/levelTheme'
 import type { CurrentMissionResponse } from '~/types/api'
 
-const props = defineProps<{ data: CurrentMissionResponse }>()
+const props = defineProps<{ data: CurrentMissionResponse; disabled?: boolean }>()
 const emit = defineEmits<{ start: [] }>()
 
 // 미션 상세 (nested) — 최고 레벨 등에서는 null

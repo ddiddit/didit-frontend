@@ -68,6 +68,7 @@
       <!-- 미션/레벨 카드 — 비면 첫 회고(Lv.1 달성) 기본 카드 -->
       <HomeMissionCard
         :data="displayMission"
+        :disabled="isCompleted"
         class="mt-5 mx-5"
         @start="startRetrospect"
       />
