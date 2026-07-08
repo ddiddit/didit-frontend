@@ -86,9 +86,11 @@
 
     <!-- 입력 바 -->
     <div
-      class="px-5 pt-2.5 bg-grey-1 shrink-0"
+      class="relative px-5 pt-2.5 bg-grey-1 shrink-0"
       :style="{ paddingBottom: keyboardOpen ? '16px' : 'max(16px, env(safe-area-inset-bottom, 16px))' }"
     >
+      <!-- 입력바 위 페이드: 채팅이 흰 배경으로 자연스럽게 사라지도록 (투명→흰색 그라데이션) -->
+      <div class="absolute -top-8 left-0 right-0 h-8 bg-gradient-to-t from-white to-white/0 pointer-events-none" />
       <!-- 질문 불러오기 실패 시 인라인 에러 배너 (figma err3) -->
       <UiInlineError
         v-if="chatError"
@@ -179,7 +181,7 @@
     <!-- 마이크 권한 안내 (figma 4374-17929) -->
     <Teleport to="#app-container">
       <Transition name="mic-fade">
-        <div v-if="showMicPopup" class="absolute inset-0 z-50 flex items-center justify-center px-5">
+        <div v-if="showMicPopup" class="absolute inset-0 z-50 flex items-center justify-center px-5" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
           <div class="absolute inset-0 bg-black/40" @click="showMicPopup = false" />
           <div class="relative w-full max-w-[300px] bg-grey-1 rounded-2xl px-5 py-4 flex flex-col gap-[14px]">
             <div class="flex flex-col items-center gap-2 py-3 text-center">
