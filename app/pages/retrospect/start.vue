@@ -148,7 +148,8 @@
 
     <!-- 내 답변 전체보기 (풀스크린, CHAT_006 / figma 24498): 질문 + 답변 전문 -->
     <Teleport to="#app-container">
-      <div v-if="fullView" class="absolute inset-0 z-50 bg-grey-1 flex flex-col">
+      <!-- inset-0이 앱 컨테이너의 safe-top 패딩 영역까지 덮으므로 오버레이에도 safe-top 적용 (상태바 겹침 방지) -->
+      <div v-if="fullView" class="absolute inset-0 z-50 bg-grey-1 flex flex-col safe-top">
         <!-- 헤더: 뒤로가기만 -->
         <div class="flex items-center h-[50px] px-5 shrink-0">
           <button class="p-1 -ml-1" aria-label="뒤로" @click="fullView = null">
@@ -654,6 +655,7 @@ async function onConfirmRestart() {
 const keyboardOpen = ref(false)
 const keyboardHeight = ref(0)
 let kbShow: PluginListenerHandle | undefined
+let kbDidShow: PluginListenerHandle | undefined
 let kbHide: PluginListenerHandle | undefined
 
 function applyKeyboardHeight(raw: number) {
@@ -666,13 +668,18 @@ function applyKeyboardHeight(raw: number) {
 onMounted(async () => {
   loadProfile()
   init()
-  if (!import.meta.client || !isNative.value || Capacitor.getPlatform() !== 'ios') return
-  kbShow = await Keyboard.addListener('keyboardWillShow', info => applyKeyboardHeight(info.keyboardHeight))
-  kbHide = await Keyboard.addListener('keyboardWillHide', () => { keyboardHeight.value = 0; keyboardOpen.value = false })
+  if (!import.meta.client || !isNative.value) return
+  if (Capacitor.getPlatform() === 'ios') {
+    kbShow = await Keyboard.addListener('keyboardWillShow', info => applyKeyboardHeight(info.keyboardHeight))
+    kbHide = await Keyboard.addListener('keyboardWillHide', () => { keyboardHeight.value = 0; keyboardOpen.value = false })
+  }
+  // 키보드가 다 올라온 뒤(레이아웃 축소 완료) 채팅을 맨 아래로 → 마지막 질문이 키보드에 가려지지 않음 (iOS·AOS 공통)
+  kbDidShow = await Keyboard.addListener('keyboardDidShow', () => scrollToBottom())
 })
 
 onUnmounted(() => {
   kbShow?.remove()
+  kbDidShow?.remove()
   kbHide?.remove()
 })
 </script>
