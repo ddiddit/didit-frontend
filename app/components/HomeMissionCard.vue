@@ -71,9 +71,9 @@
             </svg>
             <span class="text-[12px] font-semibold text-grey-6 leading-[1.36] whitespace-nowrap">{{ n }}회</span>
 
-            <!-- 레벨업 힌트 뱃지: 마지막 원형 오른쪽에 분리 노출 (첫 미션에서만) -->
+            <!-- 레벨업 힌트 뱃지: 마지막 원형 오른쪽에 분리 노출 (미션 완료 지점 = 레벨업 안내) -->
             <div
-              v-if="firstMission && n === m.target"
+              v-if="n === m.target"
               class="absolute left-full top-[5px] ml-2 flex items-center whitespace-nowrap"
             >
               <!-- 포인터: 둥근 삼각형(Figma Polygon 5) — 뱃지에 겹쳐 붙여 말풍선처럼 -->
@@ -101,7 +101,7 @@
 import { levelTheme } from '~/utils/levelTheme'
 import type { CurrentMissionResponse } from '~/types/api'
 
-const props = defineProps<{ data: CurrentMissionResponse; firstMission?: boolean }>()
+const props = defineProps<{ data: CurrentMissionResponse }>()
 const emit = defineEmits<{ start: [] }>()
 
 // 미션 상세 (nested) — 최고 레벨 등에서는 null
