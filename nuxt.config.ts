@@ -74,6 +74,8 @@ export default defineNuxtConfig({
       ],
       link: [
         { rel: 'preload', as: 'image', href: '/icon.png' },
+        // Pretendard 로컬 폰트 preload — 콜드 스타트에 폴백 폰트로 렌더됐다가 바뀌는 깜빡임 방지
+        { rel: 'preload', as: 'font', type: 'font/woff2', href: '/fonts/PretendardVariable.woff2', crossorigin: '' },
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
         { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' },
