@@ -7,7 +7,7 @@
         <button @click="goToSearch">
           <img src="/icons/search.svg" alt="검색" class="w-6 h-6" />
         </button>
-        <button v-if="activeTab === 'list'" @click="toggleMoreMenu">
+        <button @click="toggleMoreMenu">
           <img src="/icons/more-vertical.svg" alt="더보기" class="w-6 h-6" />
         </button>
       </div>
