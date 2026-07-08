@@ -11,7 +11,7 @@
     </div>
 
     <!-- 본문 -->
-    <div class="flex-1 overflow-y-auto scrollbar-hide px-5 pt-6 pb-10 space-y-6 text-label1 font-normal text-grey-10 leading-[1.6]">
+    <div class="flex-1 overflow-y-auto scrollbar-hide px-5 pt-6 pb-10 space-y-6 text-label1-reading font-normal text-grey-10">
 
       <h1 class="text-heading1 font-semibold text-grey-13">디딧(didit) 야간 마케팅 정보 수신 동의</h1>
 

@@ -282,28 +282,34 @@ const jobs = [
   { value: 'DESIGNER' as JobType, label: '디자인' },
 ]
 
-// 0.2초 디바운스로 중복 체크 호출
+// 0.2초 디바운스로 검증·중복 체크 호출 (입력을 멈추면 엔터 없이도 피드백)
 const debouncedCheckNickname = useDebounceFn(async () => {
-  if (nickname.value.trim().length < 2) return
+  const len = nickname.value.trim().length
+  if (len === 0) return
+  // 2자 미만: 입력이 멈추면 안내 문구 노출
+  if (len < 2) {
+    nicknameStatus.value = 'invalid'
+    nicknameMessage.value = '한글 또는 영문 2자 이상 입력해 주세요'
+    return
+  }
   await checkNickname() // 형식 오류 문구는 checkNickname에서 표시
 }, 200)
 
-// 실시간 중복 체크 (문자 타입 검사는 디바운스 후 수행 — IME 조합 중 오류 방지)
+// 실시간 검증 (문자 타입 검사는 디바운스 후 수행 — IME 조합 중 오류 방지)
 watch(nickname, (value) => {
   nicknameMessage.value = ''
-  if (value.length === 0) {
-    nicknameStatus.value = 'idle'
-    return
-  }
   nicknameStatus.value = 'idle'
-  if (value.length >= 2) {
-    debouncedCheckNickname()
-  }
+  if (value.length === 0) return
+  debouncedCheckNickname()
 })
 
-// 엔터키로 즉시 중복 체크
+// 엔터키로 즉시 중복 체크 (2자 미만이면 안내 문구 노출)
 async function onNicknameEnter() {
-  if (nickname.value.trim().length < 2) return
+  if (nickname.value.trim().length < 2) {
+    nicknameStatus.value = 'invalid'
+    nicknameMessage.value = '한글 또는 영문 2자 이상 입력해 주세요'
+    return
+  }
   if (nicknameStatus.value === 'checking' || nicknameStatus.value === 'available') return
   await checkNickname()
 }

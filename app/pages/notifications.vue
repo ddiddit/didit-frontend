@@ -51,7 +51,7 @@
               />
               <div class="flex-1 min-w-0">
                 <p class="text-body2 font-semibold text-grey-13">{{ item.title }}</p>
-                <p class="text-label1 font-normal text-grey-10 mt-[6px] leading-[1.6] whitespace-pre-line">{{ item.body }}</p>
+                <p class="text-label1-reading font-normal text-grey-10 mt-[6px] whitespace-pre-line">{{ item.body }}</p>
               </div>
             </div>
             <span class="text-caption1 font-normal text-grey-7 shrink-0 mt-[2px]">{{ formatTime(item.createdAt) }}</span>

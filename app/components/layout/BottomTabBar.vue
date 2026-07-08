@@ -35,7 +35,7 @@ const route = useRoute()
 
 const tabs = [
   { to: '/home', label: '홈', icon: '/icons/tab-home.svg', iconActive: '/icons/tab-home.svg' },
-  { to: '/retrospects', label: '회고기록', icon: '/icons/tab-retrospect.svg', iconActive: '/icons/tab-retrospect-active.svg' },
+  { to: '/retrospects', label: '회고 기록', icon: '/icons/tab-retrospect.svg', iconActive: '/icons/tab-retrospect-active.svg' },
   { to: '/my', label: '마이', icon: '/icons/tab-profile.svg', iconActive: '/icons/tab-profile-active.svg' },
 ]
 
