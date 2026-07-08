@@ -71,9 +71,9 @@
             </svg>
             <span class="text-[12px] font-semibold text-grey-6 leading-[1.36] whitespace-nowrap">{{ n }}회</span>
 
-            <!-- 레벨업 힌트 뱃지: 마지막 원형 오른쪽에 분리 노출 (미션 완료 지점 = 레벨업 안내) -->
+            <!-- 레벨업 힌트 뱃지: 마지막 원형 오른쪽에 분리 노출 (초반 온보딩용 — 미션 레벨 1·2에서만) -->
             <div
-              v-if="n === m.target"
+              v-if="missionLevel <= 2 && n === m.target"
               class="absolute left-full top-[5px] ml-2 flex items-center whitespace-nowrap"
             >
               <!-- 포인터: 둥근 삼각형(Figma Polygon 5) — 뱃지에 겹쳐 붙여 말풍선처럼 -->
