@@ -1,6 +1,6 @@
 <template>
   <div
-    class="h-full bg-white flex flex-col overflow-hidden"
+    class="relative h-full bg-white flex flex-col overflow-hidden"
     :style="keyboardOpen ? { height: `calc(100% - ${keyboardHeight}px)` } : undefined"
   >
     <!-- 헤더: 뒤로가기 + 다시 시작 -->
@@ -18,7 +18,8 @@
     </div>
 
     <!-- 대화 영역 -->
-    <div ref="scrollEl" class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pb-4">
+    <!-- 하단 여백: 오버레이 입력바에 마지막 메시지가 가려지지 않도록 -->
+    <div ref="scrollEl" class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pb-28">
       <div class="flex flex-col">
         <template v-for="(msg, i) in messages" :key="msg.id">
           <!-- 디닷 질문 -->
@@ -84,23 +85,23 @@
       </div>
     </div>
 
-    <!-- 입력 바 -->
+    <!-- 입력 바: 채팅 위에 겹치는 오버레이 — 흰 블록 대신 투명→흰색 그라데이션 배경 (카카오톡 스타일) -->
     <div
-      class="relative px-5 pt-2.5 bg-grey-1 shrink-0"
+      class="absolute bottom-0 left-0 right-0 px-5 pt-2.5"
       :style="{ paddingBottom: keyboardOpen ? '16px' : 'max(16px, env(safe-area-inset-bottom, 16px))' }"
     >
-      <!-- 입력바 위 페이드: 채팅이 흰 배경으로 자연스럽게 사라지도록 (투명→흰색 그라데이션) -->
-      <div class="absolute -top-8 left-0 right-0 h-8 bg-gradient-to-t from-white to-white/0 pointer-events-none" />
+      <!-- 배경: 반투명 흰색 → 위로 갈수록 투명. 채팅이 입력바 뒤로 비쳐 보임 (카카오톡 스타일) -->
+      <div class="absolute -top-8 bottom-0 left-0 right-0 bg-gradient-to-t from-white/85 to-white/0 pointer-events-none" />
       <!-- 질문 불러오기 실패 시 인라인 에러 배너 (figma err3) -->
       <UiInlineError
         v-if="chatError"
         variant="dark"
         :message="chatError.message"
-        class="mb-2.5"
+        class="relative mb-2.5"
         @retry="chatError.retry()"
       />
       <!-- figma: padding 10/8/10/20, gap 15, radius 22. 여러 줄이면 전송 버튼이 하단 정렬 -->
-      <div class="flex items-end gap-[15px] bg-grey-3 rounded-[22px] pl-5 pr-2 py-2.5">
+      <div class="relative flex items-end gap-[15px] bg-grey-3 rounded-[22px] pl-5 pr-2 py-2.5">
         <textarea
           ref="inputEl"
           v-model="inputText"
@@ -112,7 +113,7 @@
           @keydown.enter.exact="onEnterKey"
         />
         <!-- 음성 입력(네이티브 전용) — voice.svg는 28px 원형 배경+글리프 포함 -->
-        <button v-if="showVoice" class="shrink-0" aria-label="음성 입력" @click="onVoice">
+        <button v-if="showVoice" class="shrink-0" :class="isMultiline ? 'self-end' : 'self-center'" aria-label="음성 입력" @click="onVoice">
           <img src="/icons/voice.svg" alt="" class="w-7 h-7" />
         </button>
         <!-- 전송 (빈 값이어도 탭 가능 → 토스트, CHAT_007) -->
@@ -347,11 +348,15 @@ function scrollToBottom() {
   })
 }
 
+// 여러 줄 여부 — 한 줄이면 우측 버튼을 세로 중앙, 여러 줄이면 하단 정렬
+const isMultiline = ref(false)
+
 function autoGrow() {
   const el = inputEl.value
   if (!el) return
   el.style.height = 'auto'
   el.style.height = `${Math.min(el.scrollHeight, 120)}px`
+  isMultiline.value = el.scrollHeight > 40
 }
 
 // 질문 순번 계산: questionType('Q1'..)에서 숫자 추출, 없으면 카운터 증가

@@ -42,19 +42,17 @@
           :class="(!item.isRead || !!item.link || item.type === 'INQUIRY_ANSWERED') ? 'cursor-pointer' : ''"
           @click="onNotificationClick(item)"
         >
-          <div class="pb-[18px] border-b border-grey-5 flex items-start justify-between gap-2">
-            <div class="flex items-start gap-[10px] flex-1 min-w-0">
-              <!-- 미읽음 초록 점 (읽은 항목은 DOM에서 제거) -->
-              <span
-                v-if="!item.isRead"
-                class="mt-[7px] w-[7px] h-[7px] rounded-full shrink-0 bg-primary"
-              />
-              <div class="flex-1 min-w-0">
-                <p class="text-body2 font-semibold text-grey-13">{{ item.title }}</p>
-                <p class="text-label1-reading font-normal text-grey-10 mt-[6px] whitespace-pre-line">{{ item.body }}</p>
+          <!-- 시간은 제목 줄에만, 본문은 전체 폭 사용 (figma 5938-26213) -->
+          <div class="pb-[18px] border-b border-grey-5 flex flex-col gap-[6px]">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-[10px] flex-1 min-w-0">
+                <!-- 미읽음 초록 점 (읽은 항목은 DOM에서 제거) -->
+                <span v-if="!item.isRead" class="w-[7px] h-[7px] rounded-full shrink-0 bg-primary" />
+                <p class="text-body2 font-semibold text-grey-13 truncate">{{ item.title }}</p>
               </div>
+              <span class="text-caption1 font-medium text-grey-7 shrink-0">{{ formatTime(item.createdAt) }}</span>
             </div>
-            <span class="text-caption1 font-normal text-grey-7 shrink-0 mt-[2px]">{{ formatTime(item.createdAt) }}</span>
+            <p class="text-label1-reading font-normal text-grey-10 whitespace-pre-line">{{ item.body }}</p>
           </div>
         </li>
       </ul>
