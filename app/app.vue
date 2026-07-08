@@ -85,7 +85,7 @@
           <NuxtPage />
         </NuxtLayout>
         <UiToast />
-        <UiBadgeAcquiredBanner />
+        <UiBadgeAcquiredPopup />
       </div>
 
     </div>

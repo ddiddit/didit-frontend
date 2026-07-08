@@ -140,11 +140,11 @@ const theme = computed(() => levelTheme(missionLevel.value))
 const DEFAULT_WEEK_DAYS = ['월', '화', '수', '목', '금', '토', '일'].map((day) => ({ day, isCompleted: false }))
 const weekDays = computed(() => props.data.weeklyStatus?.weekDays ?? DEFAULT_WEEK_DAYS)
 
-// 진행 바 채움: 해당 주차의 흰 점(지름 8px, 양끝 여백 6px)을 완전히 덮는 지점까지
+// 진행 바 채움: 해당 주차의 흰 점을 완전히 덮는 지점까지 (figma 실측: 바 306px 기준 1/2 진행 = 163px)
 const barWidth = computed(() => {
   const d = m.value
   if (!d || d.progress <= 0) return '0px'
   const ratio = Math.min(1, d.progress / d.target)
-  return `calc((100% - 20px) * ${ratio} + 14px)`
+  return `calc((100% - 20px) * ${ratio} + 20px)`
 })
 </script>
