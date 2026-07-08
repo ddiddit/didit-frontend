@@ -104,7 +104,10 @@ const { isNative } = useIsNative()
 // (이미 동의한 사용자가 토글을 껐다 켜야만 권한 팝업이 뜨던 문제 해결)
 onMounted(() => {
   if (!import.meta.client) return
-  if (localStorage.getItem('accessToken')) usePushNotifications().syncIfConsented()
+  const push = usePushNotifications()
+  // 알림 탭 딥링크는 로그인 여부와 무관하게 앱 시작 시 바로 바인딩 (종료 상태에서 탭해 실행된 경우 포함)
+  push.bindNativeListeners()
+  if (localStorage.getItem('accessToken')) push.syncIfConsented()
 })
 
 const features = [
