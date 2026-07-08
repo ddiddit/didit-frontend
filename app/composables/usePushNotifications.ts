@@ -5,10 +5,15 @@ import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messagi
 
 // FCM 푸시: 권한 요청 → 토큰 발급 → 백엔드 등록 → 포그라운드 수신.
 // 웹은 Firebase JS SDK, 네이티브(Android/iOS)는 Capacitor 푸시 플러그인을 사용한다.
+
+// 리스너 중복 바인딩 방지 — 컴포저블이 여러 곳(app.vue·알림 설정)에서 호출돼도 앱 전체에서 1회만
+let nativeListenersBound = false
+
 export function usePushNotifications() {
   const config = useRuntimeConfig().public.firebase
   const { $api } = useNuxtApp()
   const { show } = useToast()
+  const router = useRouter()
 
   // 현재 플랫폼에 맞는 deviceType (백엔드 /api/v1/device-tokens 식별자)
   function deviceType(): 'ANDROID' | 'IOS' | 'WEB' {
@@ -32,9 +37,9 @@ export function usePushNotifications() {
 
   // ── 네이티브(Capacitor) 푸시 ──
   // 포그라운드 수신/탭 리스너는 앱 생명주기 동안 한 번만 바인딩한다.
-  let nativeListenersBound = false
+  // 종료 상태에서 알림을 탭해 실행되는 경우도 잡을 수 있게 앱 시작 시(app.vue) 항상 호출된다.
   function bindNativeListeners() {
-    if (nativeListenersBound) return
+    if (!Capacitor.isNativePlatform() || nativeListenersBound) return
     nativeListenersBound = true
     // 앱이 포그라운드일 때 수신 → 토스트
     PushNotifications.addListener('pushNotificationReceived', (notification) => {
@@ -42,9 +47,10 @@ export function usePushNotifications() {
       const body = notification.body ?? notification.data?.body ?? ''
       show(body || title)
     })
-    // 알림 탭 시 (필요하면 여기서 라우팅 처리)
+    // 알림 탭 시 백엔드가 data.link로 내려준 화면으로 이동 ('/'는 index가 로그인 상태 보고 홈으로 분기)
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-      console.log('[FCM] notification tapped:', action.notification.data)
+      const link = action.notification.data?.link
+      if (typeof link === 'string' && link.startsWith('/')) router.push(link)
     })
   }
 
@@ -171,5 +177,5 @@ export function usePushNotifications() {
     }
   }
 
-  return { register, listenForeground, syncIfConsented, deviceType }
+  return { register, listenForeground, syncIfConsented, deviceType, bindNativeListeners }
 }

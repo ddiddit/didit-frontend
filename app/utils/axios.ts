@@ -91,7 +91,12 @@ export const createApiClient = (baseURL: string) => {
         return client(original)
       } catch (err) {
         flushQueue(err, null)
-        redirectToLogin()
+        // 갱신이 서버에서 명시적으로 거부된 경우(4xx)에만 로그아웃.
+        // 네트워크 순단·타임아웃·서버 오류(5xx)는 일시적 실패라 세션을 지우지 않는다 (다음 갱신에서 복구)
+        const refreshStatus = axios.isAxiosError(err) ? err.response?.status : undefined
+        if (refreshStatus !== undefined && refreshStatus >= 400 && refreshStatus < 500) {
+          redirectToLogin()
+        }
         return Promise.reject(err)
       } finally {
         isRefreshing = false
