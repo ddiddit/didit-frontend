@@ -50,7 +50,8 @@
     <!-- 미션 실패 팝업 -->
     <Teleport to="#app-container">
       <div v-if="popup === 'failure'" class="absolute inset-0 z-[55] flex items-center justify-center px-5" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-[5px]" @click="popup = null" />
+        <!-- 실패 팝업은 일반 딤 (진한 딤+블러는 획득/완료 팝업 전용) -->
+        <div class="absolute inset-0 bg-black/40" @click="popup = null" />
         <HomeMissionFailurePopup
           message="기한 내에 미션을 완료하지 못했어요.
 다시 도전해 보세요!"
