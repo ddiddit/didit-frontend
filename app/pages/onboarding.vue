@@ -190,7 +190,8 @@
         </div>
         <!-- 본문: 섹션(제N조) 기준, 섹션 간 24px / 소제목↔본문·본문↔본문 8px -->
         <div class="flex-1 overflow-y-auto scrollbar-hide px-5">
-          <div class="pb-6">
+          <!-- 하단 내비바(edge-to-edge) 영역만큼 여백 추가 -->
+          <div style="padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px))">
             <div
               v-for="(section, i) in termSections"
               :key="i"

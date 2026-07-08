@@ -72,7 +72,7 @@
         <div
           v-if="selected"
           class="absolute left-5 right-5 z-30"
-          style="bottom: 30px;"
+          style="bottom: calc(30px + env(safe-area-inset-bottom, 0px));"
           @click.stop
         >
           <div

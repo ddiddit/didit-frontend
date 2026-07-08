@@ -4,6 +4,7 @@
       <div
         v-if="badge"
         class="absolute inset-0 z-50 flex items-center justify-center bg-black/40"
+        style="padding-bottom: env(safe-area-inset-bottom, 0px)"
         @click="hide"
       >
         <div
