@@ -96,10 +96,9 @@ export function useBadges() {
   // throwOnError=true면 에러를 던진다(useLoadState.run과 함께 에러 화면 분기용)
   async function load(throwOnError = false) {
     try {
-      const [badgeRes, retroCount] = await Promise.all([
-        $api.get<ApiResponse<BadgeApiItem[]>>('/api/v1/badges'),
-        fetchRetroCount(),
-      ])
+      // 배지 획득 상태·이미지는 /api/v1/badges 만으로 결정 → 먼저 채워 배지 이미지가 바로 뜨게 한다.
+      // (진행 카운트용 전체 회고 조회는 느리므로 묶지 않고 뒤에서 비동기로 갱신)
+      const badgeRes = await $api.get<ApiResponse<BadgeApiItem[]>>('/api/v1/badges')
       // 백엔드는 conditionType + threshold 로 식별
       const byKey = new Map<string, BadgeApiItem>()
       for (const item of badgeRes.data.data ?? []) {
@@ -112,9 +111,16 @@ export function useBadges() {
           image: `/badges/${def.code}.svg`,
           acquired: api?.acquired ?? false,
           acquiredAt: api?.acquiredAt ?? null,
-          // 회고 수 기준 배지만 진행 카운트 표기 (목표 초과 시 목표값으로 캡)
-          current: def.countable ? Math.min(retroCount, def.goal ?? retroCount) : 0,
+          current: 0,
         }
+      })
+      // 진행 카운트(countable 배지)는 별도로 조회 후 갱신 — 배지 이미지 노출을 막지 않음
+      void fetchRetroCount().then((retroCount) => {
+        badges.value = badges.value.map((b) => ({
+          ...b,
+          // 회고 수 기준 배지만 진행 카운트 표기 (목표 초과 시 목표값으로 캡)
+          current: b.countable ? Math.min(retroCount, b.goal ?? retroCount) : 0,
+        }))
       })
     } catch (e) {
       badges.value = buildDefault()
