@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-const emit = defineEmits<{ done: [blob: Blob]; cancel: [] }>()
+const emit = defineEmits<{ done: [blob: Blob]; cancel: []; blocked: [] }>()
 const { show } = useToast()
 const recorder = useVoiceRecorder()
 
@@ -121,9 +121,13 @@ function onCancel() {
 onMounted(async () => {
   const ok = await recorder.start()
   if (!ok) {
-    // 마이크 권한 거부/장치 없음 — 웹·네이티브 공통으로 안내 후 닫기
-    show('마이크를 사용할 수 없어요. 권한을 확인해 주세요.')
-    emit('cancel')
+    // 권한이 영구 거부면 부모가 '설정으로 이동' 안내를 띄우도록 위임, 그 외(1회 거부·장치 없음)엔 일반 토스트
+    if (await recorder.isPermissionBlocked()) {
+      emit('blocked')
+    } else {
+      show('마이크를 사용할 수 없어요. 권한을 확인해 주세요.')
+      emit('cancel')
+    }
     return
   }
   startWave()

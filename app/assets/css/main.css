@@ -23,7 +23,9 @@
   html {
     font-family: 'Pretendard', system-ui, sans-serif;
     /* 비정수 DPR(예: 1.75) 기기에서 antialiased(grayscale AA)는 글자를 더 물러 보이게 해 제거 → WebView 기본 AA 사용 */
-    text-rendering: optimizeLegibility;
+    /* optimizeLegibility는 커닝/리가처로 글자를 소수 픽셀 위치에 얹어 작은 글자(pill·태그칩 11~12px)를 무르게 만든다.
+       optimizeSpeed로 그 경로를 꺼 작은 텍스트를 또렷하게 (DPR 1.75 서브픽셀 뭉개짐 완화) */
+    text-rendering: optimizeSpeed;
   }
 
   body {

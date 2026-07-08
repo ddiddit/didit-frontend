@@ -34,7 +34,18 @@
         <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6" />
       </button>
       <!-- 획득 배지 미리보기: 최대 2개. 열 고정 대신 카드 최소폭(140px) 기준 auto-fill → 넓은 화면에서 카드가 늘어나지 않음 -->
-      <div v-if="acquiredBadges.length > 0" class="mt-2 mb-2 px-2 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-[10px]">
+      <!-- 로딩 중엔 스켈레톤으로 자리를 예약 → 배지(로컬 이미지)가 뒤늦게 pop-in 하며 깜빡이는 현상 방지 -->
+      <div v-if="!badgesLoaded" class="mt-2 mb-2 px-2 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-[10px]">
+        <div
+          v-for="n in 2"
+          :key="`skeleton-${n}`"
+          class="rounded-[14px] bg-grey-3 flex flex-col items-center pt-3 gap-1 pb-5 animate-pulse"
+        >
+          <div class="h-24 w-24 rounded-xl bg-grey-4" />
+          <div class="h-3 w-12 rounded bg-grey-4" />
+        </div>
+      </div>
+      <div v-else-if="acquiredBadges.length > 0" class="mt-2 mb-2 px-2 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-[10px]">
         <div
           v-for="b in acquiredBadges.slice(0, 2)"
           :key="b.code"
@@ -148,7 +159,7 @@ const jobLabel = computed(() => (profile.value?.job ? jobLabels[profile.value.jo
 const showLevelBadge = computed(() => (profile.value?.currentLevel ?? 0) >= 1)
 const displayLevel = computed(() => profile.value?.currentLevel ?? 1)
 
-const { badges, load: loadBadges } = useBadges()
+const { badges, loaded: badgesLoaded, load: loadBadges } = useBadges()
 const acquiredBadges = computed(() =>
   badges.value
     .filter(b => b.acquired)

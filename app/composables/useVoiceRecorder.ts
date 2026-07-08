@@ -42,6 +42,19 @@ export function useVoiceRecorder() {
     }
   }
 
+  // 마이크 권한이 영구 거부('denied') 상태인지 — true면 OS 다이얼로그가 더는 안 떠서 설정 유도가 필요.
+  // Permissions API는 안드 WebView(Chromium)에서 지원. iOS WKWebView 등 미지원 환경은 false로 폴백.
+  async function isPermissionBlocked(): Promise<boolean> {
+    try {
+      const perms = navigator.permissions
+      if (!perms?.query) return false
+      const status = await perms.query({ name: 'microphone' as PermissionName })
+      return status.state === 'denied'
+    } catch {
+      return false
+    }
+  }
+
   // 마이크 권한 요청 (성공 시 true). 네이티브에선 권한 다이얼로그로 대체.
   async function requestPermission(): Promise<boolean> {
     try {
@@ -117,6 +130,7 @@ export function useVoiceRecorder() {
     isRecording: readonly(isRecording),
     isPaused: readonly(isPaused),
     elapsed: readonly(elapsed),
+    isPermissionBlocked,
     requestPermission,
     start,
     stop,
