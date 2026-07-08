@@ -7,7 +7,7 @@
           class="inline-flex items-center px-1.5 py-[3px] rounded-md text-[11px] font-semibold leading-[1.3] tracking-[-0.02em] shrink-0"
           :style="{ backgroundColor: theme.light, color: theme.accent }"
         >
-          Lv.{{ data.currentLevel }}
+          Lv.{{ missionLevel }}
         </span>
         <span class="flex-1 min-w-0 text-[18px] font-semibold text-grey-13 leading-[1.4] tracking-[-0.02em] line-clamp-1">
           {{ m?.title }}
@@ -130,8 +130,11 @@ const circleRows = computed(() => {
   return rows
 })
 
+// 카드에는 '진행 중인 미션'의 레벨을 표시 — 백엔드 currentLevel은 달성한 레벨이라 +1 (레벨 0 없음, 모든 유저 Lv.1부터)
+const missionLevel = computed(() => props.data.currentLevel + 1)
+
 // 레벨별 색상은 공용 유틸(levelTheme)에서 — 미션카드·마이페이지 공유
-const theme = computed(() => levelTheme(props.data.currentLevel))
+const theme = computed(() => levelTheme(missionLevel.value))
 
 const barWidth = computed(() =>
   m.value ? `${Math.min(100, (m.value.progress / m.value.target) * 100)}%` : '0%',
