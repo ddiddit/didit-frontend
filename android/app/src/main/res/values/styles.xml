@@ -13,10 +13,21 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- 시스템 바 초기색: 첫 화면(스플래시/로그인)이 포인트컬러(초록)라 초록으로 시작.
+             WebView 로드 후 status-bar.client.ts가 화면별 배경색으로 덮어쓴다. -->
+        <item name="android:statusBarColor">#3DDB99</item>
+        <item name="android:navigationBarColor">#3DDB99</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <!-- 네이티브 스플래시: 상·하단 바 포인트컬러(초록) + 어두운 아이콘 -->
+        <item name="android:statusBarColor">#3DDB99</item>
+        <item name="android:navigationBarColor">#3DDB99</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 </resources>

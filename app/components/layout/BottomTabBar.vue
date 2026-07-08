@@ -1,5 +1,6 @@
 <template>
   <nav
+    id="bottom-tab-bar"
     class="shrink-0 bg-white w-full"
     style="border-top: 1px solid #E8E8E8;"
   >
