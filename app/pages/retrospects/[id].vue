@@ -40,8 +40,8 @@
       <span class="text-body3 text-grey-7">불러오는 중…</span>
     </div>
 
-    <!-- 본문 -->
-    <div v-else-if="detail && detail.content" class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pb-10">
+    <!-- 본문: 하단 내비바(edge-to-edge) 영역만큼 여백 가산 -->
+    <div v-else-if="detail && detail.content" class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5" style="padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px))">
       <RetrospectiveResult
         variant="detail"
         :title="detail.title"
