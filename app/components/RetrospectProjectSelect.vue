@@ -64,7 +64,7 @@
 
     <!-- 하단 -->
     <div class="px-5 shrink-0 safe-bottom">
-      <p class="text-center text-label2 font-medium text-grey-7 mb-4">
+      <p class="text-center text-label2 font-medium text-grey-7 mb-5">
         프로젝트는 최대 10개까지 생성 가능합니다.
       </p>
       <button
