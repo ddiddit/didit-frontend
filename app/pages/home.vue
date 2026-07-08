@@ -332,9 +332,11 @@ async function loadHome() {
 const showLevelUpPopup = ref(false)
 const showFailurePopup = ref(false)
 const popupConfirming = ref(false)
-// 배지 획득 팝업과 조율 (배지 먼저 → 닫히면 미션 레벨업 팝업)
-const { badge: acquiredBadge } = useBadgeAcquired()
-const missionPopupPending = ref(false)
+// 배지 획득 배너와 조율: 미션 팝업이 떠 있는 동안 배너 보류 → 확인 클릭 후 노출
+const { setHold: setBadgeBannerHold } = useBadgeAcquired()
+watchEffect(() => setBadgeBannerHold(showLevelUpPopup.value || showFailurePopup.value))
+// 페이지 이탈 시 보류 해제 (배너가 영구 보류되지 않도록)
+onUnmounted(() => setBadgeBannerHold(false))
 
 // 레벨업 축하 메시지 (백엔드 PopupStatus에 문구가 없어 프론트에서 매핑)
 const LEVEL_UP_MESSAGES: Record<number, string> = {
@@ -357,18 +359,12 @@ function evaluateMissionPopup() {
   if (!m) {
     showLevelUpPopup.value = false
     showFailurePopup.value = false
-    missionPopupPending.value = false
     return
   }
   // 1) 레벨업(완료) 우선 — popup.type === 'LEVEL_UP' (왕관 이미지는 Lv.2부터)
+  //    배지 동시 획득 시 배너는 보류됐다가 확인 클릭 후 노출 (setBadgeBannerHold)
   if (m.popup.exists && m.popup.type === 'LEVEL_UP' && m.currentLevel >= 2) {
     showFailurePopup.value = false
-    // 배지 획득 팝업이 떠 있으면 닫힐 때까지 대기 (겹침 방지)
-    if (acquiredBadge.value) {
-      missionPopupPending.value = true
-      showLevelUpPopup.value = false
-      return
-    }
     showLevelUpPopup.value = true
     return
   }
@@ -380,16 +376,7 @@ function evaluateMissionPopup() {
   }
   showLevelUpPopup.value = false
   showFailurePopup.value = false
-  missionPopupPending.value = false
 }
-
-// 대기 중이던 미션 팝업: 배지 팝업이 닫히면 그때 노출
-watch(acquiredBadge, (b) => {
-  if (!b && missionPopupPending.value) {
-    missionPopupPending.value = false
-    showLevelUpPopup.value = true
-  }
-})
 
 async function confirmLevelUp() {
   if (popupConfirming.value) return

@@ -34,7 +34,7 @@
         <button class="px-3 py-1.5 rounded-lg bg-grey-13 text-grey-1 text-label2 font-semibold" @click="popup = 'failure'">실패 팝업</button>
         <button class="px-3 py-1.5 rounded-lg bg-grey-5 text-grey-13 text-label2 font-semibold" @click="closeAll">닫기</button>
       </div>
-      <!-- 배지별 획득 팝업 -->
+      <!-- 배지별 획득 배너 -->
       <div class="flex gap-1.5 overflow-x-auto scrollbar-hide">
         <button
           v-for="b in BADGE_CATALOG"
@@ -43,6 +43,17 @@
           @click="showBadge(b)"
         >{{ b.name }}</button>
       </div>
+      <!-- 주간 미션 카드 프리뷰 -->
+      <div class="flex gap-1.5 justify-center">
+        <button class="px-2.5 py-1.5 rounded-lg bg-white border border-grey-5 text-caption1 font-semibold text-grey-10" @click="showWeekly = !showWeekly">주간 미션 카드</button>
+        <button v-if="showWeekly" class="px-2.5 py-1.5 rounded-lg bg-white border border-grey-5 text-caption1 font-semibold text-grey-10" @click="weeklyProgress = (weeklyProgress + 1) % 3">진행 {{ weeklyProgress }}/2 → +1</button>
+        <button v-if="showWeekly" class="px-2.5 py-1.5 rounded-lg bg-white border border-grey-5 text-caption1 font-semibold text-grey-10" @click="withWeeklyStatus = !withWeeklyStatus">요일 데이터 {{ withWeeklyStatus ? 'ON' : 'OFF' }}</button>
+      </div>
+    </div>
+
+    <!-- 주간 미션 카드 (요일 스탬프·진행 바 확인용) -->
+    <div v-if="showWeekly" class="absolute inset-x-0 top-32 z-[58] px-5">
+      <HomeMissionCard :data="weeklyMission" />
     </div>
 
     <!-- 미션 완료(레벨업) 팝업 — home.vue와 동일한 오버레이 구성 -->
@@ -76,6 +87,7 @@
 
 <script setup lang="ts">
 import { BADGE_CATALOG, type BadgeDef } from '~/composables/useBadges'
+import type { CurrentMissionResponse } from '~/types/api'
 
 // 개발 전용 팝업 디자인 프리뷰 — 미션 완료/실패·배지 획득 팝업을 실제 컴포넌트로 확인
 definePageMeta({ layout: false })
@@ -85,7 +97,7 @@ if (!import.meta.dev) navigateTo('/home')
 
 const popup = ref<'levelup' | 'failure' | null>('levelup')
 
-// 배지 획득 팝업 — 전역 UiBadgeAcquiredPopup(useBadgeAcquired)로 표시
+// 배지 획득 배너 — 전역 UiBadgeAcquiredBanner(useBadgeAcquired)로 표시. 연속 클릭 시 큐로 순차 노출
 const { show, hide } = useBadgeAcquired()
 
 function showBadge(def: BadgeDef) {
@@ -97,4 +109,26 @@ function closeAll() {
   popup.value = null
   hide()
 }
+
+// 주간 미션 카드 프리뷰 (요일 스탬프 항상 노출·진행 바 점 포함 확인)
+const showWeekly = ref(false)
+const weeklyProgress = ref(1)
+const withWeeklyStatus = ref(true)
+
+const weeklyMission = computed<CurrentMissionResponse>(() => ({
+  currentLevel: 2, // 진행 중인 미션 = Lv.3 (2주 연속)
+  mission: {
+    type: 'CONSECUTIVE_WEEK',
+    title: '2주 연속 회고하기',
+    description: '매주 한 번씩 작성하면 달성할 수 있어요',
+    progress: weeklyProgress.value,
+    target: 2,
+    remainingDays: null,
+    cta: '회고 남기기',
+  },
+  weeklyStatus: withWeeklyStatus.value
+    ? { weekDays: ['월', '화', '수', '목', '금', '토', '일'].map((day, i) => ({ day, isCompleted: i === 2 })) }
+    : null,
+  popup: { exists: false, type: null },
+}))
 </script>

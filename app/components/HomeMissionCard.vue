@@ -34,12 +34,12 @@
         </div>
       </div>
 
-      <!-- 이번 주 회고 현황 -->
-      <div v-if="data.weeklyStatus" class="flex flex-col gap-3">
+      <!-- 이번 주 회고 현황 (데이터가 없어도 요일 스탬프는 항상 노출) -->
+      <div class="flex flex-col gap-3">
         <p class="text-[14px] font-semibold text-grey-9 tracking-[-0.02em]">이번 주 회고 현황</p>
         <div class="flex gap-2">
           <div
-            v-for="d in data.weeklyStatus.weekDays"
+            v-for="d in weekDays"
             :key="d.day"
             class="flex-1 aspect-square max-w-11 rounded-xl flex items-center justify-center text-[15px] font-semibold"
             :class="d.isCompleted ? 'bg-green-light-hover text-green-hover' : 'bg-grey-4 text-grey-6'"
@@ -136,7 +136,15 @@ const missionLevel = computed(() => props.data.currentLevel + 1)
 // 레벨별 색상은 공용 유틸(levelTheme)에서 — 미션카드·마이페이지 공유
 const theme = computed(() => levelTheme(missionLevel.value))
 
-const barWidth = computed(() =>
-  m.value ? `${Math.min(100, (m.value.progress / m.value.target) * 100)}%` : '0%',
-)
+// 주간 미션 요일 스탬프 — weeklyStatus가 없어도 기본 요일로 항상 노출
+const DEFAULT_WEEK_DAYS = ['월', '화', '수', '목', '금', '토', '일'].map((day) => ({ day, isCompleted: false }))
+const weekDays = computed(() => props.data.weeklyStatus?.weekDays ?? DEFAULT_WEEK_DAYS)
+
+// 진행 바 채움: 해당 주차의 흰 점(지름 8px, 양끝 여백 6px)을 완전히 덮는 지점까지
+const barWidth = computed(() => {
+  const d = m.value
+  if (!d || d.progress <= 0) return '0px'
+  const ratio = Math.min(1, d.progress / d.target)
+  return `calc((100% - 20px) * ${ratio} + 14px)`
+})
 </script>
