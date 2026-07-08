@@ -112,6 +112,8 @@ const isLoading = ref(false)
 // 로그인 실패·안내 토스트는 notice 아이콘 표시 (피그마 8088:31255)
 const { show } = useToast()
 const showToast = (msg: string) => show(msg, { icon: true })
+// 로그인 성공 직후 푸시 기기 토큰을 등록하기 위해 사용
+const push = usePushNotifications()
 
 onMounted(async () => {
   // accessToken과 refreshToken이 모두 있을 때만 자동 로그인
@@ -177,6 +179,11 @@ async function submitLogin(provider: 'KAKAO' | 'GOOGLE' | 'APPLE', oauthToken: s
     const { data } = await $api.post<ApiResponse<TokenResponse>>('/api/v1/auth/login', { provider, oauthToken })
     localStorage.setItem('accessToken', data.data.accessToken)
     localStorage.setItem('refreshToken', data.data.refreshToken)
+    // 온보딩 완료 여부를 저장해야 다음 앱 실행 시 스플래시(index.vue)가 세션을 유지한다.
+    // (이 값이 없으면 스플래시가 미로그인으로 간주해 localStorage를 비우고 로그인 화면으로 보냄 → 매번 재로그인)
+    localStorage.setItem('isOnboardingCompleted', String(data.data.isOnboardingCompleted))
+    // 로그인 직후 푸시 동의 상태면 기기 토큰을 즉시 등록한다 (앱 재실행 전까지 알림이 누락되던 문제 방지)
+    push.syncIfConsented()
 
     identify(data.data.accessToken, { provider: provider.toLowerCase() })
 

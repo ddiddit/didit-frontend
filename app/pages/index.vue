@@ -13,6 +13,12 @@ definePageMeta({ layout: false })
 
 const { $api } = useNuxtApp()
 const runtimeConfig = useRuntimeConfig()
+const push = usePushNotifications()
+
+// 인증·온보딩 완료 사용자의 최종 목적지 — 알림 탭 딥링크가 있으면 그쪽 우선, 없으면 홈
+function authedDestination(): string {
+  return push.consumePendingDeepLink() ?? '/home'
+}
 
 onMounted(async () => {
   // 이미 로그인된 경우 스플래시 없이 즉시 이동
@@ -23,7 +29,7 @@ onMounted(async () => {
       navigateTo('/login', { replace: true })
       return
     }
-    navigateTo(isOnboardingCompleted === 'true' ? '/home' : '/onboarding', { replace: true })
+    navigateTo(isOnboardingCompleted === 'true' ? authedDestination() : '/onboarding', { replace: true })
     return
   }
 
@@ -75,7 +81,7 @@ onMounted(async () => {
       navigateTo('/login', { replace: true })
       return
     }
-    navigateTo(isOnboardingCompleted === 'true' ? '/home' : '/onboarding', { replace: true })
+    navigateTo(isOnboardingCompleted === 'true' ? authedDestination() : '/onboarding', { replace: true })
   } catch {
     navigateTo('/login', { replace: true })
   }
