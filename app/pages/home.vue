@@ -29,20 +29,6 @@
       </div>
     </Teleport>
 
-    <!-- 헤더: H:50, 벨 아이콘만 우측 (빈 화면에서만 고정 노출 — 로딩 중엔 숨김) -->
-    <header
-      v-if="!isLoading && recentRetrospectives.length === 0"
-      class="flex items-center justify-end px-5 h-[50px] shrink-0"
-    >
-      <button @click="goToNotifications">
-        <img
-          :src="hasUnread ? '/icons/bell-on.svg' : '/icons/bell-off.svg'"
-          alt="알림"
-          class="w-6 h-6"
-        />
-      </button>
-    </header>
-
     <!-- 로드 실패: 헤더 아래~탭바 위를 덮는 전체 화면 에러 -->
     <UiErrorState
       v-if="loadError"
@@ -51,47 +37,15 @@
       @action="loadError === 'network' ? loadHome() : navigateTo('/my/inquiry')"
     />
 
-    <!-- 인사말 (로딩/빈 상태에서만 고정; 회고 있으면 아래 스크롤 영역 안에 포함) -->
-    <div v-if="isLoading || recentRetrospectives.length === 0" class="px-5 shrink-0">
-      <template v-if="isLoading">
-        <span class="inline-block w-24 h-6 bg-grey-4 rounded animate-pulse mb-1 block" />
-        <span class="inline-block w-52 h-6 bg-grey-4 rounded animate-pulse block" />
-      </template>
-      <h1 v-else class="text-title3 font-semibold text-grey-13 leading-[1.4]">
-        {{ nickname }}님,<br />
-        {{ greetingMessage }}
-      </h1>
+    <!-- 인사말 스켈레톤 (로딩 중에만 고정 노출) -->
+    <div v-if="isLoading" class="px-5 shrink-0">
+      <span class="inline-block w-24 h-6 bg-grey-4 rounded animate-pulse mb-1 block" />
+      <span class="inline-block w-52 h-6 bg-grey-4 rounded animate-pulse block" />
     </div>
 
-    <!-- 빈 상태: 세로 중앙 정렬 -->
+    <!-- 인사말 + 미션 카드 + 최근 제안 (회고 유무와 무관하게 동일 레이아웃 — 신규 유저도 Lv.1 미션 카드 노출) -->
     <div
-      v-if="!isLoading && recentRetrospectives.length === 0"
-      class="flex-1 flex flex-col items-center justify-center gap-[40px] pb-16"
-    >
-      <!-- 아이콘 + 텍스트 그룹 -->
-      <div class="flex flex-col items-center gap-3">
-        <img src="/icons/empty-home.svg" alt="" class="w-[70px] h-[70px] rounded-[12px]" />
-        <div class="flex flex-col items-center gap-[6px]">
-          <p class="text-heading2 font-semibold text-grey-13">아직 작성한 회고가 없어요</p>
-          <p class="text-label1-reading font-normal text-grey-9 text-center">
-            회고를 시작하고<br />오늘의 일을 기록해 보세요!
-          </p>
-        </div>
-      </div>
-
-      <!-- 회고 시작하기 버튼 -->
-      <button
-        class="flex items-center gap-1 pl-[12px] pr-[18px] py-[9px] bg-primary rounded-xl"
-        @click="startRetrospect"
-      >
-        <img src="/icons/add.svg" alt="" class="w-6 h-6" />
-        <span class="text-body2 font-semibold text-grey-13">회고 시작하기</span>
-      </button>
-    </div>
-
-    <!-- 회고 있음: 인사말 + 피드백 슬라이더 + 나의 최근 회고 (전체 스크롤) -->
-    <div
-      v-else-if="!isLoading && recentRetrospectives.length > 0"
+      v-else
       class="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-24"
     >
       <!-- 헤더: 알림벨 (콘텐츠와 함께 스크롤) -->
@@ -147,9 +101,9 @@
       </div>
     </div>
 
-    <!-- FAB + 툴팁: 회고 있을 때만 표시 -->
+    <!-- FAB + 툴팁 (신규 유저 포함 항상 표시) -->
     <div
-      v-if="!isLoading && recentRetrospectives.length > 0"
+      v-if="!isLoading"
       class="absolute right-5 flex items-center gap-[14px]"
       style="bottom: 16px;"
     >
