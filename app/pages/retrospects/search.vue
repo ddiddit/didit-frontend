@@ -19,7 +19,7 @@
           v-model="searchQuery"
           type="text"
           placeholder="키워드로 검색해 보세요."
-          class="flex-1 bg-transparent text-body3 font-medium text-grey-13 placeholder:text-grey-7 placeholder:font-normal outline-none"
+          class="flex-1 min-w-0 bg-transparent text-body3 font-medium text-grey-13 placeholder:text-grey-7 placeholder:font-normal outline-none"
           @keydown.enter="onEnter"
           @compositionstart="isComposing = true"
           @compositionend="onCompositionEnd"
@@ -153,7 +153,12 @@ function goSearchByTag(tagName: string) {
 
 function clearQuery() {
   searchQuery.value = ''
-  inputRef.value?.focus()
+  // 안드로이드 WebView: 긴 검색어로 가로 스크롤된 input을 비워도 scrollLeft가 남아
+  // placeholder가 왼쪽으로 밀려 잘려 보임 → 값 반영 후 스크롤 원점 복구
+  nextTick(() => {
+    if (inputRef.value) inputRef.value.scrollLeft = 0
+    inputRef.value?.focus()
+  })
 }
 
 function saveRecent(keyword: string) {
