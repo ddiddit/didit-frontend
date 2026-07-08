@@ -131,14 +131,11 @@ export interface RecentRetrospective {
 // Mission / Level (게이미피케이션) — GET /api/v1/missions/current
 export type MissionType = 'FIRST_RETRO' | 'TIME_LIMITED' | 'CONSECUTIVE_WEEK' | 'CUMULATIVE_RETRO'
 
-// 연속 주 미션에서만 내려옴 (월~일 7요소)
-export interface WeekDayStatus {
-  day: string
-  isCompleted: boolean
-}
-
+// 연속 주 미션에서만 내려옴. 백엔드 WeeklyStatus 계약: days는 이번 주 월~일 7개 boolean
 export interface WeeklyRetroStatus {
-  weekDays: WeekDayStatus[]
+  show: boolean
+  weekStart: string
+  days: boolean[]
 }
 
 // 미션 상세 (최고 레벨 등에서는 mission = null)

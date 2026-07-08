@@ -152,9 +152,12 @@ function rowFillFrac(row: number[]): number {
 // 레벨별 색상은 공용 유틸(levelTheme)에서 — 미션카드·마이페이지 공유
 const theme = computed(() => levelTheme(missionLevel.value))
 
-// 주간 미션 요일 스탬프 — weeklyStatus가 없어도 기본 요일로 항상 노출
-const DEFAULT_WEEK_DAYS = ['월', '화', '수', '목', '금', '토', '일'].map((day) => ({ day, isCompleted: false }))
-const weekDays = computed(() => props.data.weeklyStatus?.weekDays ?? DEFAULT_WEEK_DAYS)
+// 주간 미션 요일 스탬프 — 백엔드 days(월~일 boolean[])를 요일 라벨과 zip. 데이터 없으면 전부 미완료
+const WEEKDAY_LABELS = ['월', '화', '수', '목', '금', '토', '일']
+const weekDays = computed(() => {
+  const days = props.data.weeklyStatus?.days ?? []
+  return WEEKDAY_LABELS.map((day, i) => ({ day, isCompleted: days[i] ?? false }))
+})
 
 // 진행 바 채움: 해당 주차의 흰 점을 완전히 덮는 지점까지 (figma 실측: 바 306px 기준 1/2 진행 = 163px)
 const barWidth = computed(() => {

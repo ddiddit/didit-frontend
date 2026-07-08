@@ -13,8 +13,9 @@
         <p class="text-label2 font-semibold text-grey-7">{{ jobLabel }}</p>
         <div class="flex items-center gap-[7px]">
           <p class="text-heading1 font-semibold text-grey-13 truncate">{{ profile?.nickname ?? '' }}</p>
-          <!-- 레벨 배지 -->
+          <!-- 레벨 배지: 레벨 1 이상 달성(회고 O)한 유저만 노출 -->
           <span
+            v-if="showLevelBadge"
             class="shrink-0 inline-flex items-center px-[6px] py-[3px] rounded-[6px] text-[11px] font-semibold leading-[1.3] tracking-[-0.02em]"
             :style="{ backgroundColor: levelTheme(displayLevel).light, color: levelTheme(displayLevel).accent }"
           >Lv.{{ displayLevel }}</span>
@@ -142,8 +143,10 @@ const jobLabels: Record<JobType, string> = {
 
 const jobLabel = computed(() => (profile.value?.job ? jobLabels[profile.value.job] : ''))
 
-// 백엔드 currentLevel은 '달성한 레벨'이라 신규 유저는 0 — 표시 레벨은 최소 1 (모든 유저 Lv.1부터)
-const displayLevel = computed(() => Math.max(profile.value?.currentLevel ?? 1, 1))
+// 백엔드 currentLevel은 '달성한 레벨'이라 신규·회고X 유저는 0
+// → 레벨 1 이상(회고 O)부터 배지 노출, 그 전엔 배지 자체를 숨김
+const showLevelBadge = computed(() => (profile.value?.currentLevel ?? 0) >= 1)
+const displayLevel = computed(() => profile.value?.currentLevel ?? 1)
 
 const { badges, load: loadBadges } = useBadges()
 const acquiredBadges = computed(() =>
