@@ -9,7 +9,8 @@
     />
     <!-- 카드 -->
     <div class="popup-pop bg-white rounded-2xl px-5 pt-[56px] pb-5 flex flex-col items-center gap-[14px] shadow-[0_4px_20px_0_rgba(0,0,0,0.1)]">
-      <div class="flex flex-col items-center gap-2">
+      <!-- 문구 블록 하단 12px + 카드 gap 14px = 버튼과 26px 간격 (피그마) -->
+      <div class="flex flex-col items-center gap-2 pb-3">
         <p class="text-[17px] font-semibold text-grey-13 text-center tracking-[-0.02em]" style="line-height:140%">
           회고 미션 완료!
         </p>

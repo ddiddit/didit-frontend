@@ -17,6 +17,7 @@ export interface BadgeDef {
   name: string                         // 배지 이름 (예: '10회 기록')
   description: string                  // 그리드 하단 설명 (예: '회고 10개 저장하기')
   unlockText: string                   // 바텀시트 안내 문구 (미획득 시)
+  congratsTitle: string                // 획득 팝업 타이틀 (이모지 포함)
   congratsText: string                 // 획득 팝업 축하 문구
   conditionType: BadgeConditionType    // 백엔드 대응 조건
   threshold: number                    // 백엔드 대응 임계값
@@ -26,16 +27,16 @@ export interface BadgeDef {
 
 // 활동 배지 10종 (백엔드 /api/v1/badges 와 동일 구성)
 export const BADGE_CATALOG: BadgeDef[] = [
-  { code: 'first-record',      name: '첫 기록',         description: '회고 1개 저장하기',           unlockText: '회고를 1개 저장하면 받을 수 있어요.',         congratsText: '드디어 첫 회고를 기록했네요.\n오늘의 시작이 멋진 습관이 될 거예요.', conditionType: 'CUMULATIVE_RETRO', threshold: 1 },
-  { code: 'record-10',         name: '10회 기록',        description: '회고 10개 저장하기',          unlockText: '회고를 10개 저장하면 받을 수 있어요.',        congratsText: '10번의 회고가 쌓였네요!\n꾸준한 기록이 성장을 만들어요.', conditionType: 'CUMULATIVE_RETRO', threshold: 10, countable: true, goal: 10 },
-  { code: 'record-30',         name: '30회 기록',        description: '회고 30개 저장하기',          unlockText: '회고를 30개 저장하면 받을 수 있어요.',        congratsText: '30회 기록 달성! 정말 대단해요.\n회고가 이제 일상이 됐군요.', conditionType: 'CUMULATIVE_RETRO', threshold: 30, countable: true, goal: 30 },
-  { code: 'project-collector', name: '프로젝트 컬렉터',   description: '프로젝트 3개 만들기',          unlockText: '프로젝트를 3개 만들면 받을 수 있어요.',        congratsText: '프로젝트 3개를 만들었어요!\n체계적인 회고의 시작이에요.', conditionType: 'PROJECT_COUNT', threshold: 3 },
-  { code: 'project-picker',    name: '프로젝트 피커',     description: '회고 5개를 프로젝트에 담기',    unlockText: '회고 5개를 프로젝트에 담으면 받을 수 있어요.', congratsText: '회고 5개를 프로젝트에 담았어요!\n정리가 성장을 앞당겨요.', conditionType: 'PROJECT_TAGGED_RETRO', threshold: 5 },
-  { code: 'project-digger',    name: '프로젝트 디기너',   description: '한 프로젝트에 회고 3개 담기',   unlockText: '한 프로젝트에 회고 3개를 담으면 받을 수 있어요.', congratsText: '한 프로젝트에 3개의 회고를 담았어요!\n깊이 있는 탐구가 시작됐어요.', conditionType: 'PROJECT_RETRO_IN_ONE', threshold: 3 },
-  { code: 'routine-first',     name: '루틴의 첫 걸음',    description: '한 주에 회고 3개 쓰기',        unlockText: '한 주에 회고 3개를 쓰면 받을 수 있어요.',     congratsText: '이번 주 회고 3개를 달성했어요!\n루틴이 시작됐네요.', conditionType: 'WEEKLY_RETRO_COUNT', threshold: 3 },
-  { code: 'routine-power',     name: '루틴의 힘',         description: '3주 동안 매주 회고 3개 쓰기',  unlockText: '3주 동안 매주 회고 3개를 쓰면 받을 수 있어요.', congratsText: '3주 연속 달성이에요!\n꾸준함이 진짜 힘이 되고 있어요.', conditionType: 'WEEKLY_STREAK', threshold: 3 },
-  { code: 'routine-streak',    name: '루틴의 지속',       description: '4주 연속 회고 남기기',         unlockText: '4주 연속 회고를 남기면 받을 수 있어요.',      congratsText: '4주 연속 회고 달성!\n이 습관, 정말 대단해요.', conditionType: 'WEEKLY_STREAK', threshold: 4 },
-  { code: 'didit-lover',       name: '디딧 러버',         description: '1주 동안 매일 접속하기',       unlockText: '1주 동안 매일 접속하면 받을 수 있어요.',      congratsText: '일주일 동안 매일 접속했어요!\n디딧과 함께하는 하루가 즐거워요.', conditionType: 'DAILY_ACCESS_STREAK', threshold: 7 },
+  { code: 'first-record',      name: '첫 기록',         description: '회고 1개 저장하기',           unlockText: '회고를 1개 저장하면 받을 수 있어요.',         congratsTitle: '🎉 첫 기록 배지 획득!',        congratsText: '드디어 첫 회고를 기록했네요.\n오늘의 시작이 멋진 습관이 될 거예요.', conditionType: 'CUMULATIVE_RETRO', threshold: 1 },
+  { code: 'record-10',         name: '10회 기록',        description: '회고 10개 저장하기',          unlockText: '회고를 10개 저장하면 받을 수 있어요.',        congratsTitle: '🎖️ 10번의 기록 배지 획득!',   congratsText: '어느새 10회 회고를 완료했어요.\n꾸준한 경험이 쌓이고 있어요!', conditionType: 'CUMULATIVE_RETRO', threshold: 10, countable: true, goal: 10 },
+  { code: 'record-30',         name: '30회 기록',        description: '회고 30개 저장하기',          unlockText: '회고를 30개 저장하면 받을 수 있어요.',        congratsTitle: '🔥 30회 기록 배지 획득!',      congratsText: '30번의 회고가 쌓였어요.\n이 정도면 회고 마스터!', conditionType: 'CUMULATIVE_RETRO', threshold: 30, countable: true, goal: 30 },
+  { code: 'project-collector', name: '프로젝트 컬렉터',   description: '프로젝트 3개 만들기',          unlockText: '프로젝트를 3개 만들면 받을 수 있어요.',        congratsTitle: '📁 프로젝트 컬렉터 배지 획득!', congratsText: '프로젝트를 3개나 만들었어요.\n다양한 경험을 기록해 보세요.', conditionType: 'PROJECT_COUNT', threshold: 3 },
+  { code: 'project-picker',    name: '프로젝트 피커',     description: '회고 5개를 프로젝트에 담기',    unlockText: '회고 5개를 프로젝트에 담으면 받을 수 있어요.', congratsTitle: '🎯 프로젝트 피커 배지 획득!',   congratsText: '프로젝트 지정 회고가 5회가 넘었어요.\n체계적인 기록이 빛나고 있어요.', conditionType: 'PROJECT_TAGGED_RETRO', threshold: 5 },
+  { code: 'project-digger',    name: '프로젝트 디깅',     description: '한 프로젝트에 회고 3개 담기',   unlockText: '한 프로젝트에 회고 3개를 담으면 받을 수 있어요.', congratsTitle: '⛏️ 프로젝트 디깅 배지 획득!',  congratsText: '하나의 프로젝트에 3개 이상의 회고를 쌓았어요.\n깊이 있는 기록자!', conditionType: 'PROJECT_RETRO_IN_ONE', threshold: 3 },
+  { code: 'routine-first',     name: '루틴 첫 걸음',      description: '한 주에 회고 3개 쓰기',        unlockText: '한 주에 회고 3개를 쓰면 받을 수 있어요.',     congratsTitle: '🌱 루틴 첫 걸음 배지 획득!',    congratsText: '이번 주 회고를 3번이나 작성했어요.\n루틴이 시작되고 있어요.', conditionType: 'WEEKLY_RETRO_COUNT', threshold: 3 },
+  { code: 'routine-power',     name: '루틴의 힘',         description: '3주 동안 매주 회고 3개 쓰기',  unlockText: '3주 동안 매주 회고 3개를 쓰면 받을 수 있어요.', congratsTitle: '💪 루틴의 힘 배지 획득!',       congratsText: '3주 이상 꾸준히 주 3회 회고를 달성했어요.\n습관이 만들어지고 있어요.', conditionType: 'WEEKLY_STREAK', threshold: 3 },
+  { code: 'routine-streak',    name: '루틴의 지속',       description: '4주 연속 회고 남기기',         unlockText: '4주 연속 회고를 남기면 받을 수 있어요.',      congratsTitle: '🔗 루틴의 지속 배지 획득!',     congratsText: '4주 연속으로 매주 회고를 기록했어요.\n지속하는 힘이 만들어지고 있어요.', conditionType: 'WEEKLY_STREAK', threshold: 4 },
+  { code: 'didit-lover',       name: '디딧 러버',         description: '1주 동안 매일 접속하기',       unlockText: '1주 동안 매일 접속하면 받을 수 있어요.',      congratsTitle: '❤️ 디딧 러버 배지 획득!',       congratsText: '7일 연속 디딧에 접속했어요.\n진정한 디딧 러버!', conditionType: 'DAILY_ACCESS_STREAK', threshold: 7 },
 ]
 
 // 화면 렌더링용 배지 (정의 + 획득 상태)

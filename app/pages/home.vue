@@ -3,8 +3,8 @@
 
     <!-- 미션 완료(레벨업) 팝업 -->
     <Teleport to="#app-container">
-      <div v-if="showLevelUpPopup && mission" class="absolute inset-0 z-[55] flex items-center justify-center px-5">
-        <div class="absolute inset-0 bg-black/40" />
+      <div v-if="showLevelUpPopup && mission" class="absolute inset-0 z-[55] flex items-center justify-center px-5" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-[5px]" />
         <HomeMissionPopup
           :level="mission.currentLevel"
           :message="levelUpMessage"
@@ -17,7 +17,8 @@
 
     <!-- 미션 실패 팝업 -->
     <Teleport to="#app-container">
-      <div v-if="showFailurePopup && mission" class="absolute inset-0 z-[55] flex items-center justify-center px-5">
+      <div v-if="showFailurePopup && mission" class="absolute inset-0 z-[55] flex items-center justify-center px-5" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
+        <!-- 실패 팝업은 일반 딤 (진한 딤+블러는 획득/완료 팝업 전용) -->
         <div class="absolute inset-0 bg-black/40" />
         <HomeMissionFailurePopup
           :message="failureMessage"
@@ -113,7 +114,7 @@
       <!-- 미션/레벨 카드 — 비면 첫 회고(Lv.1 달성) 기본 카드 -->
       <HomeMissionCard
         :data="displayMission"
-        :first-mission="displayMission.currentLevel === 0"
+        :disabled="isCompleted"
         class="mt-5 mx-5"
         @start="startRetrospect"
       />
@@ -332,9 +333,11 @@ async function loadHome() {
 const showLevelUpPopup = ref(false)
 const showFailurePopup = ref(false)
 const popupConfirming = ref(false)
-// 배지 획득 팝업과 조율 (배지 먼저 → 닫히면 미션 레벨업 팝업)
-const { badge: acquiredBadge } = useBadgeAcquired()
-const missionPopupPending = ref(false)
+// 배지 획득 배너와 조율: 미션 팝업이 떠 있는 동안 배너 보류 → 확인 클릭 후 노출
+const { setHold: setBadgeBannerHold } = useBadgeAcquired()
+watchEffect(() => setBadgeBannerHold(showLevelUpPopup.value || showFailurePopup.value))
+// 페이지 이탈 시 보류 해제 (배너가 영구 보류되지 않도록)
+onUnmounted(() => setBadgeBannerHold(false))
 
 // 레벨업 축하 메시지 (백엔드 PopupStatus에 문구가 없어 프론트에서 매핑)
 const LEVEL_UP_MESSAGES: Record<number, string> = {
@@ -357,18 +360,12 @@ function evaluateMissionPopup() {
   if (!m) {
     showLevelUpPopup.value = false
     showFailurePopup.value = false
-    missionPopupPending.value = false
     return
   }
   // 1) 레벨업(완료) 우선 — popup.type === 'LEVEL_UP' (왕관 이미지는 Lv.2부터)
+  //    배지 동시 획득 시 배너는 보류됐다가 확인 클릭 후 노출 (setBadgeBannerHold)
   if (m.popup.exists && m.popup.type === 'LEVEL_UP' && m.currentLevel >= 2) {
     showFailurePopup.value = false
-    // 배지 획득 팝업이 떠 있으면 닫힐 때까지 대기 (겹침 방지)
-    if (acquiredBadge.value) {
-      missionPopupPending.value = true
-      showLevelUpPopup.value = false
-      return
-    }
     showLevelUpPopup.value = true
     return
   }
@@ -380,16 +377,7 @@ function evaluateMissionPopup() {
   }
   showLevelUpPopup.value = false
   showFailurePopup.value = false
-  missionPopupPending.value = false
 }
-
-// 대기 중이던 미션 팝업: 배지 팝업이 닫히면 그때 노출
-watch(acquiredBadge, (b) => {
-  if (!b && missionPopupPending.value) {
-    missionPopupPending.value = false
-    showLevelUpPopup.value = true
-  }
-})
 
 async function confirmLevelUp() {
   if (popupConfirming.value) return

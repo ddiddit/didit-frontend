@@ -4,6 +4,7 @@
       <div
         v-if="badge"
         class="absolute inset-0 z-50 flex items-center justify-center bg-black/40"
+        style="padding-bottom: env(safe-area-inset-bottom, 0px)"
         @click="hide"
       >
         <div
@@ -21,7 +22,7 @@
           <!-- 텍스트 영역 -->
           <div class="flex flex-col items-center gap-2 mt-[14px] w-full">
             <p class="text-[17px] font-semibold leading-[140%] tracking-[-0.02em] text-grey-13 text-center">
-              🎉 {{ badge.name }} 획득!
+              {{ badge.congratsTitle }}
             </p>
             <p
               class="text-[14px] font-normal leading-[160%] tracking-[-0.02em] text-grey-8 text-center whitespace-pre-line"

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="h-full bg-white flex flex-col overflow-hidden"
+    class="relative h-full bg-white flex flex-col overflow-hidden"
     :style="keyboardOpen ? { height: `calc(100% - ${keyboardHeight}px)` } : undefined"
   >
     <!-- 헤더: 뒤로가기 + 다시 시작 -->
@@ -18,7 +18,8 @@
     </div>
 
     <!-- 대화 영역 -->
-    <div ref="scrollEl" class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pb-4">
+    <!-- 하단 여백: 오버레이 입력바에 마지막 메시지가 가려지지 않도록 -->
+    <div ref="scrollEl" class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pb-28">
       <div class="flex flex-col">
         <template v-for="(msg, i) in messages" :key="msg.id">
           <!-- 디닷 질문 -->
@@ -84,21 +85,23 @@
       </div>
     </div>
 
-    <!-- 입력 바 -->
+    <!-- 입력 바: 채팅 위에 겹치는 오버레이 — 흰 블록 대신 투명→흰색 그라데이션 배경 (카카오톡 스타일) -->
     <div
-      class="px-5 pt-2.5 bg-grey-1 shrink-0"
+      class="absolute bottom-0 left-0 right-0 px-5 pt-2.5"
       :style="{ paddingBottom: keyboardOpen ? '16px' : 'max(16px, env(safe-area-inset-bottom, 16px))' }"
     >
+      <!-- 배경: 반투명 흰색 → 위로 갈수록 투명. 채팅이 입력바 뒤로 비쳐 보임 (카카오톡 스타일) -->
+      <div class="absolute -top-8 bottom-0 left-0 right-0 bg-gradient-to-t from-white/85 to-white/0 pointer-events-none" />
       <!-- 질문 불러오기 실패 시 인라인 에러 배너 (figma err3) -->
       <UiInlineError
         v-if="chatError"
         variant="dark"
         :message="chatError.message"
-        class="mb-2.5"
+        class="relative mb-2.5"
         @retry="chatError.retry()"
       />
       <!-- figma: padding 10/8/10/20, gap 15, radius 22. 여러 줄이면 전송 버튼이 하단 정렬 -->
-      <div class="flex items-end gap-[15px] bg-grey-3 rounded-[22px] pl-5 pr-2 py-2.5">
+      <div class="relative flex items-end gap-[15px] bg-grey-3 rounded-[22px] pl-5 pr-2 py-2.5">
         <textarea
           ref="inputEl"
           v-model="inputText"
@@ -110,7 +113,7 @@
           @keydown.enter.exact="onEnterKey"
         />
         <!-- 음성 입력(네이티브 전용) — voice.svg는 28px 원형 배경+글리프 포함 -->
-        <button v-if="showVoice" class="shrink-0" aria-label="음성 입력" @click="onVoice">
+        <button v-if="showVoice" class="shrink-0" :class="isMultiline ? 'self-end' : 'self-center'" aria-label="음성 입력" @click="onVoice">
           <img src="/icons/voice.svg" alt="" class="w-7 h-7" />
         </button>
         <!-- 전송 (빈 값이어도 탭 가능 → 토스트, CHAT_007) -->
@@ -148,7 +151,8 @@
 
     <!-- 내 답변 전체보기 (풀스크린, CHAT_006 / figma 24498): 질문 + 답변 전문 -->
     <Teleport to="#app-container">
-      <div v-if="fullView" class="absolute inset-0 z-50 bg-grey-1 flex flex-col">
+      <!-- inset-0이 앱 컨테이너의 safe-top 패딩 영역까지 덮으므로 오버레이에도 safe-top 적용 (상태바 겹침 방지) -->
+      <div v-if="fullView" class="absolute inset-0 z-50 bg-grey-1 flex flex-col safe-top">
         <!-- 헤더: 뒤로가기만 -->
         <div class="flex items-center h-[50px] px-5 shrink-0">
           <button class="p-1 -ml-1" aria-label="뒤로" @click="fullView = null">
@@ -178,7 +182,7 @@
     <!-- 마이크 권한 안내 (figma 4374-17929) -->
     <Teleport to="#app-container">
       <Transition name="mic-fade">
-        <div v-if="showMicPopup" class="absolute inset-0 z-50 flex items-center justify-center px-5">
+        <div v-if="showMicPopup" class="absolute inset-0 z-50 flex items-center justify-center px-5" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
           <div class="absolute inset-0 bg-black/40" @click="showMicPopup = false" />
           <div class="relative w-full max-w-[300px] bg-grey-1 rounded-2xl px-5 py-4 flex flex-col gap-[14px]">
             <div class="flex flex-col items-center gap-2 py-3 text-center">
@@ -229,6 +233,7 @@
 </template>
 
 <script setup lang="ts">
+import { Capacitor } from '@capacitor/core'
 import type { PluginListenerHandle } from '@capacitor/core'
 import { Keyboard } from '@capacitor/keyboard'
 import type { QuestionType, CompleteRetrospectiveResponse } from '~/types/api'
@@ -343,11 +348,15 @@ function scrollToBottom() {
   })
 }
 
+// 여러 줄 여부 — 한 줄이면 우측 버튼을 세로 중앙, 여러 줄이면 하단 정렬
+const isMultiline = ref(false)
+
 function autoGrow() {
   const el = inputEl.value
   if (!el) return
   el.style.height = 'auto'
   el.style.height = `${Math.min(el.scrollHeight, 120)}px`
+  isMultiline.value = el.scrollHeight > 40
 }
 
 // 질문 순번 계산: questionType('Q1'..)에서 숫자 추출, 없으면 카운터 증가
@@ -646,14 +655,14 @@ async function onConfirmRestart() {
   }
 }
 
-// 안드로이드 WebView는 키보드가 떠도 레이아웃 높이(dvh)를 줄이지 않아 하단 입력창이
-// 키보드에 가려진다. visualViewport로 실제 보이는 영역 높이를 받아 채팅 화면을 그만큼 줄여
-// 입력창이 키보드 바로 위에 오게 한다.
-// OS가 알려주는 키보드 전체 높이(추천줄·툴바 포함)를 받아 채팅 화면을 그만큼 줄인다.
-// visualViewport는 추천줄 높이를 누락하므로 네이티브 키보드 높이를 쓴다.
+// [iOS 전용] iOS는 리사이즈 모드 none(keyboard.client.ts)이라 키보드가 떠도 레이아웃이
+// 줄지 않아, OS가 알려주는 키보드 전체 높이(추천줄·툴바 포함)만큼 화면을 JS로 줄인다.
+// (visualViewport는 추천줄 높이를 누락하므로 네이티브 키보드 높이를 쓴다)
+// 안드로이드는 adjustResize(capacitor.config resize 'body')로 WebView 자체가 줄어 JS 보정 불필요.
 const keyboardOpen = ref(false)
 const keyboardHeight = ref(0)
 let kbShow: PluginListenerHandle | undefined
+let kbDidShow: PluginListenerHandle | undefined
 let kbHide: PluginListenerHandle | undefined
 
 function applyKeyboardHeight(raw: number) {
@@ -667,12 +676,17 @@ onMounted(async () => {
   loadProfile()
   init()
   if (!import.meta.client || !isNative.value) return
-  kbShow = await Keyboard.addListener('keyboardWillShow', info => applyKeyboardHeight(info.keyboardHeight))
-  kbHide = await Keyboard.addListener('keyboardWillHide', () => { keyboardHeight.value = 0; keyboardOpen.value = false })
+  if (Capacitor.getPlatform() === 'ios') {
+    kbShow = await Keyboard.addListener('keyboardWillShow', info => applyKeyboardHeight(info.keyboardHeight))
+    kbHide = await Keyboard.addListener('keyboardWillHide', () => { keyboardHeight.value = 0; keyboardOpen.value = false })
+  }
+  // 키보드가 다 올라온 뒤(레이아웃 축소 완료) 채팅을 맨 아래로 → 마지막 질문이 키보드에 가려지지 않음 (iOS·AOS 공통)
+  kbDidShow = await Keyboard.addListener('keyboardDidShow', () => scrollToBottom())
 })
 
 onUnmounted(() => {
   kbShow?.remove()
+  kbDidShow?.remove()
   kbHide?.remove()
 })
 </script>

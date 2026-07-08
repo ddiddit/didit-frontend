@@ -94,36 +94,24 @@
     <div v-if="!isLoading && localProjects.length > 0" class="shrink-0 px-5 pt-3 bg-white safe-bottom">
       <p class="text-center text-label2 font-medium text-grey-7 mb-5">프로젝트는 최대 10개까지 생성 가능합니다</p>
       <UiButton
-        :disabled="!hasNewProjects"
+        :disabled="!hasChanges"
         :loading="isSubmitting"
         @click="saveProjects"
       >저장</UiButton>
     </div>
 
-    <!-- 삭제 확인 다이얼로그 -->
-    <div v-if="pendingDelete" class="absolute inset-0 z-30 flex items-center justify-center">
-      <div class="absolute inset-0 bg-black/40" @click="pendingDelete = null" />
-      <div
-        class="relative bg-grey-1 rounded-2xl z-10 w-[300px] flex flex-col gap-[14px]"
-        style="padding: 20px 16px; box-shadow: 0px 0px 20px 0px rgba(0,0,0,0.10);"
-      >
-        <h3 class="text-body1 font-bold text-grey-13 text-center">프로젝트를 삭제하시겠어요?</h3>
-        <p class="text-label1-reading font-normal text-grey-8 text-center">
-          프로젝트에 포함된 회고는 삭제되지 않으며,<br />전체보기에서 계속 확인할 수 있어요.
-        </p>
-        <div class="flex gap-2">
-          <button
-            class="flex-1 h-[50px] rounded-xl bg-grey-5 text-label1 font-semibold text-grey-8 transition-none"
-            @click="pendingDelete = null"
-          >취소</button>
-          <button
-            class="flex-1 h-[50px] rounded-xl bg-[#FF3B30] text-label1 font-semibold text-white transition-none"
-            :disabled="isDeleting"
-            @click="doDelete"
-          >삭제</button>
-        </div>
-      </div>
-    </div>
+    <!-- 삭제 확인 다이얼로그 (공용 팝업: 문구 여백·취소 버튼 스타일 시안 준수) -->
+    <UiPopup
+      :model-value="!!pendingDelete"
+      title="프로젝트를 삭제하시겠어요?"
+      :description="'프로젝트에 포함된 회고는 삭제되지 않으며,\n전체보기에서 계속 확인할 수 있어요.'"
+      confirm-text="삭제"
+      cancel-text="취소"
+      variant="destructive"
+      :loading="isDeleting"
+      @update:model-value="(v: boolean) => { if (!v) pendingDelete = null }"
+      @confirm="doDelete"
+    />
 
   </div>
 </template>
@@ -193,8 +181,11 @@ function setInputRef(el: unknown, index: number) {
 
 const MAX_PROJECTS = 10
 const canAdd = computed(() => localProjects.value.length < MAX_PROJECTS)
-const hasNewProjects = computed(() =>
-  localProjects.value.some(p => p.isNew && p.name.trim().length > 0)
+// 기존 상태에서 수정된 게 있으면(신규 추가·이름 변경) 저장 버튼 활성화
+const hasChanges = computed(() =>
+  localProjects.value.some(p =>
+    p.isNew ? p.name.trim().length > 0 : p.name.trim() !== p.originalName,
+  )
 )
 
 async function reload() {
@@ -216,10 +207,17 @@ onMounted(() => {
   reload()
 })
 
+// 빈 공간 터치로 키보드를 내린 직후엔, 이어지는 click이 이름 영역(span)에 떨어져도
+// startEditing으로 재포커스되지 않도록 잠시 편집 진입을 막는다 (키보드가 내려간 상태 유지)
+let suppressEditUntil = 0
+
 function onContainerTouch(e: TouchEvent) {
   if (focusedIndex.value === null) return
   const input = inputRefs.value[focusedIndex.value]
-  if (input && e.target !== input) input.blur()
+  if (input && e.target !== input) {
+    suppressEditUntil = performance.now() + 500
+    input.blur()
+  }
 }
 
 function addNewProject() {
@@ -232,32 +230,21 @@ function addNewProject() {
 }
 
 function startEditing(project: LocalProject, index: number) {
+  if (performance.now() < suppressEditUntil) return
   project.isEditing = true
   nextTick(() => {
     inputRefs.value[index]?.focus()
   })
 }
 
-async function onInputBlur(project: LocalProject, _index: number) {
+// 이름 변경은 blur 시 바로 저장하지 않고 '저장' 버튼으로 일괄 반영
+function onInputBlur(project: LocalProject, _index: number) {
   focusedIndex.value = null
 
-  // 기존 프로젝트 이름 수정 후 blur → PATCH API 호출
-  if (project.isEditing && project.id) {
+  if (project.isEditing) {
     const trimmed = project.name.trim()
-    if (trimmed && trimmed !== project.originalName) {
-      try {
-        await $api.patch(`/api/v1/projects/${project.id}/name`, { name: trimmed })
-        project.name = trimmed
-        project.originalName = trimmed
-        // 전역 캐시도 업데이트
-        const target = projects.value.find(p => p.id === project.id)
-        if (target) target.name = trimmed
-      } catch {
-        project.name = project.originalName
-      }
-    } else if (!trimmed) {
-      project.name = project.originalName
-    }
+    // 빈 값이면 원래 이름으로 복원
+    project.name = trimmed || project.originalName
     project.isEditing = false
   }
 }
@@ -288,14 +275,21 @@ async function doDelete() {
 }
 
 async function saveProjects() {
-  if (!hasNewProjects.value || isSubmitting.value) return
+  if (!hasChanges.value || isSubmitting.value) return
   isSubmitting.value = true
   try {
+    // 기존 프로젝트 이름 변경 반영
+    const renamed = localProjects.value.filter(p => !p.isNew && p.id && p.name.trim() !== p.originalName)
+    for (const p of renamed) {
+      await $api.patch(`/api/v1/projects/${p.id}/name`, { name: p.name.trim() })
+      p.originalName = p.name.trim()
+    }
+    // 신규 프로젝트 생성
     const newOnes = localProjects.value.filter(p => p.isNew && p.name.trim())
     for (const p of newOnes) {
       await $api.post('/api/v1/projects', { name: p.name.trim() })
     }
-    track('project_created', { count: newOnes.length })
+    if (newOnes.length > 0) track('project_created', { count: newOnes.length })
     const res = await $api.get<ApiResponse<Project[]>>('/api/v1/projects')
     projects.value = res.data.data
     router.back()

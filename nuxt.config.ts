@@ -30,6 +30,11 @@ export default defineNuxtConfig({
     cssPath: '~/assets/css/main.css',
   },
 
+  // 사용하는 아이콘을 클라이언트 번들에 포함 — 외부 API 요청 없이 즉시 렌더 (전송 화살표 등 간헐 미표시 방지)
+  icon: {
+    clientBundle: { scan: true },
+  },
+
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE ?? 'https://api.didit.ai.kr',

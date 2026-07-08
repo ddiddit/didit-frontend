@@ -7,7 +7,7 @@
           class="inline-flex items-center px-1.5 py-[3px] rounded-md text-[11px] font-semibold leading-[1.3] tracking-[-0.02em] shrink-0"
           :style="{ backgroundColor: theme.light, color: theme.accent }"
         >
-          Lv.{{ data.currentLevel }}
+          Lv.{{ missionLevel }}
         </span>
         <span class="flex-1 min-w-0 text-[18px] font-semibold text-grey-13 leading-[1.4] tracking-[-0.02em] line-clamp-1">
           {{ m?.title }}
@@ -34,12 +34,12 @@
         </div>
       </div>
 
-      <!-- 이번 주 회고 현황 -->
-      <div v-if="data.weeklyStatus" class="flex flex-col gap-3">
+      <!-- 이번 주 회고 현황 (데이터가 없어도 요일 스탬프는 항상 노출) -->
+      <div class="flex flex-col gap-3">
         <p class="text-[14px] font-semibold text-grey-9 tracking-[-0.02em]">이번 주 회고 현황</p>
         <div class="flex gap-2">
           <div
-            v-for="d in data.weeklyStatus.weekDays"
+            v-for="d in weekDays"
             :key="d.day"
             class="flex-1 aspect-square max-w-11 rounded-xl flex items-center justify-center text-[15px] font-semibold"
             :class="d.isCompleted ? 'bg-green-light-hover text-green-hover' : 'bg-grey-4 text-grey-6'"
@@ -60,6 +60,12 @@
         >
           <!-- 연결선 (첫~마지막 스탬프 중심) -->
           <div class="absolute left-[18px] right-[18px] top-[18px] h-[2px] bg-grey-3" />
+          <!-- 완료 구간 연결선: 완료된 마지막 스탬프까지 테마 색으로 채움 -->
+          <div
+            v-if="rowFillFrac(row) > 0"
+            class="absolute left-[18px] top-[18px] h-[2px]"
+            :style="{ width: `calc((100% - 36px) * ${rowFillFrac(row)})`, backgroundColor: theme.fill }"
+          />
           <div v-for="n in row" :key="n" class="relative flex flex-col items-center gap-1.5 shrink-0 w-9">
             <!-- 스탬프 (Figma): 완료=accent 원+#353535 체크 / 미완료=#F1F1F1 원+#C6C6C6 체크 -->
             <svg width="36" height="36" viewBox="0 0 36 36" fill="none" class="shrink-0">
@@ -71,9 +77,9 @@
             </svg>
             <span class="text-[12px] font-semibold text-grey-6 leading-[1.36] whitespace-nowrap">{{ n }}회</span>
 
-            <!-- 레벨업 힌트 뱃지: 마지막 원형 오른쪽에 분리 노출 (첫 미션에서만) -->
+            <!-- 레벨업 힌트 뱃지: 마지막 원형 오른쪽에 분리 노출 (초반 온보딩용 — 미션 레벨 1·2에서만) -->
             <div
-              v-if="firstMission && n === m.target"
+              v-if="missionLevel <= 2 && n === m.target"
               class="absolute left-full top-[5px] ml-2 flex items-center whitespace-nowrap"
             >
               <!-- 포인터: 둥근 삼각형(Figma Polygon 5) — 뱃지에 겹쳐 붙여 말풍선처럼 -->
@@ -87,9 +93,11 @@
       </div>
     </template>
 
-    <!-- CTA: 회고 남기기 -->
+    <!-- CTA: 회고 남기기 (오늘 회고 횟수 소진 시 비활성 — FAB와 동일) -->
     <button
-      class="w-full py-3 rounded-xl bg-primary text-[16px] font-semibold text-grey-13 tracking-[-0.02em] transition-opacity active:opacity-80"
+      class="w-full py-3 rounded-xl text-[16px] font-semibold tracking-[-0.02em] transition-opacity"
+      :class="disabled ? 'bg-grey-5 text-grey-6 cursor-not-allowed' : 'bg-primary text-grey-13 active:opacity-80'"
+      :disabled="disabled"
       @click="emit('start')"
     >
       {{ m?.cta ?? '회고 남기기' }}
@@ -101,7 +109,7 @@
 import { levelTheme } from '~/utils/levelTheme'
 import type { CurrentMissionResponse } from '~/types/api'
 
-const props = defineProps<{ data: CurrentMissionResponse; firstMission?: boolean }>()
+const props = defineProps<{ data: CurrentMissionResponse; disabled?: boolean }>()
 const emit = defineEmits<{ start: [] }>()
 
 // 미션 상세 (nested) — 최고 레벨 등에서는 null
@@ -130,10 +138,29 @@ const circleRows = computed(() => {
   return rows
 })
 
-// 레벨별 색상은 공용 유틸(levelTheme)에서 — 미션카드·마이페이지 공유
-const theme = computed(() => levelTheme(props.data.currentLevel))
+// 카드에는 '진행 중인 미션'의 레벨을 표시 — 백엔드 currentLevel은 달성한 레벨이라 +1 (레벨 0 없음, 모든 유저 Lv.1부터)
+const missionLevel = computed(() => props.data.currentLevel + 1)
 
-const barWidth = computed(() =>
-  m.value ? `${Math.min(100, (m.value.progress / m.value.target) * 100)}%` : '0%',
-)
+// 완료 구간 연결선 비율: 해당 줄에서 완료된 스탬프 수 기준 (첫 스탬프 중심 → 마지막 완료 스탬프 중심)
+function rowFillFrac(row: number[]): number {
+  const p = m.value?.progress ?? 0
+  const done = Math.min(Math.max(p - (row[0] ?? 1) + 1, 0), row.length)
+  if (done <= 1 || row.length <= 1) return 0
+  return (done - 1) / (row.length - 1)
+}
+
+// 레벨별 색상은 공용 유틸(levelTheme)에서 — 미션카드·마이페이지 공유
+const theme = computed(() => levelTheme(missionLevel.value))
+
+// 주간 미션 요일 스탬프 — weeklyStatus가 없어도 기본 요일로 항상 노출
+const DEFAULT_WEEK_DAYS = ['월', '화', '수', '목', '금', '토', '일'].map((day) => ({ day, isCompleted: false }))
+const weekDays = computed(() => props.data.weeklyStatus?.weekDays ?? DEFAULT_WEEK_DAYS)
+
+// 진행 바 채움: 해당 주차의 흰 점을 완전히 덮는 지점까지 (figma 실측: 바 306px 기준 1/2 진행 = 163px)
+const barWidth = computed(() => {
+  const d = m.value
+  if (!d || d.progress <= 0) return '0px'
+  const ratio = Math.min(1, d.progress / d.target)
+  return `calc((100% - 20px) * ${ratio} + 20px)`
+})
 </script>

@@ -16,8 +16,8 @@
           <!-- 레벨 배지 -->
           <span
             class="shrink-0 inline-flex items-center px-[6px] py-[3px] rounded-[6px] text-[11px] font-semibold leading-[1.3] tracking-[-0.02em]"
-            :style="{ backgroundColor: levelTheme(profile?.currentLevel ?? 1).light, color: levelTheme(profile?.currentLevel ?? 1).accent }"
-          >Lv.{{ profile?.currentLevel ?? 1 }}</span>
+            :style="{ backgroundColor: levelTheme(displayLevel).light, color: levelTheme(displayLevel).accent }"
+          >Lv.{{ displayLevel }}</span>
         </div>
       </div>
       <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6 shrink-0" />
@@ -141,6 +141,9 @@ const jobLabels: Record<JobType, string> = {
 }
 
 const jobLabel = computed(() => (profile.value?.job ? jobLabels[profile.value.job] : ''))
+
+// 백엔드 currentLevel은 '달성한 레벨'이라 신규 유저는 0 — 표시 레벨은 최소 1 (모든 유저 Lv.1부터)
+const displayLevel = computed(() => Math.max(profile.value?.currentLevel ?? 1, 1))
 
 const { badges, load: loadBadges } = useBadges()
 const acquiredBadges = computed(() =>

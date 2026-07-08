@@ -1,8 +1,14 @@
 <template>
   <div class="flex flex-col gap-[30px] w-full">
     <!-- 제목 + 메타(프로젝트/태그) -->
-    <div class="flex flex-col gap-[14px]">
-      <div class="flex items-center gap-[10px] border-b border-grey-4 pt-3 pb-[14px]">
+    <div class="flex flex-col" :class="variant === 'result' ? 'gap-[14px]' : ''">
+      <!-- 작성 날짜 (상세 화면 전용) -->
+      <p v-if="variant === 'detail' && date" class="text-label1 font-medium text-grey-8">{{ date }}</p>
+      <!-- 상세 화면은 제목 하단 라인 미노출 -->
+      <div
+        class="flex items-center gap-[10px] pt-3 pb-[14px]"
+        :class="variant === 'result' ? 'border-b border-grey-4' : ''"
+      >
         <!-- 저장 화면: 제목 편집 가능 (AI 자동생성, 공백 포함 최대 25자) -->
         <input
           v-if="editableTitle"
@@ -30,20 +36,26 @@
       </div>
 
       <div class="flex flex-col gap-[5px]">
-        <button
+        <component
+          :is="editableMeta ? 'button' : 'div'"
           class="flex h-6 items-center justify-between"
-          :disabled="!editableMeta"
           @click="editableMeta && $emit('edit-project')"
         >
           <span class="flex gap-3 items-center text-label2 font-medium">
             <span class="text-grey-7 w-[50px] text-left">프로젝트</span>
-            <span class="text-grey-8">{{ projectName || '자유 회고' }}</span>
+            <!-- 상세 화면: 프로젝트가 있으면 해당 프로젝트 회고 목록으로 이동하는 링크 -->
+            <button
+              v-if="variant === 'detail' && projectName"
+              class="text-grey-12 underline"
+              @click="$emit('open-project')"
+            >{{ projectName }}</button>
+            <span v-else class="text-grey-8">{{ projectName || '자유 회고' }}</span>
           </span>
           <img v-if="editableMeta" src="/icons/chevron-right.svg" alt="" class="w-5 h-5" />
-        </button>
-        <button
+        </component>
+        <component
+          :is="editableMeta ? 'button' : 'div'"
           class="flex min-h-6 items-center justify-between gap-2"
-          :disabled="!editableMeta"
           @click="editableMeta && $emit('edit-tags')"
         >
           <span class="flex gap-3 items-center text-label2 font-medium min-w-0">
@@ -54,7 +66,7 @@
             <span v-else class="text-grey-8">태그 없음</span>
           </span>
           <img v-if="editableMeta" src="/icons/chevron-right.svg" alt="" class="w-5 h-5 shrink-0" />
-        </button>
+        </component>
       </div>
     </div>
 
@@ -111,11 +123,13 @@ const props = withDefaults(
     editableTitle?: boolean // 저장 화면에서 제목 입력 가능
     editableMeta?: boolean // 결과 화면(저장 전)에서 프로젝트/태그 편집 가능
     deletable?: boolean
+    variant?: 'result' | 'detail' // 상세: 날짜 노출, 제목 하단 라인 미노출, 프로젝트 링크
+    date?: string | null // 상세 화면에 노출할 작성 날짜 (예: 2026년 3월 5일)
   }>(),
-  { projectName: null, tags: () => [], editableTitle: false, editableMeta: false, deletable: false },
+  { projectName: null, tags: () => [], editableTitle: false, editableMeta: false, deletable: false, variant: 'result', date: null },
 )
 
-defineEmits<{ delete: []; 'edit-project': []; 'edit-tags': []; 'update:title': [value: string] }>()
+defineEmits<{ delete: []; 'edit-project': []; 'edit-tags': []; 'open-project': []; 'update:title': [value: string] }>()
 
 const listSections = computed(() => [
   { key: 'blocked', label: '막힌 지점', items: props.content.blockedPoint ?? [] },

@@ -4,7 +4,8 @@
       <div v-if="modelValue" class="absolute inset-0 z-40 bg-black/40" @click="close" />
     </Transition>
     <Transition name="sheet-slide">
-      <div v-if="modelValue" class="absolute left-5 right-5 z-50" style="bottom: 30px">
+      <!-- Android 15 edge-to-edge: 투명 내비바 영역(env)만큼 올려 시트가 내비바에 겹치지 않게 -->
+      <div v-if="modelValue" class="absolute left-5 right-5 z-50" style="bottom: calc(30px + env(safe-area-inset-bottom, 0px))">
         <div
           ref="sheetEl"
           class="relative bg-grey-1 rounded-[36px] flex flex-col items-center gap-6 pt-8 pb-5 px-5"

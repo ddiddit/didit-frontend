@@ -20,10 +20,16 @@ const config: CapacitorConfig = {
       style: 'LIGHT',
       backgroundColor: '#F6F6F6',
     },
-    // 키보드 리사이즈는 네이티브가 아닌 앱에서 직접 처리(visualViewport 기반).
-    // native 모드는 visualViewport를 비정상(offsetTop 왜곡)으로 만들어 레이아웃이 꼬여서 none으로 둔다.
+    // 안드로이드: 키보드가 뜨면 WebView 자체를 줄임(adjustResize).
+    // - none + JS 축소 방식은 레이아웃 높이와 가시 영역의 차이만큼 팬(스크롤)이 가능해져
+    //   위로 당기면 빈 공간이 드러나는 문제가 있어 body로 전환.
+    // - resizeOnFullScreen: 상태바 투명 오버레이(edge-to-edge)에선 adjustResize가
+    //   무시되는 안드로이드 이슈 우회 옵션.
+    // iOS: 런타임에 setResizeMode('none')으로 되돌려 기존 JS(visualViewport) 방식 유지
+    //   (app/plugins/keyboard.client.ts)
     Keyboard: {
-      resize: 'none',
+      resize: 'body',
+      resizeOnFullScreen: true,
     },
   },
 }

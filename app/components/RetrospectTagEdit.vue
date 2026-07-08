@@ -1,5 +1,6 @@
 <template>
-  <div class="absolute inset-0 z-50 bg-grey-1 flex flex-col">
+  <!-- inset-0이 앱 컨테이너의 safe-top 패딩 영역까지 덮으므로 오버레이에도 safe-top 적용 (상태바 겹침 방지) -->
+  <div class="absolute inset-0 z-50 bg-grey-1 flex flex-col safe-top">
     <!-- 헤더 -->
     <div class="flex items-center h-[50px] px-5 shrink-0">
       <button class="p-1 -ml-1" aria-label="뒤로" @click="$emit('close')">
@@ -9,9 +10,9 @@
       <span class="w-6" />
     </div>
 
-    <div class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pt-2">
+    <div class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pt-2.5">
       <!-- 선택된 태그 + 입력 -->
-      <div class="flex flex-wrap items-center gap-[6px] bg-grey-3 rounded-xl px-4 py-3 min-h-[56px]">
+      <div class="flex flex-wrap items-center gap-[6px] bg-grey-3 rounded-xl px-4 py-4 min-h-[56px]">
         <span
           v-for="tag in selected"
           :key="tag.id"
@@ -36,11 +37,11 @@
       </div>
 
       <!-- 기존 태그 목록 (선택 안 된 것만) -->
-      <div class="flex flex-col mt-4">
+      <div class="flex flex-col mt-2.5">
         <div
           v-for="tag in availableTags"
           :key="tag.id"
-          class="flex h-[52px] items-center justify-between py-3 border-b border-grey-4"
+          class="flex items-center justify-between py-3 border-b border-grey-4"
         >
           <button class="flex items-center" @click="select(tag)">
             <span
@@ -51,7 +52,7 @@
             </span>
           </button>
           <button class="shrink-0" aria-label="태그 삭제" @click="askDelete(tag)">
-            <img src="/icons/trash.svg" alt="삭제" class="w-[18px] h-[18px]" />
+            <img src="/icons/close-sharp.svg" alt="삭제" class="w-[18px] h-[18px]" />
           </button>
         </div>
       </div>
@@ -59,7 +60,7 @@
 
     <!-- 하단 -->
     <div class="px-5 shrink-0 safe-bottom">
-      <p class="text-center text-label2 font-medium text-grey-7 mb-4">
+      <p class="text-center text-label2 font-medium text-grey-7 mb-5">
         태그는 최대 2개까지 선택 가능합니다.
       </p>
       <button

@@ -1,7 +1,7 @@
 <template>
   <Teleport to="#app-container">
     <Transition name="popup-fade">
-      <div v-if="modelValue" class="absolute inset-0 z-50 flex items-center justify-center px-5">
+      <div v-if="modelValue" class="absolute inset-0 z-50 flex items-center justify-center px-5" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
         <div
           class="absolute inset-0 bg-black/40"
           @click="closeOnBackdrop && $emit('update:modelValue', false)"

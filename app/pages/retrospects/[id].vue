@@ -8,8 +8,11 @@
 
       <!-- 더보기 메뉴 -->
       <div v-if="detail" class="relative">
-        <button class="p-1 -mr-1" aria-label="더보기" @click="menuOpen = !menuOpen">
-          <img src="/icons/more-vertical.svg" alt="더보기" class="w-6 h-6" />
+        <!-- 가로 미트볼(tabler dots-filled) — 인라인 SVG로 렌더 (파일 로드 실패 방지) -->
+        <button class="p-1 -mr-1 text-grey-13" aria-label="더보기" @click="menuOpen = !menuOpen">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6">
+            <path d="M7 12C7 12.5304 6.78929 13.0391 6.41421 13.4142C6.03914 13.7893 5.53043 14 5 14C4.46957 14 3.96086 13.7893 3.58579 13.4142C3.21071 13.0391 3 12.5304 3 12C3 11.9647 3.00167 11.9307 3.005 11.898C3.03017 11.386 3.25139 10.9033 3.6228 10.5499C3.99422 10.1965 4.48735 9.99964 5 10C5.53043 10 6.03914 10.2107 6.41421 10.5858C6.78929 10.9609 7 11.4696 7 12ZM14 12C14 12.5304 13.7893 13.0391 13.4142 13.4142C13.0391 13.7893 12.5304 14 12 14C11.4696 14 10.9609 13.7893 10.5858 13.4142C10.2107 13.0391 10 12.5304 10 12C10 11.9647 10.0017 11.9307 10.005 11.898C10.0302 11.386 10.2514 10.9033 10.6228 10.5499C10.9942 10.1965 11.4874 9.99964 12 10C12.5304 10 13.0391 10.2107 13.4142 10.5858C13.7893 10.9609 14 11.4696 14 12ZM21 12C21 12.5304 20.7893 13.0391 20.4142 13.4142C20.0391 13.7893 19.5304 14 19 14C18.4696 14 17.9609 13.7893 17.5858 13.4142C17.2107 13.0391 17 12.5304 17 12C17 11.9647 17.0017 11.9307 17.005 11.898C17.0302 11.386 17.2514 10.9033 17.6228 10.5499C17.9942 10.1965 18.4874 9.99964 19 10C19.5304 10 20.0391 10.2107 20.4142 10.5858C20.7893 10.9609 21 11.4696 21 12Z" fill="currentColor"/>
+          </svg>
         </button>
         <div
           v-if="menuOpen"
@@ -37,13 +40,16 @@
       <span class="text-body3 text-grey-7">불러오는 중…</span>
     </div>
 
-    <!-- 본문 -->
-    <div v-else-if="detail && detail.content" class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pb-10">
+    <!-- 본문: 하단 내비바(edge-to-edge) 영역만큼 여백 가산 -->
+    <div v-else-if="detail && detail.content" class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5" style="padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px))">
       <RetrospectiveResult
+        variant="detail"
         :title="detail.title"
         :content="detail.content"
         :project-name="detail.project?.name ?? null"
         :tags="detail.tags"
+        :date="dateLabel"
+        @open-project="goProjectRetrospects"
       />
     </div>
 
@@ -119,6 +125,7 @@
 <script setup lang="ts">
 import type { RetrospectiveDetail, Tag } from '~/types/api'
 import { isAuthError } from '~/utils/api-error'
+import { parseServerDate } from '~/utils/date'
 
 definePageMeta({ middleware: 'auth', layout: false })
 
@@ -137,6 +144,20 @@ const isDeleting = ref(false)
 
 const showProjectSelect = ref(false)
 const showTagEdit = ref(false)
+
+// 작성 날짜 (제목 상단 노출)
+const dateLabel = computed(() => {
+  const raw = detail.value?.completedAt
+  if (!raw) return null
+  const d = parseServerDate(raw)
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`
+})
+
+// 프로젝트명 클릭 → 해당 프로젝트 회고 목록으로 이동
+function goProjectRetrospects() {
+  const projectId = detail.value?.project?.id
+  if (projectId) navigateTo({ path: '/retrospects', query: { projectId } })
+}
 
 // 제목 수정
 const editingTitle = ref(false)

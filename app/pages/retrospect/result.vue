@@ -39,8 +39,8 @@
         </button>
       </div>
 
-      <!-- 본문 -->
-      <div class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pb-10">
+      <!-- 본문: 하단 내비바(edge-to-edge) 영역만큼 여백 가산 -->
+      <div class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5" style="padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px))">
         <RetrospectiveResult
           v-model:title="title"
           :content="result.content"

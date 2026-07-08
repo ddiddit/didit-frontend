@@ -7,7 +7,7 @@
         <button @click="goToSearch">
           <img src="/icons/search.svg" alt="검색" class="w-6 h-6" />
         </button>
-        <button v-if="activeTab === 'list'" @click="toggleMoreMenu">
+        <button @click="toggleMoreMenu">
           <img src="/icons/more-vertical.svg" alt="더보기" class="w-6 h-6" />
         </button>
       </div>
@@ -34,7 +34,7 @@
     <div class="flex-1 min-h-0 overflow-y-auto scrollbar-hide flex flex-col">
 
     <!-- 탭 선택: 리스트 / 캘린더 -->
-    <div class="flex items-start gap-4 px-5 h-[55px] shrink-0">
+    <div class="flex items-start gap-[7px] px-5 h-[55px] shrink-0">
       <button
         class="text-title3 transition-none"
         :class="activeTab === 'list' ? 'font-bold text-grey-12' : 'font-medium text-grey-6'"
@@ -121,7 +121,7 @@
         <div
           v-if="showProjectPicker"
           class="absolute left-5 right-5 z-30"
-          style="bottom: 30px;"
+          style="bottom: calc(30px + env(safe-area-inset-bottom, 0px));"
           @touchstart.passive="onDragStart"
           @touchend.passive="onDragEnd"
           @mousedown="onDragStart"
@@ -205,7 +205,7 @@
                   <p class="text-body2 font-semibold text-grey-13">{{ item.title }}</p>
                 </div>
                 <!-- 요약 -->
-                <p v-if="item.summary" class="text-label1 font-normal text-grey-10 leading-[1.6] line-clamp-2">{{ item.summary }}</p>
+                <p v-if="item.summary" class="text-label1-reading font-normal text-grey-10 line-clamp-2">{{ item.summary }}</p>
               </div>
               <!-- 태그 (UiTag로 통일 — 태그 id 해시 기반 색상, 화면 간 동일) -->
               <div v-if="item.tags && item.tags.length > 0" class="flex flex-wrap gap-[6px]">
@@ -319,7 +319,7 @@
                       <p class="text-body2 font-semibold text-grey-13">{{ r.title }}</p>
                     </div>
                     <!-- 요약 -->
-                    <p v-if="r.summary" class="text-label1 font-normal text-grey-10 leading-[1.6] line-clamp-2">{{ r.summary }}</p>
+                    <p v-if="r.summary" class="text-label1-reading font-normal text-grey-10 line-clamp-2">{{ r.summary }}</p>
                   </div>
                   <!-- 태그 -->
                   <div v-if="r.tags && r.tags.length > 0" class="flex flex-wrap gap-[6px]">
@@ -362,7 +362,8 @@ const isLoading = ref(retrospects.value.length === 0)
 const loadError = ref(false) // 목록 조회 실패 → 하단 인라인 에러 배너 (figma 31219)
 const slowLoading = ref(false) // 로딩이 길어질 때 응답 지연 배너 (figma 31267)
 let slowTimer: ReturnType<typeof setTimeout> | null = null
-const selectedProjectId = ref<string | null>(null)
+// 회고 상세의 프로젝트 링크 등으로 진입 시 쿼리(projectId)로 초기 필터 지정
+const selectedProjectId = ref<string | null>((route.query.projectId as string | undefined) ?? null)
 const showMoreMenu = ref(false)
 const showProjectPicker = ref(false)
 

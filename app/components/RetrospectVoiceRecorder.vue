@@ -5,7 +5,7 @@
     <div
       class="absolute left-5 right-5 z-[60] bg-grey-1 rounded-[36px] flex flex-col items-center pt-3 pb-8"
       :style="{
-        bottom: '30px',
+        bottom: 'calc(30px + env(safe-area-inset-bottom, 0px))',
         transform: dragY > 0 ? `translateY(${dragY}px)` : '',
         transition: dragging ? 'none' : 'transform 0.25s cubic-bezier(0.32,0.72,0,1)',
       }"

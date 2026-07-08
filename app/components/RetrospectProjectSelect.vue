@@ -1,5 +1,6 @@
 <template>
-  <div class="absolute inset-0 z-50 bg-grey-1 flex flex-col">
+  <!-- inset-0이 앱 컨테이너의 safe-top 패딩 영역까지 덮으므로 오버레이에도 safe-top 적용 (상태바 겹침 방지) -->
+  <div class="absolute inset-0 z-50 bg-grey-1 flex flex-col safe-top">
     <!-- 헤더 -->
     <div class="flex items-center h-[50px] px-5 shrink-0">
       <button class="p-1 -ml-1" aria-label="뒤로" @click="$emit('close')">
