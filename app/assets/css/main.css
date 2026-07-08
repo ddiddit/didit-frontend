@@ -1,4 +1,15 @@
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css');
+/* Pretendard 로컬 번들 (self-host)
+   - 앱(Capacitor WebView)은 제품 표면이라 런타임에 CDN(jsDelivr) 의존을 두지 않음: 오프라인 안전 + 렌더 안정
+   - 기존 dynamic-subset(원격)은 WebView·비정수 DPR에서 글자가 물러 보여 Variable 단일 woff2로 교체
+   - Variable 1파일이 전 weight(45~920) 커버 → normal/medium/semibold/bold 모두 이 폰트로 렌더 */
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  /* format은 범용 인식되는 'woff2'만 사용 — 'woff2-variations' 토큰을 못 읽는 구버전 WebView가 src를 통째로 건너뛰어 폴백되는 것 방지 (가변 축은 최신 WebView가 별도로 처리) */
+  src: url('/fonts/PretendardVariable.woff2') format('woff2');
+}
 
 @tailwind base;
 @tailwind components;
@@ -11,7 +22,8 @@
 
   html {
     font-family: 'Pretendard', system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
+    /* 비정수 DPR(예: 1.75) 기기에서 antialiased(grayscale AA)는 글자를 더 물러 보이게 해 제거 → WebView 기본 AA 사용 */
+    text-rendering: optimizeLegibility;
   }
 
   body {
