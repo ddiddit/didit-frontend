@@ -86,6 +86,13 @@ export type JobType = 'DEVELOPER' | 'PLANNER' | 'DESIGNER'
 export type AgeType = 'AGE_20' | 'AGE_30' | 'AGE_40_PLUS'
 export type ExperienceType = 'LESS_THAN_1_YEAR' | 'YEARS_1_TO_2' | 'YEARS_3_TO_5' | 'YEARS_6_TO_9' | 'YEARS_10_PLUS'
 
+// 프로필 응답에 포함되는 최근 획득 배지 (acquiredAt 최신순 최대 3개)
+export interface ProfileRecentBadge {
+  conditionType: string
+  threshold: number
+  acquiredAt: string | null
+}
+
 export interface UserProfile {
   nickname: string | null
   job: JobType | null
@@ -94,6 +101,7 @@ export interface UserProfile {
   experience: ExperienceType | null
   provider: 'KAKAO' | 'GOOGLE' | 'APPLE'
   currentLevel: number
+  recentBadges: ProfileRecentBadge[]
 }
 
 export interface NicknameCheckResponse {

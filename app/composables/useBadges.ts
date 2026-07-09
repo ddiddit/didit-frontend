@@ -67,6 +67,19 @@ function keyOf(conditionType: string, threshold: number): string {
   return `${conditionType}:${threshold}`
 }
 
+// 획득 배지(프로필 recentBadges 등) → 화면용 BadgeView (카탈로그 미정의 배지는 제외)
+export function mapAcquiredBadge(item: { conditionType: string; threshold: number; acquiredAt: string | null }): BadgeView | null {
+  const def = BADGE_CATALOG.find((d) => keyOf(d.conditionType, d.threshold) === keyOf(item.conditionType, item.threshold))
+  if (!def) return null
+  return {
+    ...def,
+    image: `/badges/${def.code}.svg`,
+    acquired: true,
+    acquiredAt: item.acquiredAt,
+    current: 0,
+  }
+}
+
 export function useBadges() {
   const { $api } = useNuxtApp()
 
@@ -80,8 +93,10 @@ export function useBadges() {
     }))
   }
 
-  const badges = ref<BadgeView[]>(buildDefault())
-  const loaded = ref(false)
+  // 전역 캐시 (useProfile과 동일 패턴) — 페이지 재진입 시 캐시를 즉시 그리고
+  // load()는 백그라운드 갱신만 하므로 스켈레톤은 앱 실행 후 최초 1회만 보인다.
+  const badges = useState<BadgeView[]>('badges:list', buildDefault)
+  const loaded = useState<boolean>('badges:loaded', () => false)
 
   // countable 배지(10회/30회) 진행 표기용 — 백엔드 배지 응답엔 카운트가 없어 완료 회고 수를 직접 센다.
   async function fetchRetroCount(): Promise<number> {
@@ -123,7 +138,8 @@ export function useBadges() {
         }))
       })
     } catch (e) {
-      badges.value = buildDefault()
+      // 캐시가 이미 있으면 유지 — 백그라운드 갱신 실패로 보여주던 배지를 비우지 않는다
+      if (!loaded.value) badges.value = buildDefault()
       if (throwOnError) throw e
     } finally {
       loaded.value = true
@@ -132,15 +148,7 @@ export function useBadges() {
 
   // BadgeApiItem → BadgeView (카탈로그 정의와 매칭, 미정의는 제외)
   function mapToView(item: BadgeApiItem): BadgeView | null {
-    const def = BADGE_CATALOG.find((d) => keyOf(d.conditionType, d.threshold) === keyOf(item.conditionType, item.threshold))
-    if (!def) return null
-    return {
-      ...def,
-      image: `/badges/${def.code}.svg`,
-      acquired: true,
-      acquiredAt: item.acquiredAt,
-      current: 0,
-    }
+    return mapAcquiredBadge(item)
   }
 
   // 아직 안 보여준 신규 획득 배지 조회 (GET /badges/popup). 배지 적립은 비동기라 1회 재시도.

@@ -34,18 +34,8 @@
         <img src="/icons/chevron-right.svg" alt="" class="w-6 h-6" />
       </button>
       <!-- 획득 배지 미리보기: 최대 2개. 열 고정 대신 카드 최소폭(140px) 기준 auto-fill → 넓은 화면에서 카드가 늘어나지 않음 -->
-      <!-- 로딩 중엔 스켈레톤으로 자리를 예약 → 배지(로컬 이미지)가 뒤늦게 pop-in 하며 깜빡이는 현상 방지 -->
-      <div v-if="!badgesLoaded" class="mt-2 mb-2 px-2 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-[10px]">
-        <div
-          v-for="n in 2"
-          :key="`skeleton-${n}`"
-          class="rounded-[14px] bg-grey-3 flex flex-col items-center pt-3 gap-1 pb-5 animate-pulse"
-        >
-          <div class="h-24 w-24 rounded-xl bg-grey-4" />
-          <div class="h-3 w-12 rounded bg-grey-4" />
-        </div>
-      </div>
-      <div v-else-if="acquiredBadges.length > 0" class="mt-2 mb-2 px-2 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-[10px]">
+      <!-- 프로필 캐시(recentBadges)로 그려 닉네임과 동시에 뜬다. 스켈레톤 없음 — 프로필은 레이아웃에서 프리페치됨 -->
+      <div v-if="acquiredBadges.length > 0" class="mt-2 mb-2 px-2 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-[10px]">
         <div
           v-for="b in acquiredBadges.slice(0, 2)"
           :key="b.code"
@@ -136,7 +126,8 @@
 
 <script setup lang="ts">
 import type { JobType } from '~/types/api'
-import { parseServerDate } from '~/utils/date'
+import type { BadgeView } from '~/composables/useBadges'
+import { mapAcquiredBadge } from '~/composables/useBadges'
 import { levelTheme } from '~/utils/levelTheme'
 
 definePageMeta({ middleware: 'auth', layout: 'default' })
@@ -159,20 +150,17 @@ const jobLabel = computed(() => (profile.value?.job ? jobLabels[profile.value.jo
 const showLevelBadge = computed(() => (profile.value?.currentLevel ?? 0) >= 1)
 const displayLevel = computed(() => profile.value?.currentLevel ?? 1)
 
-const { badges, loaded: badgesLoaded, load: loadBadges } = useBadges()
+// 배지 미리보기는 프로필 응답의 recentBadges(최신순)로 그린다.
+// 별도 배지 API 호출이 없어 프로필 캐시가 있으면 재진입 시 스켈레톤 없이 즉시 렌더링된다.
 const acquiredBadges = computed(() =>
-  badges.value
-    .filter(b => b.acquired)
-    .sort((a, b) => {
-      const ta = a.acquiredAt ? parseServerDate(a.acquiredAt).getTime() : 0
-      const tb = b.acquiredAt ? parseServerDate(b.acquiredAt).getTime() : 0
-      return tb - ta
-    }),
+  (profile.value?.recentBadges ?? [])
+    .map(mapAcquiredBadge)
+    .filter((b): b is BadgeView => b !== null),
 )
 
 async function reload() {
   await run(async () => {
-    await Promise.all([reloadProfile(), loadBadges(true)])
+    await reloadProfile()
   })
 }
 
