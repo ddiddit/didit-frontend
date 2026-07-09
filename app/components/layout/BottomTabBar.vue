@@ -21,7 +21,7 @@
           :style="isActive(tab.to) ? 'filter: brightness(0) invert(1) brightness(0.098)' : 'filter: brightness(0) invert(1) brightness(0.596)'"
         />
         <span
-          class="text-caption1 font-bold transition-colors duration-150"
+          class="text-caption1 font-semibold transition-colors duration-150"
           :class="isActive(tab.to) ? 'text-grey-13' : 'text-grey-7'"
         >
           {{ tab.label }}

@@ -75,7 +75,7 @@
                 :fill="n <= m.progress ? '#353535' : '#C6C6C6'"
               />
             </svg>
-            <span class="text-[12px] font-semibold text-grey-6 leading-[1.36] whitespace-nowrap">{{ n }}회</span>
+            <span class="text-[12px] font-semibold text-grey-6 leading-[1.36] tracking-[-0.02em] whitespace-nowrap">{{ n }}회</span>
 
             <!-- 레벨업 힌트 뱃지: 마지막 원형 오른쪽에 분리 노출 (초반 온보딩용 — 미션 레벨 1·2에서만) -->
             <div

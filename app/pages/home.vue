@@ -93,7 +93,7 @@
           <template v-for="(r, i) in recentList" :key="r.id">
             <button class="flex items-center gap-3 text-left w-full" @click="navigateTo(`/retrospects/${r.id}`)">
               <div class="shrink-0 w-[42px] h-[42px] rounded-[10px] bg-grey-4 flex items-center justify-center">
-                <span class="text-[12px] font-semibold text-grey-7 leading-[1.36]">{{ r.completedAt ? formatDate(r.completedAt) : '' }}</span>
+                <span class="text-[12px] font-semibold text-grey-7 leading-[1.36] tracking-[-0.02em]">{{ r.completedAt ? formatDate(r.completedAt) : '' }}</span>
               </div>
               <div class="flex-1 min-w-0 flex flex-col gap-1">
                 <!-- 상단: 피드백 (최대 2줄) -->
