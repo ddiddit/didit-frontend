@@ -130,7 +130,8 @@ export interface HomeResponse {
 export interface RecentRetrospective {
   id: string
   title: string | null
-  summary: string | null
+  // 홈 "최근 제안 받은 행동" 카드는 회고 요약이 아니라 다음 행동 제안 요약구를 노출
+  nextAction: string | null
   completedAt: string | null
   projectName: string | null
   tags: Tag[]

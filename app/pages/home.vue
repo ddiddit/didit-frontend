@@ -91,13 +91,13 @@
         <p class="text-[14px] font-medium text-grey-7 leading-[1.4] tracking-[-0.02em] mt-[3px]">제안 받은 피드백을 업무에 적용해보세요</p>
         <div class="mt-3.5 bg-white rounded-[18px] px-5 py-[22px] flex flex-col gap-[14px]">
           <template v-for="(r, i) in recentList" :key="r.id">
-            <button class="flex items-center gap-3 text-left w-full" @click="navigateTo(`/retrospects/${r.id}`)">
+            <button class="flex items-center gap-3 text-left w-full" @click="navigateTo(`/retrospects/${r.id}?from=home`)">
               <div class="shrink-0 w-[42px] h-[42px] rounded-[10px] bg-grey-4 flex items-center justify-center">
                 <span class="text-[12px] font-semibold text-grey-7 leading-[1.36] tracking-[-0.02em]">{{ r.completedAt ? formatDate(r.completedAt) : '' }}</span>
               </div>
               <div class="flex-1 min-w-0 flex flex-col gap-1">
-                <!-- 상단: 피드백 (최대 2줄) -->
-                <p class="text-[15px] font-medium text-grey-13 leading-[1.5] tracking-[-0.02em] line-clamp-2">{{ r.summary || r.title }}</p>
+                <!-- 상단: 다음 행동 제안 요약구 (최대 2줄) -->
+                <p class="text-[15px] font-medium text-grey-13 leading-[1.5] tracking-[-0.02em] line-clamp-2">{{ r.nextAction || r.title }}</p>
                 <!-- 하단: 프로젝트명 · 회고제목 (자유회고는 제목만) -->
                 <div class="flex items-center gap-[5px]">
                   <template v-if="r.projectName">
@@ -221,11 +221,11 @@ const greetingMessage = computed(() =>
 
 function formatDate(dateStr: string): string {
   const d = parseServerDate(dateStr)
-  return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
+  return `${d.getMonth() + 1}/${d.getDate()}`
 }
 
-// 최근 회고 최대 3개 — 피드백 슬라이더(요약 있는 것)와 최근 회고 리스트에 사용
-const topFeedbacks = computed(() => recentRetrospectives.value.filter((r) => r.summary).slice(0, 3))
+// 최근 회고 최대 3개 — 피드백 슬라이더(다음 행동 제안 있는 것)와 최근 회고 리스트에 사용
+const topFeedbacks = computed(() => recentRetrospectives.value.filter((r) => r.nextAction).slice(0, 3))
 const recentList = computed(() => recentRetrospectives.value.slice(0, 5))
 
 // 피드백 캐러셀 (transform 방식 — 모든 카드 좌측 정렬 + 우측 peek, 마우스/터치 드래그)
@@ -313,14 +313,14 @@ onUnmounted(() => setBadgeBannerHold(false))
 // 레벨업 축하 메시지 (백엔드 PopupStatus에 문구가 없어 프론트에서 매핑)
 const LEVEL_UP_MESSAGES: Record<number, string> = {
   2: '한 주 동안 꾸준히 회고를 작성했네요.\n작은 기록이 좋은 습관의 시작이 될 수 있어요.',
-  3: '꾸준히 기록하는 습관이 만들어졌네요.\n다음 회고도 차근차근 이어가 보세요.',
+  3: '꾸준히 기록하는 습관이 만들어졌어요.\n다음 회고도 차근차근 이어가 보세요.',
   4: '3번의 회고를 작성했어요.\n계속해서 나만의 회고 루틴을 이어가 보세요.',
-  5: '꾸준히 기록하는 습관이 만들어졌네요.\n다음 회고도 차근차근 이어가 보세요.',
+  5: '꾸준히 기록하는 습관이 만들어졌어요.\n다음 회고도 차근차근 이어가 보세요.',
   6: '5번의 회고를 작성했어요.\n기록하는 습관이 조금씩 자리를 잡고 있어요.',
-  7: '꾸준히 기록하는 습관이 만들어졌네요.\n다음 회고도 차근차근 이어가 보세요.',
+  7: '꾸준히 기록하는 습관이 만들어졌어요.\n다음 회고도 차근차근 이어가 보세요.',
   8: '7번의 회고를 작성했어요.\n꾸준히 쌓아온 기록이 성장의 기반이 돼요.',
-  9: '꾸준히 기록하는 습관이 만들어졌네요.\n다음 회고도 차근차근 이어가 보세요.',
-  10: '10번의 회고를 작성하고 최고 레벨에 도달했어요.\n앞으로도 꾸준히 회고를 남겨보세요!',
+  9: '꾸준히 기록하는 습관이 만들어졌어요.\n다음 회고도 차근차근 이어가 보세요.',
+  10: '10번의 회고를 작성했어요.\n최고 레벨에 도달했어요. 앞으로도 꾸준히 회고를 남겨보세요!',
 }
 const levelUpMessage = computed(() => LEVEL_UP_MESSAGES[mission.value?.currentLevel ?? 0] ?? '미션을 완료했어요!')
 
