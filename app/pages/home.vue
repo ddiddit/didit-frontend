@@ -91,13 +91,13 @@
         <p class="text-[14px] font-medium text-grey-7 leading-[1.4] tracking-[-0.02em] mt-[3px]">제안 받은 피드백을 업무에 적용해보세요</p>
         <div class="mt-3.5 bg-white rounded-[18px] px-5 py-[22px] flex flex-col gap-[14px]">
           <template v-for="(r, i) in recentList" :key="r.id">
-            <button class="flex items-center gap-3 text-left w-full" @click="navigateTo(`/retrospects/${r.id}`)">
+            <button class="flex items-center gap-3 text-left w-full" @click="navigateTo(`/retrospects/${r.id}?from=home`)">
               <div class="shrink-0 w-[42px] h-[42px] rounded-[10px] bg-grey-4 flex items-center justify-center">
                 <span class="text-[12px] font-semibold text-grey-7 leading-[1.36] tracking-[-0.02em]">{{ r.completedAt ? formatDate(r.completedAt) : '' }}</span>
               </div>
               <div class="flex-1 min-w-0 flex flex-col gap-1">
-                <!-- 상단: 피드백 (최대 2줄) -->
-                <p class="text-[15px] font-medium text-grey-13 leading-[1.5] tracking-[-0.02em] line-clamp-2">{{ r.summary || r.title }}</p>
+                <!-- 상단: 다음 행동 제안 요약구 (최대 2줄) -->
+                <p class="text-[15px] font-medium text-grey-13 leading-[1.5] tracking-[-0.02em] line-clamp-2">{{ r.nextAction || r.title }}</p>
                 <!-- 하단: 프로젝트명 · 회고제목 (자유회고는 제목만) -->
                 <div class="flex items-center gap-[5px]">
                   <template v-if="r.projectName">
@@ -221,11 +221,11 @@ const greetingMessage = computed(() =>
 
 function formatDate(dateStr: string): string {
   const d = parseServerDate(dateStr)
-  return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
+  return `${d.getMonth() + 1}/${d.getDate()}`
 }
 
-// 최근 회고 최대 3개 — 피드백 슬라이더(요약 있는 것)와 최근 회고 리스트에 사용
-const topFeedbacks = computed(() => recentRetrospectives.value.filter((r) => r.summary).slice(0, 3))
+// 최근 회고 최대 3개 — 피드백 슬라이더(다음 행동 제안 있는 것)와 최근 회고 리스트에 사용
+const topFeedbacks = computed(() => recentRetrospectives.value.filter((r) => r.nextAction).slice(0, 3))
 const recentList = computed(() => recentRetrospectives.value.slice(0, 5))
 
 // 피드백 캐러셀 (transform 방식 — 모든 카드 좌측 정렬 + 우측 peek, 마우스/터치 드래그)

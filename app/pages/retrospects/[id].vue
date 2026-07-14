@@ -2,7 +2,7 @@
   <div class="h-full bg-grey-1 flex flex-col">
     <!-- 헤더 -->
     <div class="flex items-center justify-between h-[50px] px-5 shrink-0">
-      <button class="p-1 -ml-1" aria-label="뒤로" @click="navigateTo('/retrospects')">
+      <button class="p-1 -ml-1" aria-label="뒤로" @click="goBack">
         <img src="/icons/back.svg" alt="뒤로" class="w-6 h-6" />
       </button>
 
@@ -135,6 +135,11 @@ const { show } = useToast()
 const { track } = useAmplitude()
 
 const id = computed(() => String(route.params.id))
+
+// 진입점에 따라 뒤로가기 목적지 결정 — 홈에서 들어오면 홈, 그 외(목록/검색 등)는 회고 목록
+function goBack() {
+  navigateTo(route.query.from === 'home' ? '/home' : '/retrospects')
+}
 const detail = ref<RetrospectiveDetail | null>(null)
 const isLoading = ref(true)
 const authFailed = ref(false) // 인증 만료 시 에러 화면 대신 로그인 리다이렉트(인터셉터)
