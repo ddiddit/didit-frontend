@@ -1,14 +1,14 @@
 <template>
   <!-- 미션 완료/레벨업 팝업 카드: 왕관(아래→위 상승) + confetti + 메시지 + 확인 -->
-  <div class="relative w-full max-w-[300px] mx-auto pt-[46px]">
-    <!-- 왕관 (카드 위로 솟으며 상승) -->
+  <div class="relative w-full max-w-[300px] mx-auto pt-[60px]">
+    <!-- 왕관 (카드 위로 솟으며 상승) — SVG 뷰박스(82×60) 비율 유지, 하단이 카드 윗면과 맞닿음 -->
     <img
       :src="`/icons/levels/lv-${level}.svg`"
       :alt="`레벨 ${level} 달성`"
-      class="crown-rise absolute top-0 left-1/2 w-[84px] h-[84px] z-10"
+      class="crown-rise absolute top-0 left-1/2 w-[82px] h-[60px] z-10"
     />
     <!-- 카드 -->
-    <div class="popup-pop bg-white rounded-2xl px-5 pt-[56px] pb-5 flex flex-col items-center gap-[14px] shadow-[0_4px_20px_0_rgba(0,0,0,0.1)]">
+    <div class="popup-pop bg-white rounded-2xl px-5 pt-7 pb-5 flex flex-col items-center gap-[14px] shadow-[0_4px_20px_0_rgba(0,0,0,0.1)]">
       <!-- 문구 블록 하단 12px + 카드 gap 14px = 버튼과 26px 간격 (피그마) -->
       <div class="flex flex-col items-center gap-2 pb-3">
         <p class="text-[17px] font-semibold text-grey-13 text-center tracking-[-0.02em]" style="line-height:140%">
