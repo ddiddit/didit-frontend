@@ -14,7 +14,7 @@
     <div class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5">
       <div class="flex flex-col items-center">
         <!-- 자유 회고 (프로젝트 없음) -->
-        <button class="flex gap-[14px] items-center w-full py-[11px]" @click="selectFree">
+        <button class="flex gap-[14px] items-center w-full h-[46px]" @click="selectFree">
           <img :src="checkSrc(selectedId === null && !adding)" alt="" class="w-6 h-6 shrink-0" />
           <span class="text-body3 font-medium text-left">
             <span class="text-grey-13">자유 회고</span>
@@ -26,7 +26,7 @@
         <button
           v-for="p in projects"
           :key="p.id"
-          class="flex gap-[14px] items-center w-full py-[11px]"
+          class="flex gap-[14px] items-center w-full h-[46px]"
           @click="selectProject(p.id)"
         >
           <img :src="checkSrc(selectedId === p.id && !adding)" alt="" class="w-6 h-6 shrink-0" />
@@ -34,7 +34,7 @@
         </button>
 
         <!-- 새 프로젝트 입력 (초록 체크 = 선택됨, 포커스 시 하단 보더 — /projects와 동일) -->
-        <div v-if="adding" class="flex gap-[14px] items-center w-full py-[11px]">
+        <div v-if="adding" class="flex gap-[14px] items-center w-full h-[46px]">
           <img src="/icons/check-circle-on.svg" alt="" class="w-6 h-6 shrink-0" />
           <div class="flex-1 min-w-0 self-stretch flex items-center border-b border-transparent focus-within:border-grey-5 transition-colors">
             <input
@@ -42,7 +42,7 @@
               v-model="newProjectName"
               maxlength="15"
               placeholder="프로젝트 이름을 입력하세요"
-              class="w-full bg-transparent text-label1 text-grey-13 placeholder:text-[15px] placeholder:font-normal placeholder:text-grey-7 outline-none py-1"
+              class="w-full bg-transparent text-body3 font-medium text-grey-13 placeholder:text-[15px] placeholder:font-normal placeholder:text-grey-7 outline-none py-1"
               @keydown.enter="onNewProjectEnter"
             />
           </div>

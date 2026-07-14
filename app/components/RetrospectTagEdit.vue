@@ -52,7 +52,7 @@
             </span>
           </button>
           <button class="shrink-0" aria-label="태그 삭제" @click="askDelete(tag)">
-            <img src="/icons/close-sharp.svg" alt="삭제" class="w-[18px] h-[18px]" />
+            <img src="/icons/trash.svg" alt="삭제" class="w-[18px] h-[18px]" />
           </button>
         </div>
       </div>

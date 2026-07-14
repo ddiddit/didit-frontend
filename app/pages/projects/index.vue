@@ -37,7 +37,7 @@
         <li
           v-for="(project, index) in localProjects"
           :key="project.id ?? `new-${index}`"
-          class="flex items-center px-5 h-[54px] bg-white"
+          class="flex items-center px-5 h-[46px] bg-white"
         >
           <!-- 삭제 버튼 -->
           <button class="shrink-0 mr-3" @click="requestDelete(project)">
@@ -59,14 +59,14 @@
               type="text"
               maxlength="15"
               :placeholder="project.isNew ? '프로젝트 이름을 입력하세요' : ''"
-              class="w-full bg-transparent text-label1 text-grey-13 placeholder:text-[15px] placeholder:font-normal placeholder:text-[#989898] outline-none py-1"
+              class="w-full bg-transparent text-body3 font-medium text-grey-13 placeholder:text-[15px] placeholder:font-normal placeholder:text-[#989898] outline-none py-1"
               @focus="focusedIndex = index"
               @blur="onInputBlur(project, index)"
               @keydown.enter.prevent="inputRefs[index]?.blur()"
             />
             <span
               v-else
-              class="w-full text-label1 text-grey-13 py-1 cursor-text"
+              class="w-full text-body3 font-medium text-grey-13 py-1 cursor-text"
               @click="startEditing(project, index)"
             >{{ project.name }}</span>
           </div>
