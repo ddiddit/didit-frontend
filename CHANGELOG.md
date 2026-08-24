@@ -1,5 +1,87 @@
 # Changelog
 
+## [1.3.0](https://github.com/ddiddit/didit-frontend/compare/v1.2.0...v1.3.0) (2026-08-24)
+
+
+### Features
+
+* **app:** 상·하단 시스템 바를 화면 배경색에 자동 통일 ([b8de12e](https://github.com/ddiddit/didit-frontend/commit/b8de12eb11b4dc655fa6d10ce6b0d6fdd014518d))
+* **error:** 회고 결과·검색 페이지 로드 실패 처리 보강 ([b3a2aa1](https://github.com/ddiddit/didit-frontend/commit/b3a2aa120b3f8fe38a0ab77dff5dd1c6d55682b4))
+* **home:** 회고 유무·레벨별 홈/마이 상태 정리 및 최고레벨 카드 추가 ([14f18ab](https://github.com/ddiddit/didit-frontend/commit/14f18ab66dbff8be3128d8489dae75f7a7a86b6a))
+* 소셜 로그인 계정 복구 화면 연결 ([d7d5ad9](https://github.com/ddiddit/didit-frontend/commit/d7d5ad9e968a7ed3e890f7650dfcfbf766833c9d))
+* 소셜 로그인 계정 복구 화면 연결 [#57](https://github.com/ddiddit/didit-frontend/issues/57) ([97ce3b2](https://github.com/ddiddit/didit-frontend/commit/97ce3b2c0abc04e9bebe4569de037a962c1f27fa))
+
+
+### Bug Fixes
+
+* 7/8 디자인 QA 일괄 반영 (회고 상세·태그·검색·홈 미션·팝업·edge-to-edge) ([d7e7873](https://github.com/ddiddit/didit-frontend/commit/d7e787360be46682268173871e19f438b7399a41))
+* **android:** 키보드 표시 시 WebView 리사이즈되도록 adjustResize 추가 ([a4b1cb1](https://github.com/ddiddit/didit-frontend/commit/a4b1cb13b06be39dc4d30bcc53433af841ca33d4))
+* **app:** 앱 WebView 작은 텍스트 뭉개짐 완화(불투명 배경으로 서브픽셀 AA 복구) ([4a797a6](https://github.com/ddiddit/didit-frontend/commit/4a797a6bfb0d3f8a0d9c0bfa6d125c8c05420c93))
+* **app:** 키보드 열릴 때 채팅 입력창이 가려지는 문제 수정 ([51f6d7f](https://github.com/ddiddit/didit-frontend/commit/51f6d7f4b55dc0cd00ce45aecd2e8c3ceb808793))
+* **auth:** 계정 전환 시 이전 계정 데이터 노출 수정 ([f778c24](https://github.com/ddiddit/didit-frontend/commit/f778c24cbdafb67b5814e5c5b2bebb3eefd1633e))
+* **auth:** 네이티브 로그인 시 세션 유지·푸시 등록 및 알림 딥링크 콜드스타트 처리 ([eee1a00](https://github.com/ddiddit/didit-frontend/commit/eee1a009e9736d6dc8db0d1eb834208e6e308e2e))
+* **auth:** 앱 라이브 리로드(dev)에서 소셜 로그인 실패 수정 ([f704a67](https://github.com/ddiddit/didit-frontend/commit/f704a67495f96ff8b7d819cfe381a6aea1c31804))
+* **auth:** 토큰 갱신 일시 실패 시 로그아웃 방지 및 푸시 탭 딥링크 이동 ([b405e68](https://github.com/ddiddit/didit-frontend/commit/b405e68d547256929e56442cac36c3f63ce0447f))
+* **badge:** 마이페이지 배지 이미지 지연 로딩 개선 ([9f554eb](https://github.com/ddiddit/didit-frontend/commit/9f554eb7bd71a2e23e1a6c9a3a4c38e3311b9bba))
+* **badge:** 배지 이미지 SVG 전체 교체(시안 재추출본) ([17a0dd3](https://github.com/ddiddit/didit-frontend/commit/17a0dd38d571671ecd87e49b8aa6b39a11a3f8b2))
+* **badge:** 배지 획득 알림을 모달 팝업에서 인앱 토스트 배너로 전환 ([18b82b2](https://github.com/ddiddit/didit-frontend/commit/18b82b249af7e09cce35b7f8b7ff29881f531797))
+* **badge:** 배지 획득 알림을 확정 디자인(모달 팝업)으로 복원 ([7647045](https://github.com/ddiddit/didit-frontend/commit/7647045b0bd7375ffd37af8dad8c8f32ed74f69f))
+* **badge:** 배지 획득 팝업 타이틀·본문 문구를 확정 카피로 교체 ([bc1600a](https://github.com/ddiddit/didit-frontend/commit/bc1600a4eee592442d1893d21bd0cc19fbe02f56))
+* **font:** Pretendard 로컬 번들로 교체해 앱 WebView 텍스트 뭉개짐 수정 ([447ab90](https://github.com/ddiddit/didit-frontend/commit/447ab901421e2590e2db918b836a6cf25998fd5c))
+* **font:** Pretendard 로컬 번들로 앱 텍스트 뭉개짐 수정 ([47d1aea](https://github.com/ddiddit/didit-frontend/commit/47d1aea10eaf9fc1794bf3cbb11cd48971766ad4))
+* **home:** 레벨업 안내 뱃지를 모든 횟수형 미션에서 노출 ([f17e3e4](https://github.com/ddiddit/didit-frontend/commit/f17e3e4de5f833d5e562aad4ad9184a326a1dd49))
+* **home:** 레벨업 안내 뱃지를 미션 레벨 1·2에서만 노출 ([62fd202](https://github.com/ddiddit/didit-frontend/commit/62fd2028e49b72e5a7077a36d833999e1a4e93f7))
+* **home:** 미션 실패 팝업 딤을 일반 딤(black/40)으로 복원 ([6b8cb93](https://github.com/ddiddit/didit-frontend/commit/6b8cb930b4be3fc648551b6f36a00dd7fecb8c5c))
+* **home:** 미션 완료 팝업 왕관 정렬·레벨업 문구 피그마 정합 ([7de3fe0](https://github.com/ddiddit/didit-frontend/commit/7de3fe096f1587ca5e4ffdf6442ce79fef91c775))
+* **home:** 미션 카드 레벨을 진행 중인 미션 레벨로 표시 ([5c1e337](https://github.com/ddiddit/didit-frontend/commit/5c1e337d60cd00683b0a0c6d4f58ef8375b4348a))
+* **home:** 미션 팝업 시안 정합 — 문구·버튼 간격 26px, 딤 강화 ([e8cde4a](https://github.com/ddiddit/didit-frontend/commit/e8cde4abad2a2406c354a72d3adf229369e1f35c))
+* **home:** 신규 유저에게도 빈 화면 대신 미션 카드 홈 노출 ([7d32866](https://github.com/ddiddit/didit-frontend/commit/7d328662b3ad20e4657e969ad0f1718db0fd1696))
+* **home:** 오늘 회고 횟수 소진 시 미션 카드 '회고 남기기' 버튼 비활성화 ([46c7eb9](https://github.com/ddiddit/didit-frontend/commit/46c7eb95008ef94f6b751562a302fe4bae51e8c8))
+* **home:** 최근 제안 받은 행동 카드 QA 수정 ([399584a](https://github.com/ddiddit/didit-frontend/commit/399584a2276c2d9412091e6a95164dd979f79ec1))
+* **home:** 횟수형 미션 완료 스탬프 사이 연결선을 테마 색으로 채움 ([786fda9](https://github.com/ddiddit/didit-frontend/commit/786fda9d3327369942208b24335e26065b2b201c))
+* **layout:** Android 15 edge-to-edge 하단 내비바 보정 일괄 적용 ([e572a16](https://github.com/ddiddit/didit-frontend/commit/e572a164938130e5485c2f1a2829da1af8a4cb92))
+* **layout:** 컨테이너 스크롤 잘림 방지 및 채팅 키보드 스크롤 대응 ([f19b8f5](https://github.com/ddiddit/didit-frontend/commit/f19b8f58d98128c459fbdc3a1ecbed1d6210d5f7))
+* **layout:** 하단 여백 통일 및 태블릿 레터박스 대응 ([afa0a0a](https://github.com/ddiddit/didit-frontend/commit/afa0a0a0f2e094eff8289784dbbb51a52f7a563b))
+* **layout:** 홈 탭 비활성 아이콘을 라인(outline) 버전으로 분리 ([76b4eab](https://github.com/ddiddit/didit-frontend/commit/76b4eab40d854ec7be6482f9648dfd2773d61e20))
+* **login:** 로그인 취소는 실패 처리하지 않고 실패 시 토스트로 안내 ([166ca48](https://github.com/ddiddit/didit-frontend/commit/166ca4864c3a3f21f34ffb9c76a88239479889bd))
+* **my:** 마이페이지 배지 미리보기를 프로필 응답으로 통합해 스켈레톤 제거 ([2dbaeaa](https://github.com/ddiddit/didit-frontend/commit/2dbaeaa0ae26e70b2dc501de65de6301770b0369))
+* **my:** 목표 달성 배지 미리보기 pop-in 방지(스켈레톤) ([6ce23df](https://github.com/ddiddit/didit-frontend/commit/6ce23df485bd421b522ca6b1c3e28997d115478b))
+* **my:** 신규 유저 레벨 배지 Lv.0 표시를 Lv.1로 보정 ([60091ef](https://github.com/ddiddit/didit-frontend/commit/60091efbd8cc51ee656271b46d39a6cb5264afe1))
+* **profile:** 닉네임 형식 오류 시 안내 문구 노출 (온보딩·프로필수정) ([e85fa13](https://github.com/ddiddit/didit-frontend/commit/e85fa13cedef61223c0e950c47b1426fd3ffe18e))
+* **project:** 프로젝트 선택/편집·태그 UI 시안 정합 ([3f6cd33](https://github.com/ddiddit/didit-frontend/commit/3f6cd33b98cf61a61a3cd9d45bf88ca75fb11f97))
+* **project:** 프로젝트 편집 QA 수정 ([32ebe94](https://github.com/ddiddit/didit-frontend/commit/32ebe94ccb9292e111235a747881e8d5411eeeb9))
+* **retrospect:** 안드로이드 키보드 리사이즈를 adjustResize 방식으로 전환 ([78236c7](https://github.com/ddiddit/didit-frontend/commit/78236c7e649c2364974d234ca136ef5995c3a4a6))
+* **retrospect:** 전송 아이콘 첫 렌더 깜빡임 제거 및 마이크 권한 처리 ([1e5cc5f](https://github.com/ddiddit/didit-frontend/commit/1e5cc5f9e7e7e06553a624c3dae253b98d6aadba))
+* **retrospect:** 주 구분선 상하 여백 12→24px로 정합 ([98a9257](https://github.com/ddiddit/didit-frontend/commit/98a92572b76e9f37389d66532dd10aae7bc441b8))
+* **retrospect:** 채팅 입력바 상단 그라데이션 페이드 및 마이크 팝업 하단 보정 ([f0a8ad8](https://github.com/ddiddit/didit-frontend/commit/f0a8ad865505a24c4f274ca1a48e4c8a7850d31d))
+* **retrospect:** 캘린더 탭에서도 더보기(⋯) 메뉴 노출 ([937d64f](https://github.com/ddiddit/didit-frontend/commit/937d64f507ff3c5716b7199707950bc7f710598b))
+* **retrospect:** 키보드 열릴 때 채팅 입력창을 키보드에 밀착 ([5bf27ec](https://github.com/ddiddit/didit-frontend/commit/5bf27ec89d53eec55a73b1dc51b1d759a109693e))
+* **retrospect:** 키보드 열릴 때 채팅 입력창이 가려지는 문제 해결 ([0a388ec](https://github.com/ddiddit/didit-frontend/commit/0a388ec9ec2b529e01590fceace8f920486bfbbc))
+* **retrospect:** 키보드 열림 시 채팅 입력창 위치 처리 개선 ([48ceb21](https://github.com/ddiddit/didit-frontend/commit/48ceb21dcde1802d213b11f1289f3cf1b305998e))
+* **retrospect:** 프로젝트 선택 안내 문구와 버튼 사이 간격 16px→20px 조정 ([0965074](https://github.com/ddiddit/didit-frontend/commit/096507489aba3ae2a8be4583675c8f75670901f0))
+* **retrospect:** 한글 IME 조합 중 음성 버튼 토글 오작동 수정 ([a150e87](https://github.com/ddiddit/didit-frontend/commit/a150e87379223e6895b6e2ee647f856abe77acc4))
+* **retrospect:** 회고 결과·상세 하단 여백에 내비바 safe-area 가산 ([7b514d5](https://github.com/ddiddit/didit-frontend/commit/7b514d5c6e183c54cdea1a1db174b3faf1541540))
+* **retrospect:** 회고 상세 화면 시안 정합 및 목록 카드 타이포 수정 ([35abaae](https://github.com/ddiddit/didit-frontend/commit/35abaaed7d11c65c5eff9e3bded0344e16f908e8))
+* **search:** 검색 입력창 flex 넘침으로 아이콘 우측 패딩이 밀리던 문제 수정 ([e07ae83](https://github.com/ddiddit/didit-frontend/commit/e07ae839cdf279b7883deac6d6a85cf958818861))
+* **search:** 회고 검색 화면에서 하단 탭바 미노출 ([e86f4de](https://github.com/ddiddit/didit-frontend/commit/e86f4de743b091a467ae8da3141f2c4874a4c1b4))
+* **tag:** 태그 추가·삭제 화면 시안 정합 ([bcfe36d](https://github.com/ddiddit/didit-frontend/commit/bcfe36db38cc913eeb0625c276c8626312df4f6b))
+* **toast:** 토스트 피그마 디자인 적용 (로그인 에러 아이콘·두 줄) ([2d3e9f1](https://github.com/ddiddit/didit-frontend/commit/2d3e9f1254fc31d64be2e03dbe022caedee7a8a6))
+* **ui:** WebView 작은 텍스트 뭉개짐 완화(text-rendering optimizeSpeed) ([092fdba](https://github.com/ddiddit/didit-frontend/commit/092fdba5adc218c795fe9aad819415817b87abe6))
+* **ui:** 닉네임 검증 안내·탭 명칭·본문 라인하이트 수정 ([df70a9b](https://github.com/ddiddit/didit-frontend/commit/df70a9bf9b7861886148c4c39127c6eff8d58f0c))
+* **ui:** 실패 팝업 시안 정합·배지 팝업 프리뷰·텍스트 배율 100% 고정 ([5df6d48](https://github.com/ddiddit/didit-frontend/commit/5df6d4812162c0db8bfa2c00dc4eea467bdc82ea))
+* **ui:** 아이콘을 클라이언트 번들에 포함해 간헐 미표시 해결 ([ccbed47](https://github.com/ddiddit/didit-frontend/commit/ccbed47fb7752cf25400db18bec6e1aa5bab6d8c))
+* **ui:** 알림 본문 한 줄 표시 및 채팅 입력바 오버레이 개선 ([95f70cd](https://github.com/ddiddit/didit-frontend/commit/95f70cd5e30ae7f3babc46a8ac5505470380725f))
+* **ui:** 피그마 스펙 정합 — 탭바 라벨 굵기·누락된 소형 텍스트 자간 보정 ([65e6e57](https://github.com/ddiddit/didit-frontend/commit/65e6e5760efb6b530bb5f9e1387fde3a783af290))
+* **ui:** 하단 CTA 여백을 앱에선 기기별 safe-area로 자동조절 ([3d83b73](https://github.com/ddiddit/didit-frontend/commit/3d83b739ef1c10fae733efed40a85ec0b739c5b6))
+* 키보드 가림·토스트 디자인·하단 CTA safe-area ([bb03433](https://github.com/ddiddit/didit-frontend/commit/bb034333e9863dc67bf991473e0386a0b50e842c))
+* 프로젝트 선택 안내 문구와 버튼 사이 간격 조정 ([d2525a1](https://github.com/ddiddit/didit-frontend/commit/d2525a1dda2ef55def9fb9deaf54a05fa0de96bc))
+* 하단 CTA safe-area 자동조절 + 닉네임 형식 오류 안내 ([b8e9ec7](https://github.com/ddiddit/didit-frontend/commit/b8e9ec7b7f9c5e7fa95e41f0dfd72aa0eb36fb62))
+
+
+### Reverts
+
+* 1.3.0 릴리스 되돌리기 (1.2.0 유지) ([ed23459](https://github.com/ddiddit/didit-frontend/commit/ed23459c1f6e5e04d9dd6e572a9a1831d9d27f83))
+
 ## [1.2.0](https://github.com/ddiddit/didit-frontend/compare/v1.0.0...v1.2.0) (2026-07-01)
 
 
