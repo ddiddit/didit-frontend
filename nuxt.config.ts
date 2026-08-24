@@ -12,7 +12,7 @@ export default defineNuxtConfig({
     server: {
       proxy: {
         '/api': {
-          target: process.env.NUXT_PUBLIC_API_BASE ?? 'https://dev-api.didit.ai.kr',
+          target: process.env.NUXT_PUBLIC_API_BASE ?? 'https://dev-api.didit.io.kr',
           changeOrigin: true,
         },
       },
@@ -37,7 +37,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE ?? 'https://api.didit.ai.kr',
+      apiBase: process.env.NUXT_PUBLIC_API_BASE ?? 'https://api.didit.io.kr',
       // 웹에서 표시할 앱 버전 (앱은 @capacitor/app로 네이티브 버전을 동적으로 읽음)
       appVersion: pkg.version,
       kakaoJsKey: process.env.NUXT_PUBLIC_KAKAO_JS_KEY ?? '',
@@ -46,6 +46,7 @@ export default defineNuxtConfig({
       kakaoNativeKey: process.env.NUXT_PUBLIC_KAKAO_NATIVE_KEY ?? 'a2d60240a516c8296d6506cad6ae841b',
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID ?? '',
       appleClientId: process.env.NUXT_PUBLIC_APPLE_CLIENT_ID ?? '',
+      appleLoginEnabled: process.env.NUXT_PUBLIC_APPLE_LOGIN_ENABLED === 'true',
       amplitudeApiKey: process.env.NUXT_PUBLIC_AMPLITUDE_API_KEY ?? '',
       // 웹 FCM (Firebase Cloud Messaging) — 웹 config/VAPID는 공개키라 커밋 무방(클라이언트 번들에 어차피 노출).
       // env로 덮어쓸 수 있고, 없으면 아래 기본값(didit-bd2f1) 사용 → 배포 시 env 미설정이어도 동작.

@@ -16,6 +16,15 @@ export type ApiErrorCode =
   | 'INVALID_REFRESH_TOKEN'
   | 'EXPIRED_REFRESH_TOKEN'
   | 'UNSUPPORTED_OAUTH_PROVIDER'
+  | 'INVALID_SOCIAL_CREDENTIAL_TYPE'
+  | 'ACCOUNT_VERIFICATION_REQUIRED'
+  | 'SOCIAL_LOGIN_SESSION_INVALID'
+  | 'SOCIAL_LOGIN_SESSION_EXPIRED'
+  | 'EMAIL_VERIFICATION_INVALID'
+  | 'EMAIL_VERIFICATION_EXPIRED'
+  | 'EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED'
+  | 'EMAIL_VERIFICATION_RESEND_TOO_SOON'
+  | 'EMAIL_REQUIRED'
   | 'DUPLICATE_NICKNAME'
   | 'OAUTH_USER_INFO_FAILED'
   // 프로젝트/태그
@@ -80,6 +89,24 @@ export interface TokenResponse {
   refreshToken: string
   isNewUser: boolean
   isOnboardingCompleted: boolean
+}
+
+export type SocialProvider = 'KAKAO' | 'GOOGLE' | 'APPLE'
+export type SocialCredentialType = 'ID_TOKEN' | 'ACCESS_TOKEN' | 'AUTHORIZATION_CODE'
+export type SocialLoginStatus = 'AUTHENTICATED' | 'EMAIL_VERIFICATION_REQUIRED' | 'SUPPORT_REQUIRED'
+
+export interface SocialLoginResponse {
+  status: SocialLoginStatus
+  accessToken: string | null
+  refreshToken: string | null
+  isNewUser: boolean | null
+  isOnboardingCompleted: boolean | null
+  loginSessionToken: string | null
+  emailHint: string | null
+}
+
+export interface EmailVerificationStartResponse {
+  expiresInSeconds: number
 }
 
 export type JobType = 'DEVELOPER' | 'PLANNER' | 'DESIGNER'
