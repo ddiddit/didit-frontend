@@ -70,16 +70,18 @@
 import { Capacitor } from '@capacitor/core'
 import { SocialLogin } from '@capgo/capacitor-social-login'
 import { CapacitorKakaoLogin } from '@team-lepisode/capacitor-kakao-login'
-import type { ApiResponse, TokenResponse } from '~/types/api'
+import type { SocialCredentialType, SocialProvider } from '~/types/api'
 import { getApiErrorMessage } from '~/utils/api-error'
 
-const { track, identify } = useAmplitude()
+const { track } = useAmplitude()
+const config = useRuntimeConfig()
+const socialLoginFlow = useSocialLoginFlow()
 
 // 플랫폼 판별 — 앱(네이티브)이면 네이티브 SDK, 웹이면 기존 방식
 const platform = Capacitor.getPlatform() // 'web' | 'ios' | 'android'
 const isNative = Capacitor.isNativePlatform()
 // 애플 버튼은 웹·iOS만 노출 (안드로이드 앱은 숨김)
-const showApple = computed(() => platform !== 'android')
+const showApple = computed(() => config.public.appleLoginEnabled && platform !== 'android')
 
 // 웹 SDK 최소 타입 선언 (웹에서만 사용)
 declare const google: {
@@ -104,17 +106,12 @@ declare const AppleID: {
 definePageMeta({ layout: false })
 
 
-const { $api } = useNuxtApp()
-const config = useRuntimeConfig()
 const googleContent = ref<HTMLElement | null>(null)
 const syncWidth = ref('')
 const isLoading = ref(false)
 // 로그인 실패·안내 토스트는 notice 아이콘 표시 (피그마 8088:31255)
 const { show } = useToast()
 const showToast = (msg: string) => show(msg, { icon: true })
-// 로그인 성공 직후 푸시 기기 토큰을 등록하기 위해 사용
-const push = usePushNotifications()
-
 onMounted(async () => {
   // accessToken과 refreshToken이 모두 있을 때만 자동 로그인
   if (localStorage.getItem('accessToken') && localStorage.getItem('refreshToken')) {
@@ -133,7 +130,7 @@ onMounted(async () => {
     await SocialLogin.initialize({
       google: { webClientId: config.public.googleClientId },
       // 애플은 iOS에서만 (안드로이드는 버튼 자체가 없음)
-      ...(platform === 'ios' ? { apple: { clientId: config.public.appleClientId } } : {}),
+      ...(showApple.value && platform === 'ios' ? { apple: { clientId: config.public.appleClientId } } : {}),
     })
     return
   }
@@ -141,12 +138,14 @@ onMounted(async () => {
   // 웹: Google·Apple SDK 로딩 (카카오는 직접 URL 방식으로 SDK 불필요)
   await Promise.all([
     loadScript('https://accounts.google.com/gsi/client'),
-    loadScript('https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js'),
+    ...(showApple.value
+      ? [loadScript('https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js')]
+      : []),
   ])
 
   google.accounts.id.initialize({
     client_id: config.public.googleClientId,
-    callback: (res) => submitLogin('GOOGLE', res.credential),
+    callback: (res) => submitLogin('GOOGLE', 'ID_TOKEN', res.credential),
     cancel_on_tap_outside: true,
   })
 })
@@ -173,28 +172,10 @@ function isUserCancelled(e: unknown): boolean {
   return /cancel|취소|dismiss|popup_closed|closed_by_user|user_trigger/.test(text)
 }
 
-async function submitLogin(provider: 'KAKAO' | 'GOOGLE' | 'APPLE', oauthToken: string) {
+async function submitLogin(provider: SocialProvider, credentialType: SocialCredentialType, credential: string) {
   isLoading.value = true
   try {
-    const { data } = await $api.post<ApiResponse<TokenResponse>>('/api/v1/auth/login', { provider, oauthToken })
-    localStorage.setItem('accessToken', data.data.accessToken)
-    localStorage.setItem('refreshToken', data.data.refreshToken)
-    // 온보딩 완료 여부를 저장해야 다음 앱 실행 시 스플래시(index.vue)가 세션을 유지한다.
-    // (이 값이 없으면 스플래시가 미로그인으로 간주해 localStorage를 비우고 로그인 화면으로 보냄 → 매번 재로그인)
-    localStorage.setItem('isOnboardingCompleted', String(data.data.isOnboardingCompleted))
-    // 로그인 직후 푸시 동의 상태면 기기 토큰을 즉시 등록한다 (앱 재실행 전까지 알림이 누락되던 문제 방지)
-    push.syncIfConsented()
-
-    identify(data.data.accessToken, { provider: provider.toLowerCase() })
-
-    if (data.data.isNewUser) {
-      track('user_signed_up', { provider: provider.toLowerCase() })
-    } else {
-      track('user_logged_in', { provider: provider.toLowerCase() })
-    }
-
-    const dest = data.data.isNewUser || !data.data.isOnboardingCompleted ? '/onboarding' : '/home'
-    navigateTo(dest, { replace: true })
+    await socialLoginFlow.startSocialLogin(provider, credentialType, credential)
   } catch (e) {
     track('login_failed', { provider: provider.toLowerCase() })
     // 백엔드 에러 코드(WITHDRAWN_USER, OAUTH_USER_INFO_FAILED 등)에 맞는 문구 노출
@@ -209,7 +190,7 @@ async function loginWithKakao() {
     // 앱: 네이티브 카카오 로그인 → 액세스 토큰
     try {
       const res = await CapacitorKakaoLogin.login()
-      await submitLogin('KAKAO', res.accessToken)
+      await submitLogin('KAKAO', 'ACCESS_TOKEN', res.accessToken)
     } catch (e) {
       // 사용자가 취소한 경우는 실패가 아니므로 무시
       if (isUserCancelled(e)) return
@@ -232,7 +213,7 @@ async function loginWithGoogle() {
         showToast('Google 로그인에 실패했어요. 다시 시도해 주세요.')
         return
       }
-      await submitLogin('GOOGLE', idToken)
+      await submitLogin('GOOGLE', 'ID_TOKEN', idToken)
     } catch (e) {
       // 사용자가 취소한 경우는 실패가 아니므로 무시
       if (isUserCancelled(e)) return
@@ -259,7 +240,7 @@ async function loginWithApple() {
         showToast('Apple 로그인에 실패했어요. 다시 시도해 주세요.')
         return
       }
-      await submitLogin('APPLE', idToken)
+      await submitLogin('APPLE', 'ID_TOKEN', idToken)
     } catch (e) {
       // 사용자가 취소한 경우는 실패가 아니므로 무시
       if (isUserCancelled(e)) return
@@ -276,7 +257,7 @@ async function loginWithApple() {
   })
   try {
     const result = await AppleID.auth.signIn()
-    await submitLogin('APPLE', result.authorization.id_token)
+    await submitLogin('APPLE', 'ID_TOKEN', result.authorization.id_token)
   } catch (e) {
     if (isUserCancelled(e)) return
     showToast('Apple 로그인에 실패했어요. 다시 시도해 주세요.')

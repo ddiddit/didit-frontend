@@ -15,6 +15,15 @@ const ERROR_MESSAGES: Record<ApiErrorCode, string> = {
   INVALID_REFRESH_TOKEN: '로그인이 만료되었어요. 다시 로그인해주세요.',
   EXPIRED_REFRESH_TOKEN: '로그인이 만료되었어요. 다시 로그인해주세요.',
   UNSUPPORTED_OAUTH_PROVIDER: '지원하지 않는 로그인 방식이에요.',
+  INVALID_SOCIAL_CREDENTIAL_TYPE: '소셜 로그인 요청 방식이 올바르지 않아요.',
+  ACCOUNT_VERIFICATION_REQUIRED: '계정 보호를 위해 이메일 인증이 필요해요.',
+  SOCIAL_LOGIN_SESSION_INVALID: '로그인 인증 정보가 유효하지 않아요. 처음부터 다시 시도해주세요.',
+  SOCIAL_LOGIN_SESSION_EXPIRED: '로그인 인증 시간이 만료되었어요. 처음부터 다시 시도해주세요.',
+  EMAIL_VERIFICATION_INVALID: '인증번호가 올바르지 않아요.',
+  EMAIL_VERIFICATION_EXPIRED: '인증번호가 만료되었어요. 다시 받아주세요.',
+  EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED: '인증 시도 횟수를 초과했어요. 처음부터 다시 시도해주세요.',
+  EMAIL_VERIFICATION_RESEND_TOO_SOON: '잠시 후 인증번호를 다시 요청해주세요.',
+  EMAIL_REQUIRED: '이메일 주소를 확인해주세요.',
   DUPLICATE_NICKNAME: '이미 사용 중인 닉네임이에요.',
   OAUTH_USER_INFO_FAILED: '소셜 로그인 정보를 가져오지 못했어요. 다시 시도해주세요.',
   // 프로젝트/태그
@@ -50,7 +59,8 @@ const DEFAULT_MESSAGE = '문제가 발생했어요. 잠시 후 다시 시도해�
 // 어떤 에러든 백엔드 에러 코드를 안전하게 꺼낸다 (없으면 null)
 export function getApiErrorCode(error: unknown): ApiErrorCode | null {
   if (axios.isAxiosError<ApiErrorResponse>(error)) {
-    return error.response?.data?.properties?.code ?? null
+    const data = error.response?.data as (ApiErrorResponse & { code?: ApiErrorCode }) | undefined
+    return data?.properties?.code ?? data?.code ?? null
   }
   return null
 }
