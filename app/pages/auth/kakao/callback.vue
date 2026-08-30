@@ -13,17 +13,18 @@ const { startSocialLogin } = useSocialLoginFlow()
 const route = useRoute()
 
 onMounted(async () => {
-  const code = route.query.code as string | undefined
+  const code = typeof route.query.code === 'string' ? route.query.code : undefined
 
   if (!code) {
-    navigateTo('/login', { replace: true })
+    await navigateTo('/login', { replace: true })
     return
   }
 
   try {
     // Client Secret과 액세스 토큰이 브라우저에 노출되지 않도록 인가 코드를 백엔드에 그대로 전달한다.
     await startSocialLogin('KAKAO', 'AUTHORIZATION_CODE', code)
-  } catch {
+  } catch (error) {
+    console.error('[kakao-login-error]', error)
     track('login_failed', { provider: 'kakao' })
     navigateTo('/login', { replace: true })
   }

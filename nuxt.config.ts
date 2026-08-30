@@ -1,5 +1,7 @@
 import pkg from './package.json'
 
+const apiBase = process.env.NUXT_PUBLIC_API_BASE ?? 'https://dev-api.didit.io.kr'
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   ssr: false,
@@ -12,8 +14,15 @@ export default defineNuxtConfig({
     server: {
       proxy: {
         '/api': {
-          target: process.env.NUXT_PUBLIC_API_BASE ?? 'https://dev-api.didit.io.kr',
+          target: apiBase,
           changeOrigin: true,
+          // Spring validates the forwarded Origin header even though the browser
+          // sends this request to the same-origin Vite proxy.
+          configure(proxy) {
+            proxy.on('proxyReq', (proxyRequest) => {
+              proxyRequest.removeHeader('origin')
+            })
+          },
         },
       },
     },
