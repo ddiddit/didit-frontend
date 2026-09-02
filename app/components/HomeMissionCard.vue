@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white rounded-2xl p-[22px] flex flex-col gap-5">
+  <div class="bg-white rounded-2xl p-[22px] flex flex-col">
     <!-- 헤더: 레벨 뱃지 + 미션 제목 + 부가 설명 -->
     <div class="flex flex-col gap-1.5">
       <div class="flex items-center gap-1.5">
@@ -52,44 +52,43 @@
 
     <!-- 횟수형 미션: 원형 스텝 (8개 이상은 5개씩 줄바꿈 — Figma Lv.9) -->
     <template v-else-if="m">
-      <div class="flex flex-col gap-2.5">
         <div
           v-for="(row, ri) in circleRows"
           :key="ri"
-          class="relative w-max mx-auto flex items-start gap-2 px-0.5"
+          class="relative w-full mt-[20px] pb-[45px]"
         >
           <!-- 연결선 (첫~마지막 스탬프 중심) -->
-          <div class="absolute left-[18px] right-[18px] top-[18px] h-[2px] bg-grey-3" />
-          <!-- 완료 구간 연결선: 완료된 마지막 스탬프까지 테마 색으로 채움 -->
-          <div
-            v-if="rowFillFrac(row) > 0"
-            class="absolute left-[18px] top-[18px] h-[2px]"
-            :style="{ width: `calc((100% - 36px) * ${rowFillFrac(row)})`, backgroundColor: theme.fill }"
-          />
-          <div v-for="n in row" :key="n" class="relative flex flex-col items-center gap-1.5 shrink-0 w-9">
-            <!-- 스탬프 (Figma): 완료=accent 원+#353535 체크 / 미완료=#F1F1F1 원+#C6C6C6 체크 -->
-            <svg width="36" height="36" viewBox="0 0 36 36" fill="none" class="shrink-0">
-              <rect width="36" height="36" rx="18" :fill="n <= m.progress ? theme.fill : '#F1F1F1'" />
-              <path
-                d="M25 14.3706L16.1446 23L11 17.9863L12.6307 16.6157L16.1446 20.0401L23.3693 13L25 14.3706Z"
-                :fill="n <= m.progress ? '#353535' : '#C6C6C6'"
-              />
-            </svg>
-            <span class="text-[12px] font-semibold text-grey-6 leading-[1.36] tracking-[-0.02em] whitespace-nowrap">{{ n }}회</span>
-
-            <!-- 레벨업 힌트 뱃지: 마지막 원형 오른쪽에 분리 노출 (초반 온보딩용 — 미션 레벨 1·2에서만) -->
-            <div
-              v-if="missionLevel <= 2 && n === m.target"
-              class="absolute left-full top-[5px] ml-2 flex items-center whitespace-nowrap"
-            >
-              <!-- 포인터: 둥근 삼각형(Figma Polygon 5) — 뱃지에 겹쳐 붙여 말풍선처럼 -->
-              <svg width="9" height="10" viewBox="0 0 9 10" fill="none" class="shrink-0 relative z-0">
-                <path d="M0.848617 6.47691C-0.282874 5.78018 -0.282872 4.21982 0.848619 3.52309L6.09755 0.291C7.34494 -0.477095 9 0.365085 9 1.76791L9 8.23209C9 9.63492 7.34493 10.4771 6.09754 9.709L0.848617 6.47691Z" fill="#353535" />
-              </svg>
-              <span class="-ml-[3px] relative z-10 inline-flex items-center bg-grey-11 text-grey-1 text-[11px] font-medium px-[7px] py-[4px] rounded-md leading-[1.3] tracking-[-0.22px]">레벨업</span>
+          <div v-if="row.length >= 1" class="relative w-full h-[16px] rounded-[8px] bg-grey-4">
+           <div
+              v-if="rowFillFrac(row) > 0"
+              class="progress"
+              :style="{ width: `${rowFillFrac(row) * 100}%`, backgroundColor: theme.fill }"
+            />
+            <div class="exp_wrapper absolute top-0 left-[8px] right-[8px] flex justify-between">
+              <div class="zero">
+                <span class="block my-[4px] w-[8px] h-[8px] bg-grey-1 rounded-full"></span>
+                <span class="block mt-[8px] text-grey-6">0</span>
+              </div>
+              <template v-for="(number, i) in row" :key="i">
+                <div class="other_number">
+                  <span class="block my-[4px] w-[8px] h-[8px] bg-grey-1 rounded-full"></span>
+                  <span class="block mt-[8px] text-grey-6 ml-[1px]">{{number}}</span>
+                </div>
+              </template>
             </div>
           </div>
-        </div>
+          <template v-for="n in row" :key="n" class="flex flex-col items-center gap-1.5 shrink-0 w-9">
+            <!--레벨업 힌트 뱃지: 마지막 원형 오른쪽에 분리 노출 (초반 온보딩용 — 미션 레벨 1·2에서만) -->
+            <div
+              v-if="missionLevel <= 2 && n === m.target"
+              class="absolute right-0 bottom-[calc(100%+5px)] flex flex-col items-center whitespace-nowrap"
+            >
+              <span class="-ml-[3px] relative z-10 inline-flex items-center bg-grey-11 text-grey-1 text-[11px] font-medium px-[7px] py-[4px] rounded-md leading-[1.3] tracking-[-0.22px]">레벨업</span>
+              <svg width="10" height="9" viewBox="0 0 10 9" fill="none" class="relative top-[-2px]">
+                <path d="M6.47691 8.15138C5.78018 9.28287 4.21982 9.28287 3.52309 8.15138L0.291 2.90245C-0.477095 1.65506 0.365085 -1.59584e-08 1.76791 -7.72779e-08L8.23209 5.93838e-07C9.63492 5.32519e-07 10.4771 1.65507 9.709 2.90246L6.47691 8.15138Z" fill="#353535"/>
+              </svg>
+            </div>
+          </template>
       </div>
     </template>
 
