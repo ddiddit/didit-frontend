@@ -55,13 +55,14 @@
         <div
           v-for="(row, ri) in circleRows"
           :key="ri"
-          class="relative w-full mt-[20px] pb-[45px]"
+          class="relative w-full"
+          :class="missionLevel != 2 ? 'mt-[20px] pb-[45px]' : 'py-[20px]'"
         >
-          <!-- 연결선 (첫~마지막 스탬프 중심) -->
-          <div v-if="row.length >= 1" class="relative w-full h-[16px] rounded-[8px] bg-grey-4">
+          <!-- 연결선 + 진행바 (Lv.2 외 나머지 레벨) -->
+          <div v-if="missionLevel !== 2 && row.length >= 1" class="relative w-full h-[16px] rounded-[8px] bg-grey-4">
            <div
               v-if="rowFillFrac(row) > 0"
-              class="progress"
+              class="progress h-full rounded-[8px_0px_0px_8px]"
               :style="{ width: `${rowFillFrac(row) * 100}%`, backgroundColor: theme.fill }"
             />
             <div class="exp_wrapper absolute top-0 left-[8px] right-[8px] flex justify-between">
@@ -72,11 +73,28 @@
               <template v-for="(number, i) in row" :key="i">
                 <div class="other_number">
                   <span class="block my-[4px] w-[8px] h-[8px] bg-grey-1 rounded-full"></span>
-                  <span class="block mt-[8px] text-grey-6 ml-[1px]">{{number}}</span>
+                  <span class="block mt-[8px] text-grey-6 ml-[1px]">{{ number }}</span>
                 </div>
               </template>
             </div>
           </div>
+
+          <!-- Lv.2: 개별 스탬프 (target 개수만큼, progress 만큼 채움) -->
+          <div v-else-if="missionLevel === 2 && row.length >= 1" class="flex justify-center items-center gap-[20px]">
+            <div
+              v-for="(number, i) in row"
+              :key="i"
+              class="level_2_stamp flex flex-col items-center gap-[4px]"
+              :class="{ 'level_2_stamp_done': number <= m.progress }"
+            >
+              <div class="bg-grey-4 rounded-full">           
+                <img v-if="number <= m.progress" src="/icons/check-on.svg" alt="check_on" class="p-[6px]" />
+                <img v-else src="/icons/check-off.svg" alt="check_off" class="p-[6px]" />
+              </div>
+              <span class="text-[14px] text-grey-6">{{ number }}회</span>
+            </div>
+          </div>
+
           <template v-for="n in row" :key="n" class="flex flex-col items-center gap-1.5 shrink-0 w-9">
             <!--레벨업 힌트 뱃지: 마지막 원형 오른쪽에 분리 노출 (초반 온보딩용 — 미션 레벨 1·2에서만) -->
             <div
@@ -103,7 +121,11 @@
     </button>
   </div>
 </template>
-
+<style scoped>
+  .level_2_stamp_done div {
+    background-color: #f7bfa6;
+  }
+</style>
 <script setup lang="ts">
 import { levelTheme } from '~/utils/levelTheme'
 import type { CurrentMissionResponse } from '~/types/api'

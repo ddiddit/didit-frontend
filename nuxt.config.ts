@@ -1,6 +1,6 @@
 import pkg from './package.json'
 
-const apiBase = process.env.NUXT_PUBLIC_API_BASE ?? 'https://dev-api.didit.io.kr'
+const apiBase = process.env.NUXT_PUBLIC_API_BASE
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
