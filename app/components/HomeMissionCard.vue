@@ -56,7 +56,7 @@
           v-for="(row, ri) in circleRows"
           :key="ri"
           class="relative w-full"
-          :class="missionLevel != 2 ? 'mt-[20px] pb-[45px]' : 'py-[20px]'"
+          :class="missionLevel != 2 ? 'mt-[20px] pb-[45px]' : 'py-[20px] flex justify-center'"
         >
           <!-- 연결선 + 진행바 (Lv.2 외 나머지 레벨) -->
           <div v-if="missionLevel !== 2 && row.length >= 1" class="relative w-full h-[16px] rounded-[8px] bg-grey-4">
@@ -80,30 +80,39 @@
           </div>
 
           <!-- Lv.2: 개별 스탬프 (target 개수만큼, progress 만큼 채움) -->
-          <div v-else-if="missionLevel === 2 && row.length >= 1" class="flex justify-center items-center gap-[20px]">
+          <div v-else-if="missionLevel === 2 && row.length >= 1" class="level_2_stamp_wrapper relative inline-flex justify-center items-center gap-[20px]">
             <div
               v-for="(number, i) in row"
               :key="i"
-              class="level_2_stamp flex flex-col items-center gap-[4px]"
+              class="level_2_stamp relative z-[10] flex flex-col items-center gap-[4px]"
               :class="{ 'level_2_stamp_done': number <= m.progress }"
             >
-              <div class="bg-grey-4 rounded-full">           
+              <div class="rounded-full" :class="number <= m.progress ? 'bg-green-light-hover' : 'bg-grey-4'">           
                 <img v-if="number <= m.progress" src="/icons/check-on.svg" alt="check_on" class="p-[6px]" />
                 <img v-else src="/icons/check-off.svg" alt="check_off" class="p-[6px]" />
               </div>
-              <span class="text-[14px] text-grey-6">{{ number }}회</span>
+              <span class="text-[14px]" :class="number <= m.progress ? 'text-green' : 'text-grey-4'">{{ number }}회</span>
             </div>
           </div>
 
           <template v-for="n in row" :key="n" class="flex flex-col items-center gap-1.5 shrink-0 w-9">
             <!--레벨업 힌트 뱃지: 마지막 원형 오른쪽에 분리 노출 (초반 온보딩용 — 미션 레벨 1·2에서만) -->
             <div
-              v-if="missionLevel <= 2 && n === m.target"
+              v-if="missionLevel != 2 && n === m.target"
               class="absolute right-0 bottom-[calc(100%+5px)] flex flex-col items-center whitespace-nowrap"
             >
               <span class="-ml-[3px] relative z-10 inline-flex items-center bg-grey-11 text-grey-1 text-[11px] font-medium px-[7px] py-[4px] rounded-md leading-[1.3] tracking-[-0.22px]">레벨업</span>
               <svg width="10" height="9" viewBox="0 0 10 9" fill="none" class="relative top-[-2px]">
                 <path d="M6.47691 8.15138C5.78018 9.28287 4.21982 9.28287 3.52309 8.15138L0.291 2.90245C-0.477095 1.65506 0.365085 -1.59584e-08 1.76791 -7.72779e-08L8.23209 5.93838e-07C9.63492 5.32519e-07 10.4771 1.65507 9.709 2.90246L6.47691 8.15138Z" fill="#353535"/>
+              </svg>
+            </div>
+            <div
+              v-else-if="missionLevel == 2"
+              class="absolute right-[90px] flex flex-col items-center whitespace-nowrap"
+            >
+              <span class="-ml-[3px] relative z-10 inline-flex items-center bg-grey-11 text-grey-1 text-[11px] font-medium px-[7px] py-[4px] rounded-md leading-[1.3] tracking-[-0.22px]">레벨업</span>
+              <svg width="9" height="10" viewBox="0 0 9 10" fill="none" class="absolute right-[calc(100%-2px)] top-0 bottom-0 my-auto">
+                <path d="M0.848617 6.47691C-0.282874 5.78018 -0.282872 4.21982 0.848619 3.52309L6.09755 0.291C7.34494 -0.477095 9 0.365085 9 1.76791L9 8.23209C9 9.63492 7.34493 10.4771 6.09754 9.709L0.848617 6.47691Z" fill="#353535"/>
               </svg>
             </div>
           </template>
@@ -122,8 +131,14 @@
   </div>
 </template>
 <style scoped>
-  .level_2_stamp_done div {
-    background-color: #f7bfa6;
+  .level_2_stamp_wrapper:after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 13px;
+    height: 2px;
+    background-color: #f1f1f1;
   }
 </style>
 <script setup lang="ts">
