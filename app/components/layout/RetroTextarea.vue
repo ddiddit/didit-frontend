@@ -3,7 +3,7 @@
         <button class="px-[6px]" :class="isTextWrapped ? 'mb-[2px]' : ''">
             <img src="/icons/attach_file.png" alt="첨부파일" />
         </button>
-        <textarea ref="textRef" style="height: 22px;" :value="inputValue" :disabled="sending" @focus="isInputFocused = true" @blur="isInputFocused = false" @input="handleInputChange" @keydown="handleSend" placeholder="회고를 입력하세요" class="resize-none outline-none text-[14px] bg-transparent placeholder:text-grey-7 placeholder:text-[14px] disabled:opacity-50" :class="isTextWrapped ? 'absolute left-[10px] right-[10px] bottom-[48px] px-[6px] py-[10px] box-border' : 'w-full'" />
+        <textarea ref="textRef" style="height: 22px;" :value="inputValue" :disabled="sending" @focus="isInputFocused = true" @blur="isInputFocused = false" @input="handleInputChange" @keydown="handleSend" placeholder="회고를 입력하세요" class="resize-none outline-none text-[14px] leading-[22px] bg-transparent placeholder:text-grey-7 placeholder:text-[14px] disabled:opacity-50" :class="isTextWrapped ? 'absolute left-[10px] right-[10px] bottom-[48px] px-[6px] py-[10px] box-border' : 'w-full'" />
         <button>
             <img src="/icons/voice.svg" alt="전송" />
         </button>
@@ -42,46 +42,68 @@
   // 전체 자체 ref
   const allRef = ref<HTMLDivElement | null>(null)
 
-  // 한 줄 기준 높이(px) — style="height: 22px" 와 맞춤
+  // 한 줄 높이(px) — textarea 의 leading-[22px] / style="height: 22px" 와 반드시 일치
   const LINE_HEIGHT = 22
   // 컨테이너 상하 패딩 (줄바꿈 시 py-[10px])
   const PADDING_Y = 10
+  // wrapped 상태에서 textarea 자체에 붙는 상하 패딩 (py-[10px])
+  const TA_PADDING_Y = 10
 
-  // 입력 값 체인지
-  function handleInputChange(event: Event) {
-    inputValue.value = (event.target as HTMLTextAreaElement).value
+  // 한 줄(인라인) 상태의 textarea 콘텐츠 폭 — 측정 기준을 항상 이 폭으로 고정한다.
+  // (wrapped 되면 absolute 로 폭이 넓어져서, 넓은 폭에서 재면 1줄로 보여 무한 토글이 남)
+  let inlineWidth = 0
 
+  // 입력창 높이·줄바꿈 상태를 재계산
+  // (입력할 때뿐 아니라 창 크기가 바뀌어 줄바꿈 지점이 달라질 때도 호출)
+  function syncHeight() {
     const el = textRef.value
     const all = allRef.value
     if (!el || !all) return
 
-    // 이미 늘어난 상태면 축소 감지를 위해 높이를 0으로 눌러줌
-    // ('auto' 는 rows 기본값(2줄) 높이로 잡혀서 축소 감지가 안 됨)
-    // (한 줄 상태에선 scrollHeight 가 알아서 넘침을 알려주므로 초기화 불필요)
-    if (isTextWrapped.value) el.style.height = '0px'
+    // 한 줄 상태의 실제 폭을 기억해 둔다 (이 폭에서 넘치는지가 wrapped 판정 기준)
+    if (!isTextWrapped.value) inlineWidth = el.clientWidth
+    if (!inlineWidth) return
 
-    // scrollHeight 는 padding 을 포함한다. wrapped 클래스에서 textarea 에
-    // py-[10px] box-border 가 붙으므로, 순수 텍스트 높이로 비교하려면 padding 을 뺀다.
-    const cs = getComputedStyle(el)
-    const paddingV = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom)
-    const contentHeight = el.scrollHeight
-    const textHeight = contentHeight - paddingV
+    // --- 측정: 항상 "한 줄 상태" 지오메트리로 강제한 뒤 잰다 ---
+    const s = el.style
+    const saved = { width: s.width, height: s.height, padding: s.padding, boxSizing: s.boxSizing }
+    s.boxSizing = 'content-box'
+    s.padding = '0px'
+    s.width = `${inlineWidth}px`
+    s.height = '0px'
+
+    const textHeight = el.scrollHeight // padding 0 → 순수 텍스트 높이
     const wrapped = textHeight > LINE_HEIGHT * 1.5
+
+    // 측정용 인라인 스타일 원복 (실제 표시 스타일은 클래스가 결정)
+    s.width = saved.width
+    s.padding = saved.padding
+    s.boxSizing = saved.boxSizing
+    s.height = saved.height
 
     // 한 줄 유지 중이면 아무 것도 하지 않음 (스타일 조작 X)
     if (!wrapped && !isTextWrapped.value) return
 
     isTextWrapped.value = wrapped
     if (wrapped) {
-      // 줄이 넘어갔을 때만 콘텐츠 높이만큼 늘림
-      el.style.height = `${contentHeight}px`
-      all.style.height = `${28 + contentHeight + PADDING_Y * 2}px`
+      // wrapped textarea 는 box-border + py-[10px] 이므로 패딩만큼 더해준다
+      el.style.height = `${textHeight + TA_PADDING_Y * 2}px`
+      all.style.height = `${28 + textHeight + TA_PADDING_Y * 2 + PADDING_Y * 2}px`
     } else {
       // 한 줄로 돌아오면 원복 (인라인 제거 → 클래스/기본 인라인으로 복귀)
       el.style.height = `${LINE_HEIGHT}px`
       all.style.height = ''
     }
   }
+
+  // 입력 값 체인지
+  function handleInputChange(event: Event) {
+    inputValue.value = (event.target as HTMLTextAreaElement).value
+    syncHeight()
+  }
+
+  // 창 크기 변경 시에도 줄바꿈 여부가 달라질 수 있으므로 재계산 (언마운트 시 자동 해제)
+  useEventListener(window, 'resize', useThrottleFn(syncHeight, 100))
 
   // 심화질문 "생성 중" placeholder — 실제 질문이 아니므로 렌더하면 안 됨
   const DEEP_PLACEHOLDERS = ['심화 질문을 생성 중입니다.', 'Q1~Q3 답변을 보내주시면']
