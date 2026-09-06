@@ -58,7 +58,7 @@ import { getApiErrorCode, getApiErrorMessage, isAuthError } from '~/utils/api-er
 import RetroHeader from '~/components/layout/RetroHeader.vue'
 import RetroTextarea from '~/components/layout/RetroTextarea.vue'
 
-definePageMeta({ middleware: 'auth', layout: false })
+definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
 export type ChatMessage =
   | {

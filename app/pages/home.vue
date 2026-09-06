@@ -83,6 +83,7 @@
         :disabled="isCompleted"
         class="mt-5 mx-5"
         @start="startRetrospect"
+        @intro="introRetrospect"
       />
 
       <!-- 최근 제안 받은 행동 (단일 카드 + 구분선) — Figma 새 홈 UI: 날짜·제목·프로젝트·태그 -->
@@ -397,6 +398,11 @@ function goToNotifications() {
 }
 
 function startRetrospect() {
+  track('retrospect_started', { source: 'home' })
+  navigateTo('/retrospect/start')
+}
+
+function introRetrospect() {
   track('retrospect_started', { source: 'home' })
   navigateTo('/retrospect/intro')
 }

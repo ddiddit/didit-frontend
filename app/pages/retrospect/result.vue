@@ -76,7 +76,7 @@
 import type { CompleteRetrospectiveResponse, Tag } from '~/types/api'
 import { isAuthError, toErrorVariant } from '~/utils/api-error'
 
-definePageMeta({ middleware: 'auth', layout: false })
+definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
 const retro = useRetrospect()
 const { show } = useToast()

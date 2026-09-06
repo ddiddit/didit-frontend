@@ -18,7 +18,7 @@
 
     <!-- 연속 주 미션: 주 단위 프로그레스 바 + 이번 주 요일 현황 -->
     <template v-if="isWeekly && m">
-      <div class="flex flex-col gap-2">
+      <div class="flex flex-col gap-2 py-[20px]">
         <!-- 16px 두꺼운 바: 연한 accent 채움 + 흰 점(주차 마커) -->
         <div class="relative h-4 rounded-full bg-grey-4">
           <div
@@ -35,9 +35,9 @@
       </div>
 
       <!-- 이번 주 회고 현황 (데이터가 없어도 요일 스탬프는 항상 노출) -->
-      <div class="flex flex-col gap-3">
+      <div class="flex flex-col gap-3 mb-[20px]">
         <p class="text-[14px] font-semibold text-grey-9 tracking-[-0.02em]">이번 주 회고 현황</p>
-        <div class="flex gap-2">
+        <div class="flex gap-2 justify-between">
           <div
             v-for="d in weekDays"
             :key="d.day"
@@ -51,7 +51,7 @@
     </template>
 
     <!-- 횟수형 미션: 원형 스텝 (8개 이상은 5개씩 줄바꿈 — Figma Lv.9) -->
-    <template v-else-if="m">
+    <template v-else-if="!isWeekly && m">
         <div
           v-for="(row, ri) in circleRows"
           :key="ri"
@@ -59,7 +59,7 @@
           :class="missionLevel != 2 ? 'mt-[20px] pb-[45px]' : 'py-[20px] flex justify-center'"
         >
           <!-- 연결선 + 진행바 (Lv.2 외 나머지 레벨) -->
-          <div v-if="missionLevel !== 2 && row.length >= 1" class="relative w-full h-[16px] rounded-[8px] bg-grey-4">
+          <div v-if="missionLevel != 2" class="relative w-full h-[16px] rounded-[8px] bg-grey-4">
            <div
               v-if="rowFillFrac(row) > 0"
               class="progress h-full rounded-[8px_0px_0px_8px]"
@@ -80,7 +80,7 @@
           </div>
 
           <!-- Lv.2: 개별 스탬프 (target 개수만큼, progress 만큼 채움) -->
-          <div v-else-if="missionLevel === 2 && row.length >= 1" class="level_2_stamp_wrapper relative inline-flex justify-center items-center gap-[20px]">
+          <div v-else-if="missionLevel == 2" class="level_2_stamp_wrapper relative inline-flex justify-center items-center gap-[20px]">
             <div
               v-for="(number, i) in row"
               :key="i"
@@ -124,7 +124,7 @@
       class="w-full py-3 rounded-xl text-[16px] font-semibold tracking-[-0.02em] transition-opacity"
       :class="disabled ? 'bg-grey-5 text-grey-6 cursor-not-allowed' : 'bg-primary text-grey-13 active:opacity-80'"
       :disabled="disabled"
-      @click="emit('start')"
+      @click="retroButton"
     >
       {{ m?.cta ?? '회고 남기기' }}
     </button>
@@ -146,7 +146,7 @@ import { levelTheme } from '~/utils/levelTheme'
 import type { CurrentMissionResponse } from '~/types/api'
 
 const props = defineProps<{ data: CurrentMissionResponse; disabled?: boolean }>()
-const emit = defineEmits<{ start: [] }>()
+const emit = defineEmits<{ start: [], intro: [] }>()
 
 // 미션 상세 (nested) — 최고 레벨 등에서는 null
 const m = computed(() => props.data.mission)
@@ -202,4 +202,9 @@ const barWidth = computed(() => {
   const ratio = Math.min(1, d.progress / d.target)
   return `calc((100% - 20px) * ${ratio} + 20px)`
 })
+
+function retroButton() {
+  if(missionLevel.value == 1) emit('intro') 
+  else emit('start')
+}
 </script>

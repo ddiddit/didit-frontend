@@ -1,9 +1,9 @@
 <template>
-    <div class="retro__input mx-[20px] px-[10px] box-border border border-grey-4 absolute left-0 right-0 bottom-[10px] h-[52px] bg-grey-4 rounded-[24px] flex items-center">
-        <button class="px-[6px]">
+    <div ref="allRef" class="retro__input mx-[20px] px-[10px] box-border border border-grey-4 absolute left-0 right-0 bottom-[10px] h-[52px] bg-grey-4 rounded-[24px] flex" :class="isTextWrapped ? 'items-end justify-between py-[10px]' : 'items-center'">
+        <button class="px-[6px]" :class="isTextWrapped ? 'mb-[2px]' : ''">
             <img src="/icons/attach_file.png" alt="첨부파일" />
         </button>
-        <textarea style="height: 22px;" :value="inputValue" :disabled="sending" @focus="isInputFocused = true" @blur="isInputFocused = false" @input="handleInputChange" @keydown="handleSend" placeholder="회고를 입력하세요" class="w-[260px] resize-none w-full outline-none text-[14px] bg-transparent placeholder:text-grey-7 placeholder:text-[14px] disabled:opacity-50" />
+        <textarea ref="textRef" style="height: 22px;" :value="inputValue" :disabled="sending" @focus="isInputFocused = true" @blur="isInputFocused = false" @input="handleInputChange" @keydown="handleSend" placeholder="회고를 입력하세요" class="resize-none outline-none text-[14px] bg-transparent placeholder:text-grey-7 placeholder:text-[14px] disabled:opacity-50" :class="isTextWrapped ? 'absolute left-[10px] right-[10px] bottom-[48px] px-[6px] py-[10px] box-border' : 'w-full'" />
         <button>
             <img src="/icons/voice.svg" alt="전송" />
         </button>
@@ -33,9 +33,54 @@
   // 전송 중 중복 Enter 방지
   const sending = ref(false)
 
+  // 줄 넘어가는 여부
+  const isTextWrapped = ref(false)
+
+  // 텍스트애리어 자체 ref
+  const textRef = ref<HTMLTextAreaElement | null>(null)
+
+  // 전체 자체 ref
+  const allRef = ref<HTMLDivElement | null>(null)
+
+  // 한 줄 기준 높이(px) — style="height: 22px" 와 맞춤
+  const LINE_HEIGHT = 22
+  // 컨테이너 상하 패딩 (줄바꿈 시 py-[10px])
+  const PADDING_Y = 10
+
   // 입력 값 체인지
   function handleInputChange(event: Event) {
     inputValue.value = (event.target as HTMLTextAreaElement).value
+
+    const el = textRef.value
+    const all = allRef.value
+    if (!el || !all) return
+
+    // 이미 늘어난 상태면 축소 감지를 위해 높이를 0으로 눌러줌
+    // ('auto' 는 rows 기본값(2줄) 높이로 잡혀서 축소 감지가 안 됨)
+    // (한 줄 상태에선 scrollHeight 가 알아서 넘침을 알려주므로 초기화 불필요)
+    if (isTextWrapped.value) el.style.height = '0px'
+
+    // scrollHeight 는 padding 을 포함한다. wrapped 클래스에서 textarea 에
+    // py-[10px] box-border 가 붙으므로, 순수 텍스트 높이로 비교하려면 padding 을 뺀다.
+    const cs = getComputedStyle(el)
+    const paddingV = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom)
+    const contentHeight = el.scrollHeight
+    const textHeight = contentHeight - paddingV
+    const wrapped = textHeight > LINE_HEIGHT * 1.5
+
+    // 한 줄 유지 중이면 아무 것도 하지 않음 (스타일 조작 X)
+    if (!wrapped && !isTextWrapped.value) return
+
+    isTextWrapped.value = wrapped
+    if (wrapped) {
+      // 줄이 넘어갔을 때만 콘텐츠 높이만큼 늘림
+      el.style.height = `${contentHeight}px`
+      all.style.height = `${28 + contentHeight + PADDING_Y * 2}px`
+    } else {
+      // 한 줄로 돌아오면 원복 (인라인 제거 → 클래스/기본 인라인으로 복귀)
+      el.style.height = `${LINE_HEIGHT}px`
+      all.style.height = ''
+    }
   }
 
   // 심화질문 "생성 중" placeholder — 실제 질문이 아니므로 렌더하면 안 됨
@@ -76,6 +121,11 @@
 
     sending.value = true
     inputValue.value = '' // 입력값은 즉시 비운다
+
+    // 입력창 높이·줄바꿈 상태 초기화
+    isTextWrapped.value = false
+    if (textRef.value) textRef.value.style.height = `${LINE_HEIGHT}px`
+    if (allRef.value) allRef.value.style.height = '' // 인라인 제거 → h-[52px] 클래스로 복귀
 
     try {
       console.log('[answer] retrospectId:', props.retrospectId)
