@@ -1,15 +1,48 @@
 <template>
-    <div ref="allRef" class="retro__input mx-[20px] px-[10px] box-border border border-grey-4 absolute left-0 right-0 bottom-[10px] h-[52px] bg-grey-4 rounded-[24px] flex" :class="isTextWrapped ? 'items-end justify-between py-[10px]' : 'items-center'">
-        <button class="px-[6px]" :class="isTextWrapped ? 'mb-[2px]' : ''">
-            <img src="/icons/attach_file.png" alt="첨부파일" />
-        </button>
-        <textarea ref="textRef" style="height: 22px;" :value="inputValue" :disabled="sending" @focus="isInputFocused = true" @blur="isInputFocused = false" @input="handleInputChange" @keydown="handleSend" placeholder="회고를 입력하세요" class="resize-none outline-none text-[14px] leading-[22px] bg-transparent placeholder:text-grey-7 placeholder:text-[14px] disabled:opacity-50" :class="isTextWrapped ? 'absolute left-[10px] right-[10px] bottom-[48px] px-[6px] py-[10px] box-border' : 'w-full'" />
-        <button>
-            <img src="/icons/voice.svg" alt="전송" />
-        </button>
+    <div class="retro__composer mx-[20px] absolute left-0 right-0 bottom-[10px] flex flex-col gap-[8px]">
+
+        <div ref="allRef" class="retro__input relative px-[10px] box-border border border-grey-4 h-[52px] bg-grey-4 rounded-[24px] flex" :class="isTextWrapped ? 'items-end justify-between py-[10px]' : 'items-center'">
+            <button class="px-[6px]" :class="isTextWrapped ? 'mb-[2px]' : ''">
+                <img src="/icons/attach_file.png" alt="첨부파일" />
+            </button>
+            <input type="file" multiple accept=".pdf,image/*" class="hidden" />
+            <textarea ref="textRef" style="height: 22px;" :value="inputValue" :disabled="sending" @focus="isInputFocused = true" @blur="isInputFocused = false" @input="handleInputChange" @keydown="handleSend" placeholder="회고를 입력하세요" class="resize-none outline-none text-[14px] leading-[22px] bg-transparent placeholder:text-grey-7 placeholder:text-[14px] disabled:opacity-50" :class="isTextWrapped ? 'absolute left-[10px] right-[10px] bottom-[48px] px-[6px] py-[10px] box-border' : 'w-full'" />
+            <button @click="accessMic">
+                <img src="/icons/voice.svg" alt="마이크접근" />
+            </button>
+        </div>
     </div>
 </template>
-<style scoped></style>
+<style scoped>
+  /* 회고 입력창 스크롤바 — 얇고 짧은 회색 바 */
+  textarea::-webkit-scrollbar {
+    width: 6px;
+  }
+  /* 스크롤바 양 끝 화살표 버튼 제거 */
+  textarea::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  textarea::-webkit-scrollbar-track {
+    margin: 6px 0; /* 위아래 여백 → 바가 짧아 보이게 */
+    background: transparent;
+  }
+  textarea::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background-color: theme('colors.grey.6');
+    background-clip: padding-box; /* 테두리만큼 안쪽으로 → 더 가늘게 */
+    border: 1px solid transparent;
+  }
+  textarea::-webkit-scrollbar-thumb:hover {
+    background-color: theme('colors.grey.7');
+  }
+  /* Firefox */
+  textarea {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.grey.6') transparent;
+  }
+</style>
 <script setup lang="ts">
 
   const { answer, getDeepQuestion } = useRetrospect()
@@ -20,6 +53,7 @@
     nextQuestion: (questionType: string, content: string, skippable?: boolean) => void
     setGenerating: (on: boolean) => void
     completeRetro: () => void
+    accessMic: () => void
   }>()
 
   const text = ref('')
@@ -48,6 +82,9 @@
   const PADDING_Y = 10
   // wrapped 상태에서 textarea 자체에 붙는 상하 패딩 (py-[10px])
   const TA_PADDING_Y = 10
+  // 최대 표시 줄 수 — 이 이상은 늘리지 않고 스크롤
+  const MAX_LINES = 4
+  const MAX_TEXT_HEIGHT = LINE_HEIGHT * MAX_LINES
 
   // 한 줄(인라인) 상태의 textarea 콘텐츠 폭 — 측정 기준을 항상 이 폭으로 고정한다.
   // (wrapped 되면 absolute 로 폭이 넓어져서, 넓은 폭에서 재면 1줄로 보여 무한 토글이 남)
@@ -86,11 +123,15 @@
 
     isTextWrapped.value = wrapped
     if (wrapped) {
+      // 최대 MAX_LINES 까지만 늘리고, 그 이상은 높이 고정 + 스크롤
+      const visibleHeight = Math.min(textHeight, MAX_TEXT_HEIGHT)
+      el.style.overflowY = textHeight > MAX_TEXT_HEIGHT ? 'auto' : 'hidden'
       // wrapped textarea 는 box-border + py-[10px] 이므로 패딩만큼 더해준다
-      el.style.height = `${textHeight + TA_PADDING_Y * 2}px`
-      all.style.height = `${28 + textHeight + TA_PADDING_Y * 2 + PADDING_Y * 2}px`
+      el.style.height = `${visibleHeight + TA_PADDING_Y * 2}px`
+      all.style.height = `${28 + visibleHeight + TA_PADDING_Y * 2 + PADDING_Y * 2}px`
     } else {
       // 한 줄로 돌아오면 원복 (인라인 제거 → 클래스/기본 인라인으로 복귀)
+      el.style.overflowY = 'hidden'
       el.style.height = `${LINE_HEIGHT}px`
       all.style.height = ''
     }
@@ -104,6 +145,18 @@
 
   // 창 크기 변경 시에도 줄바꿈 여부가 달라질 수 있으므로 재계산 (언마운트 시 자동 해제)
   useEventListener(window, 'resize', useThrottleFn(syncHeight, 100))
+
+  // 음성 레코더가 STT로 변환한 텍스트를 입력창 초안으로 받아온다. 기존 입력이 있으면 뒤에 이어붙인다.
+  const voiceTranscript = useState<string>('retrospect:voice-transcript', () => '')
+  watch(voiceTranscript, (t) => {
+    if (!t) return
+    inputValue.value = inputValue.value ? `${inputValue.value} ${t}` : t
+    voiceTranscript.value = '' // 1회성 채널 — 소비 후 비운다
+    nextTick(() => {
+      syncHeight()
+      textRef.value?.focus()
+    })
+  })
 
   // 심화질문 "생성 중" placeholder — 실제 질문이 아니므로 렌더하면 안 됨
   const DEEP_PLACEHOLDERS = ['심화 질문을 생성 중입니다.', 'Q1~Q3 답변을 보내주시면']
@@ -146,7 +199,10 @@
 
     // 입력창 높이·줄바꿈 상태 초기화
     isTextWrapped.value = false
-    if (textRef.value) textRef.value.style.height = `${LINE_HEIGHT}px`
+    if (textRef.value) {
+      textRef.value.style.height = `${LINE_HEIGHT}px`
+      textRef.value.style.overflowY = 'hidden'
+    }
     if (allRef.value) allRef.value.style.height = '' // 인라인 제거 → h-[52px] 클래스로 복귀
 
     try {

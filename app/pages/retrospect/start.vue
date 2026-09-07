@@ -6,6 +6,12 @@
     <!-- 헤더 영역 -->
     <RetroHeader :title="'회고 마치기'" :is-busy="isBusy" />
 
+    <!-- 마이크 접근 모달 — 권한이 아직 없을 때만. 이미 허용된 경우 accessMic()에서 바로 레코더를 연다 -->
+    <UiPopup :modelValue="isAccessMicModal" :title="'디딧(didit)이(가) 마이크에 접근하려고 합니다.'" :description="'회고를 음성으로 기록하기 위해 마이크 접근 권한이 필요해요.'" :confirmText="'허용'" :cancelText="'허용 안 함'" :loading="micRequesting" @cancel="isAccessMicModal = false" @confirm="confirmAccessMic" />
+
+    <!-- 음성 레코더 (녹음 중 파형·타이머, 엔터로 STT 변환) -->
+    <RetrospectVoiceRecorder v-if="isRecorderOpen" :retrospectiveId="retrospectiveId" @done="onVoiceDone" @cancel="isRecorderOpen = false" @blocked="onVoiceBlocked" />
+
     <!-- 대화 영역 -->
     <div class="message_wrapper h-[calc(100%-112px)] overflow-y-auto">
       <div class="message_area px-[20px] pt-[20px] flex flex-col" v-for="(m, i) in messages" :key="m.id">
@@ -30,9 +36,7 @@
             </div>
           </div>
         </div>
-        <div class="user_message_box self-end max-w-[350px] box-border p-[10px] bg-grey-13 rounded-lg text-grey-1 text-[14px]" v-else-if="m.role === 'user'">
-          {{ m.text }}
-        </div>
+        <RetroUserMessage v-else-if="m.role === 'user'" :text="m.text" />
       </div>
     </div>
 
@@ -43,6 +47,7 @@
       :nextQuestion="nextQuestion"
       :setGenerating="setGenerating"
       :completeRetro="completeRetro"
+      :accessMic="accessMic"
     />
   </div>
 </template>
@@ -57,6 +62,8 @@ import { getApiErrorCode, getApiErrorMessage, isAuthError } from '~/utils/api-er
 
 import RetroHeader from '~/components/layout/RetroHeader.vue'
 import RetroTextarea from '~/components/layout/RetroTextarea.vue'
+import RetroUserMessage from '~/components/layout/RetroUserMessage.vue'
+import RetrospectVoiceRecorder from '~/components/RetrospectVoiceRecorder.vue'
 
 definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
@@ -83,11 +90,22 @@ function uid() {
 const retro = useRetrospect()
 const { show } = useToast()
 const { isNative } = useIsNative()
+// 마이크 권한 요청·상태 판정은 음성 레코더 컴포저블과 동일 로직을 재사용
+const {
+  requestPermission: requestMicPermission,
+  isPermissionBlocked: isMicPermissionBlocked,
+  isPermissionGranted: isMicPermissionGranted,
+} = useVoiceRecorder()
 
 const retrospectiveId = ref('')
 const messages = ref<ChatMessage[]>([])
 const isBusy = ref(false) // API 호출 중(질문 전환/완료) — 입력·전송 잠금
 const questionNo = ref(0) // 화면에 표시한 질문 순번
+const isAccessMicModal = ref(false) // 마이크 접근 모달 여부
+const micRequesting = ref(false) // 권한 요청 진행 중 — '허용' 버튼 잠금
+const isRecorderOpen = ref(false) // 음성 레코더 표시 여부
+// 음성 레코더가 변환한 텍스트를 입력창(RetroTextarea)으로 넘기는 초안 채널
+const voiceTranscript = useState<string>('retrospect:voice-transcript', () => '')
 
 // 앰플리튜드 분석용 — 회고 시작 시각/심화질문 노출·스킵 여부 추적
 const startedAt = ref(0)
@@ -168,6 +186,63 @@ async function init() {
     show(getApiErrorMessage(e, '회고를 시작하지 못했어요. 잠시 후 다시 시도해 주세요.'))
   } finally {
     isBusy.value = false
+  }
+}
+
+// 마이크 버튼 — 권한이 이미 허용돼 있으면 접근 모달을 건너뛰고 바로 레코더를 연다.
+// (Permissions API 미지원 환경은 항상 접근 모달을 거쳐 requestPermission으로 처리)
+async function accessMic() {
+  if (await isMicPermissionGranted()) {
+    isRecorderOpen.value = true
+    return
+  }
+  isAccessMicModal.value = true
+}
+
+// 마이크 접근 모달 '허용' — 웹은 브라우저 권한 다이얼로그, 네이티브는 OS 권한 요청을 띄운다.
+// 성공하면 레코더를 열고, 영구 거부('denied')면 설정 화면으로 유도, 그 외(1회 거부·장치 없음)엔 안내만 한다.
+async function confirmAccessMic() {
+  if (micRequesting.value) return
+  micRequesting.value = true
+  try {
+    const granted = await requestMicPermission()
+    isAccessMicModal.value = false
+    if (granted) {
+      isRecorderOpen.value = true
+      return
+    }
+    if (await isMicPermissionBlocked()) {
+      await openMicSettings()
+    } else {
+      show('마이크 권한이 필요해요. 다시 시도해 주세요.')
+    }
+  } finally {
+    micRequesting.value = false
+  }
+}
+
+// STT 변환 완료 — 레코더를 닫고, 변환된 텍스트를 입력창 초안으로 넘긴다 (전송은 사용자가 직접).
+function onVoiceDone(text: string) {
+  isRecorderOpen.value = false
+  const trimmed = text.trim()
+  if (trimmed) voiceTranscript.value = trimmed
+}
+
+// 레코더 진입 시점에 권한이 영구 거부로 바뀐 경우 — 설정으로 유도
+function onVoiceBlocked() {
+  isRecorderOpen.value = false
+  openMicSettings()
+}
+
+// 마이크 권한이 영구 거부된 경우 — 네이티브는 앱 설정 화면, 웹은 안내 문구로 대체.
+async function openMicSettings() {
+  if (isNative.value) {
+    await NativeSettings.open({
+      optionAndroid: AndroidSettings.ApplicationDetails,
+      optionIOS: IOSSettings.App,
+    })
+  } else {
+    show('브라우저 주소창의 사이트 설정에서 마이크 접근을 허용해 주세요.')
   }
 }
 
