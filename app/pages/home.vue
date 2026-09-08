@@ -83,6 +83,7 @@
         :disabled="isCompleted"
         class="mt-5 mx-5"
         @start="startRetrospect"
+        @intro="introRetrospect"
       />
 
       <!-- 최근 제안 받은 행동 (단일 카드 + 구분선) — Figma 새 홈 UI: 날짜·제목·프로젝트·태그 -->
@@ -211,7 +212,7 @@ const hasUnread = useState<boolean>('notifications:hasUnread', () => false)
 const homeLoaded = useState<boolean>('home:loaded', () => false)
 const isLoading = ref(!homeLoaded.value)
 
-const maxDaily = 3
+const maxDaily = 50
 const remaining = computed(() => Math.max(0, maxDaily - todayRetrospectiveCount.value))
 const isCompleted = computed(() => remaining.value === 0)
 
@@ -283,6 +284,7 @@ async function loadHome() {
     // /api/v2/home 한 번이면 nickname·mission·알림까지 전부 받음
     const { data } = await $api.get<ApiResponse<HomeResponse>>('/api/v2/home')
     const home = data.data
+    console.log(home)
     nickname.value = home.nickname
     recentRetrospectives.value = home.recentRetrospectives
     todayRetrospectiveCount.value = home.todayRetrospectiveCount
@@ -398,5 +400,10 @@ function goToNotifications() {
 function startRetrospect() {
   track('retrospect_started', { source: 'home' })
   navigateTo('/retrospect/start')
+}
+
+function introRetrospect() {
+  track('retrospect_started', { source: 'home' })
+  navigateTo('/retrospect/intro')
 }
 </script>

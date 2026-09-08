@@ -30,28 +30,46 @@ export const createApiClient = (baseURL: string) => {
     window.location.href = '/login'
   }
 
+  function isPublicAuthRequest(url?: string) {
+    return url === '/api/v1/auth/login'
+      || url === '/api/v1/auth/refresh'
+      || url?.startsWith('/api/v2/auth/social/')
+  }
+
+  // 로그인 이후의 보호 API에만 서비스 액세스 토큰을 첨부한다.
+  // 소셜 로그인 자격 증명은 Authorization 헤더가 아니라 요청 본문으로 전달한다.
   client.interceptors.request.use((config) => {
-    const token = localStorage.getItem('accessToken')
-    if (token) config.headers.Authorization = `Bearer ${token}`
+    const accessToken = localStorage.getItem('accessToken')
+    if (accessToken && !isPublicAuthRequest(config.url)) {
+      config.headers.Authorization = `Bearer ${accessToken}`
+    }
     return config
   })
 
   client.interceptors.response.use(
     (res) => res,
     async (error) => {
+      console.log(error)
       const original = error.config
       const status = error.response?.status
-      const code = error.response?.data?.properties?.code
+      const code = error.response?.data?.properties?.codeWW
 
       // 탈퇴 회원(403)은 갱신해도 소용없음 → 바로 로그인으로
       if (code === 'WITHDRAWN_USER') {
+        // 로그인 요청에서는 호출부가 오류를 표시하도록 리디렉션하지 않는다.
+        if (isPublicAuthRequest(original?.url)) {
+          return Promise.reject(error)
+        }
         redirectToLogin()
         return Promise.reject(error)
       }
 
       // 토큰 갱신: 401(리프레시 만료) + 403(액세스 토큰 무효 시 백엔드가 주는 상태)에서 시도.
       // (백엔드는 잘못/만료된 access token에 401이 아니라 403을 반환함)
-      if ((status !== 401 && status !== 403) || original._retry) {
+      // 인증 헤더가 없는 공개 요청(로그인 등)의 401/403은 토큰 갱신 대상이 아니다.
+      // 호출부가 원래 API 오류를 처리할 수 있도록 그대로 전달한다.
+      const hasAuthorization = Boolean(original?.headers?.Authorization)
+      if ((status !== 401 && status !== 403) || original?._retry || !hasAuthorization) {
         return Promise.reject(error)
       }
 

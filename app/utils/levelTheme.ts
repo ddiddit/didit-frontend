@@ -3,7 +3,7 @@
 export const LEVEL_THEME: Record<number, { accent: string; fill: string }> = {
   1: { accent: '#5A8DEE', fill: '#C5D7F9' },
   2: { accent: '#8C7CF0', fill: '#B4ABF0' },
-  3: { accent: '#E079E0', fill: '#EEB5EE' },
+  3: { accent: '#8C7CF0', fill: '#B4ABF0' },
   4: { accent: '#DEAD3A', fill: '#EBCE89' },
   5: { accent: '#F08A5D', fill: '#F7BFA6' },
   6: { accent: '#F06C6C', fill: '#F6A7A7' },

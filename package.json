@@ -29,6 +29,7 @@
     "@capacitor/status-bar": "^7.0.6",
     "@capacitor/text-zoom": "^7.0.4",
     "@capgo/capacitor-social-login": "^7.20.0",
+    "@lottiefiles/dotlottie-vue": "^0.11.27",
     "@pinia/nuxt": "^0.11.1",
     "@tanstack/vue-query": "^5.80.2",
     "@team-lepisode/capacitor-kakao-login": "^7.0.0",
@@ -43,6 +44,7 @@
     "nuxt": "^4.4.7",
     "pinia": "^3.0.2",
     "sortablejs": "^1.15.7",
+    "swiper": "^14.2.0",
     "vue": "^3.5.35",
     "vue-router": "^5.1.0"
   },
