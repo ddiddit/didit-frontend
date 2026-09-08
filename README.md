@@ -4,7 +4,7 @@ AI 기반 회고(retrospective) 앱 **didit**의 프론트엔드 레포입니다
 백엔드 API(`https://api.didit.ai.kr`)와 연동하며, Nuxt 웹을 Capacitor로 감싸 iOS/Android 앱으로 패키징합니다.
 
 - **단계**: 웹 MVP 개발 중
-- **개발자**: 1인 사이드 프로젝트
+- **개발자**: 5인 사이드 프로젝트
 - **디자인 컨셉**: 모바일 우선, 미니멀
 
 ## 플랫폼 전략
