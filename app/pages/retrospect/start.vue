@@ -34,7 +34,7 @@
         <div class="didit_message_wrapper self-start" v-else-if="m.role === 'generating'">
           <div class="didit_profile flex flex-col">
             <img src="/icons/icon_chat_didit.png" alt="디딧" class="w-6 h-6" />
-            <div class="didit_message_box mt-[10px] px-[12px] py-[14px] bg-grey-3 inline-flex items-center gap-[6px] text-[14px] rounded-[24px] self-start text-grey-7">
+            <div class="didit_message_box max-w-[350px] mt-[10px] px-[12px] py-[14px] bg-grey-3 inline-flex items-center gap-[6px] text-[14px] rounded-[24px] self-start text-grey-7">
               <!-- 심화 질문 생성 대기(= m.text 없음)일 땐 텍스트 없이 로티만, 그 외(결과 정리 등)엔 텍스트 -->
               <DotLottieVue v-if="!m.text" class="w-5 h-5 shrink-0" autoplay loop :src="DEEP_QUESTION_LOTTIE" />
               <span v-else>{{ m.text }}</span>
