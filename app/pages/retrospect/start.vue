@@ -19,7 +19,7 @@
     <div class="message_wrapper h-[calc(100%-112px)] overflow-y-auto">
       <div class="message_area px-[20px] pt-[20px] flex flex-col" v-for="(m, i) in messages" :key="m.id">
         <div class="didit_message_wrapper self-start" v-if="m.role === 'didit'">
-          <div class="didit_profile flex flex-col">
+          <div class="didit_profile flex flex-col mb-[20px]">
             <img src="/icons/icon_chat_didit.png" alt="디딧" class="w-6 h-6" />
             <div class="didit_message_box mt-[10px] px-[12px] py-[14px] bg-grey-3 inline-block text-[14px] rounded-[24px] self-start">
               {{ m.typedMain }}
@@ -50,9 +50,8 @@
       :retrospectId="retrospectiveId"
       :saveAnswer="saveAnswer"
       :nextQuestion="nextQuestion"
-      :setGenerating="setGenerating"
-      :completeRetro="completeRetro"
       :accessMic="accessMic"
+      :messages="messages"
     />
   </div>
 </template>
@@ -183,6 +182,7 @@ const QUESTION_GUIDES: Record<string, string> = {
   Q1: '잘된 일, 막혔던 일, 정리되지 않은 생각 모두 자\n유롭게 이야기해주세요.',
   Q2: '새롭게 해 본 방법이나, 잘 풀리지 않았던 순간을\n떠올려 보세요. 작은 부분도 괜찮아요.',
   Q3: '다음에 적용해보고 싶은 생각이나 방법을 떠올려 보세요.',
+  Q4_DEEP: '오늘 회고 내용은 충분해요\n지금까지 나눈 내용을 정리해볼까요?'
 }
 
 
@@ -301,45 +301,6 @@ function nextQuestion(questionType: string, content: string, skippable = false) 
   // push된 반응형 객체를 다시 받아 타이핑 시작 (로컬 원본은 반응형이 아님)
   const added = messages.value[messages.value.length - 1]
   if (added?.role === 'didit') typeDiditMessage(added)
-}
-
-// 심화질문 생성 중 로딩 버블 토글 (RetroTextarea가 /deep-question 폴링하는 동안 노출)
-const generatingId = ref<number | null>(null)
-function setGenerating(on: boolean) {
-  if (on) {
-    if (generatingId.value !== null) return
-    const id = uid()
-    generatingId.value = id
-    messages.value.push({ id, role: 'generating' })
-    scrollToBottom()
-  } else {
-    if (generatingId.value === null) return
-    messages.value = messages.value.filter((m) => m.id !== generatingId.value)
-    generatingId.value = null
-  }
-}
-
-// 회고 완료 단계 진입 (심화질문 스킵·생성 실패 또는 isReadyToComplete)
-// 결과 화면이 completingId를 보고 retro.complete()로 제목/요약을 생성한다.
-const completingId = useState<string>('retrospect:completing-id')
-async function completeRetro() {
-  if (isBusy.value) return
-  isBusy.value = true
-  const loadingId = uid()
-  messages.value.push({ id: loadingId, role: 'generating', text: '회고 결과를 정리하고 있어요…' })
-  scrollToBottom()
-  try {
-    // 심화질문을 건너뛴 경우 백엔드 상태 전이를 위해 skip 호출 (이미 완료 가능 상태면 무시됨)
-    await retro.skipDeepQuestion(retrospectiveId.value).catch(() => {})
-    completingId.value = retrospectiveId.value
-    await navigateTo('/retrospect/result')
-  } catch (e) {
-    messages.value = messages.value.filter((m) => m.id !== loadingId)
-    if (isAuthError(e)) return // 인증 만료 → 로그인 이동
-    show(getApiErrorMessage(e, '회고를 마치지 못했어요. 잠시 후 다시 시도해 주세요.'))
-  } finally {
-    isBusy.value = false
-  }
 }
 
 
