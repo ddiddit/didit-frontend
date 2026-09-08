@@ -4,7 +4,10 @@
     :style="keyboardOpen ? { height: `calc(100% - ${keyboardHeight}px)` } : undefined"
   >
     <!-- 헤더 영역 -->
-    <RetroHeader :title="'회고 마치기'" :is-busy="isBusy" />
+    <RetroHeader :title="'회고 마치기'" :isBusy="isBusy" :onBack="onBack" />
+
+    <!-- 뒤로가기 모달 -->
+    <UiPopup :modelValue="isBackModal" :title="'뒤로가기'" description="뒤로가기 하시겠습니까?" :onConfirm="onBackConfirm" :onCancel="onBackCancel" />
 
     <!-- 마이크 접근 모달 — 권한이 아직 없을 때만. 이미 허용된 경우 accessMic()에서 바로 레코더를 연다 -->
     <UiPopup :modelValue="isAccessMicModal" :title="'디딧(didit)이(가) 마이크에 접근하려고 합니다.'" :description="'회고를 음성으로 기록하기 위해 마이크 접근 권한이 필요해요.'" :confirmText="'허용'" :cancelText="'허용 안 함'" :loading="micRequesting" @cancel="isAccessMicModal = false" @confirm="confirmAccessMic" />
@@ -31,8 +34,10 @@
         <div class="didit_message_wrapper self-start" v-else-if="m.role === 'generating'">
           <div class="didit_profile flex flex-col">
             <img src="/icons/icon_chat_didit.png" alt="디딧" class="w-6 h-6" />
-            <div class="didit_message_box mt-[10px] px-[12px] py-[14px] bg-grey-3 inline-block text-[14px] rounded-[24px] self-start text-grey-7">
-              {{ m.text || '심화 질문을 만들고 있어요…' }}
+            <div class="didit_message_box mt-[10px] px-[12px] py-[14px] bg-grey-3 inline-flex items-center gap-[6px] text-[14px] rounded-[24px] self-start text-grey-7">
+              <!-- 심화 질문 생성 대기(= m.text 없음)일 땐 텍스트 없이 로티만, 그 외(결과 정리 등)엔 텍스트 -->
+              <DotLottieVue v-if="!m.text" class="w-5 h-5 shrink-0" autoplay loop :src="DEEP_QUESTION_LOTTIE" />
+              <span v-else>{{ m.text }}</span>
             </div>
           </div>
         </div>
@@ -60,12 +65,17 @@ import { NativeSettings, AndroidSettings, IOSSettings } from 'capacitor-native-s
 import type { QuestionType, CompleteRetrospectiveResponse } from '~/types/api'
 import { getApiErrorCode, getApiErrorMessage, isAuthError } from '~/utils/api-error'
 
+import { DotLottieVue } from '@lottiefiles/dotlottie-vue'
+
 import RetroHeader from '~/components/layout/RetroHeader.vue'
 import RetroTextarea from '~/components/layout/RetroTextarea.vue'
 import RetroUserMessage from '~/components/layout/RetroUserMessage.vue'
 import RetrospectVoiceRecorder from '~/components/RetrospectVoiceRecorder.vue'
 
 definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
+
+// 심화 질문 생성 로딩 로티 (.lottie). public/lottie/ 에 파일을 두거나 호스팅 URL로 교체.
+const DEEP_QUESTION_LOTTIE = '/icons/loading.lottie'
 
 export type ChatMessage =
   | {
@@ -99,6 +109,7 @@ const {
 
 const retrospectiveId = ref('')
 const messages = ref<ChatMessage[]>([])
+const isBackModal = ref(false) // 뒤로가기 모달 표시 여부
 const isBusy = ref(false) // API 호출 중(질문 전환/완료) — 입력·전송 잠금
 const questionNo = ref(0) // 화면에 표시한 질문 순번
 const isAccessMicModal = ref(false) // 마이크 접근 모달 여부
@@ -118,6 +129,24 @@ function scrollToBottom() {
   nextTick(() => {
     scrollEl.value?.scrollTo({ top: scrollEl.value.scrollHeight, behavior: 'smooth' })
   })
+}
+
+// 뒤로 가기 모달 재생
+function onBack() {
+  if(isBusy.value) {
+    return
+  }
+  isBackModal.value = true
+}
+
+// 뒤로 가기 확인
+function onBackConfirm() {
+  navigateTo("/home")
+}
+
+// 뒤로 가기 취소
+function onBackCancel() {
+  isBackModal.value = false
 }
 
 // didit 메시지 본문(main)을 delay 간격으로 한 글자씩 typedMain에 채우고,

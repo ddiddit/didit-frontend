@@ -1,7 +1,7 @@
 ﻿<template>
 
     <!-- 뒤로가기 팝업 -->
-    <UiPopup :modelValue="isPopupOpen" :title="'액션 확인'" :description="'뒤로가기 하시겠습니까?'" :onConfirm="confirmBack" :onCancel="cancelBack" />
+    <UiPopup :modelValue="isPopupOpen" :title="'뒤로가기'" :description="'뒤로가기 하시겠습니까?'" :onConfirm="confirmBack" :onCancel="cancelBack" />
 
     <RetroHeader :title="'건너뛰기'" :isBusy="isBusy" :onBack="onBack" />
     <div class="intro_body w-full h-[calc(100%-50px)] relative">
