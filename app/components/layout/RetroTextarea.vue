@@ -166,6 +166,7 @@
         props.messages.splice(idx, 1)
         return
       }
+      console.log(response)
 
       // readyToComplete가 true면 지금까지 답변으로 완료해도 될 만큼 쌓였다는 뜻이라,
       // 다음 질문이 와도 skippable로 표시해 건너뛸 수 있게 한다

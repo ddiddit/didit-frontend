@@ -3,11 +3,31 @@
     class="relative h-full bg-white flex flex-col overflow-hidden"
     :style="keyboardOpen ? { height: `calc(100% - ${keyboardHeight}px)` } : undefined"
   >
-    <!-- 헤더 영역 -->
-    <RetroHeader :title="'회고 마치기'" :isBusy="isBusy" :onBack="onBack" />
+    <!-- 헤더 영역 — 오른쪽 '회고 마치기'는 응답 대기 중에만 잠기고, 그 외에는 언제나 누를 수 있다 -->
+    <RetroHeader :title="'회고 마치기'" :isBusy="isBusy" :onBack="onBack" :onFinish="onFinishClick" :finishDisabled="isFinishBlocked" />
 
-    <!-- 뒤로가기 모달 — 뒤로가기는 곧 대화 종료(exit)라 이를 명시 -->
-    <UiPopup :modelValue="isBackModal" :title="'대화 종료'" description="대화를 종료하시겠습니까?" confirmText="대화 종료" :onConfirm="onBackConfirm" :onCancel="onBackCancel" />
+    <!-- 뒤로가기 모달 — 지금 나가면 결과가 생성되지 않음을 알리고, '나가기' 시 대화 종료(finish)까지 함께 처리 -->
+    <UiPopup
+      :modelValue="isBackModal"
+      title="아직 회고 결과 생성이 어려워요"
+      :description="'충분한 회고가 이뤄지지 않아\n지금 나가면 결과가 생성되지 않아요'"
+      cancelText="계속하기"
+      confirmText="나가기"
+      :loading="isBackLeaving"
+      :onConfirm="onBackConfirm"
+      :onCancel="onBackCancel"
+    />
+
+    <!-- 내용 부족 모달 — 결과 생성 기준을 아직 못 채운 상태에서 회고 마치기를 누른 경우 -->
+    <UiPopup
+      v-model="isNotReadyModal"
+      title="아직 내용이 충분하지 않아요"
+      description="결과 생성을 위해 내용을 더 작성해주세요"
+      :showCancel="false"
+      confirmText="확인"
+      variant="dark"
+      @confirm="isNotReadyModal = false"
+    />
 
     <!-- 마이크 접근 모달 — 권한이 아직 없을 때만. 이미 허용된 경우 accessMic()에서 바로 레코더를 연다 -->
     <UiPopup :modelValue="isAccessMicModal" :title="'디딧(didit)이(가) 마이크에 접근하려고 합니다.'" :description="'회고를 음성으로 기록하기 위해 마이크 접근 권한이 필요해요.'" :confirmText="'허용'" :cancelText="'허용 안 함'" :loading="micRequesting" @cancel="isAccessMicModal = false" @confirm="confirmAccessMic" />
@@ -21,11 +41,11 @@
         <div class="didit_message_wrapper self-start" v-if="m.role === 'didit'">
           <div class="didit_profile flex flex-col mb-[20px]">
             <img src="/icons/icon_chat_didit.png" alt="디딧" class="w-6 h-6" />
-            <div class="didit_message_box mt-[10px] px-[12px] max-w-[350px] py-[14px] bg-grey-3 inline-block text-[14px] rounded-[24px] self-start">
+            <div class="didit_message_box mt-[10px] px-[12px] max-w-[250px] py-[14px] bg-grey-3 inline-block text-[14px] rounded-[24px] self-start">
               {{ m.typedMain }}
             </div>
             <Transition name="sub-bubble">
-              <div v-if="m.showSub" class="didit_sub_message_box mt-[10px] max-w-[350px] px-[12px] py-[14px] bg-grey-3 inline-block text-[14px] rounded-[24px] whitespace-pre-line self-start">
+              <div v-if="m.showSub" class="didit_sub_message_box mt-[10px] max-w-[250px] px-[12px] py-[14px] bg-grey-3 inline-block text-[14px] rounded-[24px] whitespace-pre-line self-start">
                 {{ m.sub }}
               </div>
             </Transition>
@@ -42,15 +62,6 @@
           </div>
         </div>
         <RetroUserMessage v-else-if="m.role === 'user'" :text="m.text" />
-      </div>
-
-      <!-- 지금까지 답변으로 완료 가능(skippable) — 계속 답해도 되고, 여기서 바로 마쳐도 됨 -->
-      <div v-if="canFinish" class="px-[20px] pt-[8px] pb-[20px]">
-        <button
-          class="w-full h-[48px] rounded-xl bg-primary text-[15px] font-semibold text-grey-13 tracking-[-0.02em] active:opacity-80 disabled:opacity-60"
-          :disabled="isFinishing"
-          @click="onFinishClick"
-        >회고 마치기</button>
       </div>
     </div>
 
@@ -109,6 +120,7 @@ const {
 const retrospectiveId = ref('')
 const messages = ref<ChatMessage[]>([])
 const isBackModal = ref(false) // 뒤로가기 모달 표시 여부
+const isBackLeaving = ref(false) // '나가기' 처리 중(finish 호출) — 버튼 잠금
 const isBusy = ref(false) // API 호출 중(질문 전환/완료) — 입력·전송 잠금
 const questionNo = ref(0) // 화면에 표시한 질문 순번
 const isAccessMicModal = ref(false) // 마이크 접근 모달 여부
@@ -117,12 +129,16 @@ const isRecorderOpen = ref(false) // 음성 레코더 표시 여부
 // 음성 레코더가 변환한 텍스트를 입력창(RetroTextarea)으로 넘기는 초안 채널
 const voiceTranscript = useState<string>('retrospect:voice-transcript', () => '')
 
-// 회고 마치기(대화 종료) 관련 상태 — 마지막 메시지가 skippable이면 지금 마쳐도 됨
+// 회고 마치기(대화 종료) 관련 상태
 const isFinishing = ref(false) // finish() 호출 중 — 버튼 잠금
-const canFinish = computed(() => {
-  const last = messages.value.at(-1)
-  return last?.role === 'didit' && last.skippable === true
-})
+const isNotReadyModal = ref(false) // 내용 부족 안내 모달 표시 여부
+
+// AI가 답변에 응답 중인지 — generating 자리표시자가 떠 있으면 응답 대기 중
+const isAiResponding = computed(() => messages.value.some(m => m.role === 'generating'))
+
+// 회고 마치기 버튼 잠금 — 초기 로딩·AI 응답 대기·finish 처리 중일 때만 막고, 그 외엔 언제나 누를 수 있다
+const isFinishBlocked = computed(() => isBusy.value || isAiResponding.value || isFinishing.value)
+
 // result.vue와 공유하는 채널 — 결과 생성 화면에 어떤 회고를 넘길지 전달
 const completingId = useState<string>('retrospect:completing-id')
 
@@ -147,9 +163,11 @@ function onBack() {
   isBackModal.value = true
 }
 
-// 뒤로 가기 확인 — v2 대화 종료(finish)로 대화를 끝낸다. 실패해도 나가는 것 자체는 막지 않음
+// 뒤로 가기 확인('나가기') — v2 대화 종료(finish)로 대화를 끝내고 홈으로. 실패해도 나가는 것 자체는 막지 않음
 // (다음 진입 시 대화 조회에서 여전히 ACTIVE로 보이면 자연스럽게 이어서 진행됨)
 async function onBackConfirm() {
+  if (isBackLeaving.value) return // 연타로 finish가 중복 호출되는 것 방지
+  isBackLeaving.value = true
   if (retrospectiveId.value) {
     try {
       await retro.finish(retrospectiveId.value)
@@ -169,18 +187,25 @@ function onBackCancel() {
 // 회고 마치기 — 대화만 종료(finish)하고, 곧바로 기존 v1 결과 생성 화면으로 넘긴다
 // (result.vue가 completingId로 기존 complete() API를 그대로 호출)
 async function onFinishClick() {
-  if (isFinishing.value || !retrospectiveId.value) return
-  isFinishing.value = true
+  if (isFinishBlocked.value || !retrospectiveId.value) return
+  isFinishing.value = true // 이 시점부터 버튼 잠금 (isFinishBlocked에 포함)
   try {
+    // 로컬 skippable 신호가 늦게 갱신되는 경우가 있어, 대화 조회로 서버의 readyToComplete를 직접 확인
+    const conversation = await retro.getConversation(retrospectiveId.value)
+    if (!conversation.readyToComplete) {
+      isNotReadyModal.value = true
+      isFinishing.value = false // 계속 회고를 이어갈 수 있게 잠금 해제
+      return
+    }
     await retro.finish(retrospectiveId.value)
     localStorage.removeItem(ACTIVE_RETROSPECTIVE_KEY) // 대화가 끝났으니 재개 대상에서 제외
     completingId.value = retrospectiveId.value
     navigateTo('/retrospect/result')
+    // 성공 시엔 isFinishing을 풀지 않는다 — 결과 화면으로 넘어가는 동안 버튼이 다시 눌리는 것 방지
   } catch (e) {
+    isFinishing.value = false // 실패 — 다시 시도할 수 있게 잠금 해제
     if (isAuthError(e)) return
     show(getApiErrorMessage(e, '회고를 마치지 못했어요. 잠시 후 다시 시도해주세요.'))
-  } finally {
-    isFinishing.value = false
   }
 }
 
@@ -279,7 +304,8 @@ async function syncConversation() {
     const lastMessage = conversation.messages.at(-1)
     if (!lastMessage) return
 
-    const diditMessage = buildDiditMessage(lastMessage)
+    // 백그라운드 동안 완료 기준을 채웠을 수 있으니 readyToComplete도 함께 반영
+    const diditMessage = buildDiditMessage(lastMessage, conversation.readyToComplete)
     messages.value.splice(generatingIdx, 1, diditMessage)
     typeDiditMessage(diditMessage)
   } catch (e) {
