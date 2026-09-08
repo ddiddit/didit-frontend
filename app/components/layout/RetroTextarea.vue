@@ -6,7 +6,7 @@
                 <img src="/icons/attach_file.png" alt="첨부파일" />
             </button>
             <input type="file" multiple accept=".pdf,image/*" class="hidden" />
-            <textarea ref="textRef" style="height: 22px;" :value="inputValue" @focus="isInputFocused = true" @blur="isInputFocused = false" @input="handleInputChange" @keydown="handleSend" placeholder="회고를 입력하세요" class="resize-none outline-none text-[14px] leading-[22px] bg-transparent placeholder:text-grey-7 placeholder:text-[14px]" :class="isTextWrapped ? 'absolute left-[10px] right-[10px] bottom-[48px] px-[6px] py-[10px] box-border' : 'w-full'" />
+            <textarea ref="textRef" :disabled="isSending" style="height: 22px;" :value="inputValue" @focus="isInputFocused = true" @blur="isInputFocused = false" @input="handleInputChange" @keydown="handleSend" placeholder="회고를 입력하세요" class="resize-none outline-none text-[14px] leading-[22px] bg-transparent placeholder:text-grey-7 placeholder:text-[14px]" :class="isTextWrapped ? 'absolute left-[10px] right-[10px] bottom-[48px] px-[6px] py-[10px] box-border' : 'w-full'" />
             <button @click="accessMic">
                 <img src="/icons/voice.svg" alt="마이크접근" />
             </button>
@@ -50,14 +50,16 @@
 
   const props = defineProps<{
     retrospectId: string
-    saveAnswer: (text: string) => void
-    nextQuestion: (questionType: string, content: string, skippable?: boolean) => void
     accessMic: () => void
     messages: ChatMessage[]
   }>()
 
-  // 답변 저장할 ref
-  const text = ref('')
+  // 다음 질문(didit 메시지) 타이핑 애니메이션 — start.vue(첫 질문)와 공용
+  const { typeDiditMessage, clearTypingTimers } = useDiditTyping()
+  onUnmounted(clearTypingTimers)
+
+  // 다시 질문 보내는 중... 상황을 나타내는 변수
+  const isSending = ref(false)
 
   // 회고 입력 창 포커스 시 관리할 상태
   const isInputFocused = ref(false)
@@ -135,45 +137,48 @@
     }
   }
 
-  // Textarea 입력하기
+  // Textarea 입력하기 — Enter로 전송 (Shift+Enter, 한글 조합 확정 Enter는 줄바꿈/무시)
   async function handleSend(event: KeyboardEvent) {
-    // Shift+Enter는 줄바꿈용, 한글 조합 중 Enter(자모 확정)는 전송 아님
-    if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return
-    event.preventDefault() // textarea에 개행이 들어가는 것 방지 (안 하면 inputValue가 안 비워지고 줄만 바뀜)
+    if (event.key !== 'Enter' || event.isComposing || event.shiftKey) return
+    event.preventDefault() // await 전에 동기 호출해야 기본 동작(줄바꿈) 삽입을 막을 수 있음
 
     const content = inputValue.value.trim()
-    if (!content) return
+    if (!content || isSending.value) return // TODO: TOAST UI로 채팅을 입력해주셔야 합니다 추가하기
 
-    // 입력값·높이 상태를 먼저 비운다 (네트워크 응답을 기다리는 동안 개행이 남아 보이지 않도록)
+    // 사용자 메시지를 먼저 채팅에 반영하고 입력창은 비운다
+    props.messages.push({ id: crypto.randomUUID(), role: 'user', text: content })
     inputValue.value = ''
-    isTextWrapped.value = false
-    if (textRef.value) {
-      textRef.value.style.height = `${LINE_HEIGHT}px`
-      textRef.value.style.overflowY = 'hidden'
-    }
-    if (allRef.value) allRef.value.style.height = ''
+    nextTick(syncHeight)
 
+    // AI 응답을 기다리는 동안 보여줄 자리표시자 — id를 기억해뒀다가 응답 도착 시 이 자리를 교체한다
+    const generatingId = crypto.randomUUID()
+    props.messages.push({ id: generatingId, role: 'generating' })
+
+    isSending.value = true
     try {
       const response = await answer(props.retrospectId, content)
-      text.value = content
-      props.saveAnswer(text.value)
-      if (!response.nextQuestionType || !response.nextQuestionContent) return
-      if (response.nextQuestionType === 'Q4_DEEP') {
-        // 심화질문은 서버가 비동기로 생성 → isReady 될 때까지 1.2초 간격으로 최대 25회 폴링
-        for (let i = 0; i < 25; i++) {
-          await new Promise((resolve) => setTimeout(resolve, 1200))
-          const deep = await getDeepQuestion(props.retrospectId)
-          console.log(deep)
-          if (deep.isReady && deep.content) {
-            props.nextQuestion('Q4_DEEP', deep.content, true) // 심화질문은 스킵 가능
-            break
-          }
-        }
-      } else {
-        props.nextQuestion(response.nextQuestionType, response.nextQuestionContent)
+
+      const idx = props.messages.findIndex(m => m.id === generatingId)
+      if (idx === -1) return
+
+      if (!response.assistantMessage) {
+        // 다음 질문 없이 완료 준비 신호만 온 경우 — 완료 플로우는 별도 처리 필요
+        props.messages.splice(idx, 1)
+        return
       }
+
+      // readyToComplete가 true면 지금까지 답변으로 완료해도 될 만큼 쌓였다는 뜻이라,
+      // 다음 질문이 와도 skippable로 표시해 건너뛸 수 있게 한다
+      const diditMessage = buildDiditMessage(response.assistantMessage, response.readyToComplete)
+      props.messages.splice(idx, 1, diditMessage)
+      typeDiditMessage(diditMessage)
     } catch {
-      inputValue.value = content // 전송 실패 시 입력값 복구
+      // 실패 시 generating 자리표시자 제거 (에러 안내는 이후 처리)
+      const idx = props.messages.findIndex(m => m.id === generatingId)
+      if (idx !== -1) props.messages.splice(idx, 1)
+    } finally {
+      isSending.value = false
+      console.log(props.messages)
     }
   }
 
