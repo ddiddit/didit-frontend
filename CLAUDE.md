@@ -90,7 +90,11 @@ AI 기반 회고(retrospective) 앱의 프론트엔드.
   - 앱 백그라운드→포그라운드 복귀 시에도(`@capacitor/app`의 `appStateChange`) 대화 상태를 동기화해, 놓친 AI 응답을 복구
   - 단, WebView 자체가 완전히 종료된 뒤 재실행되면 `no-direct-entry` 미들웨어가 먼저 `/home`으로 돌려보내 재개 불가 (정상 네비게이션·백그라운드 유지 상태에서만 재개됨)
 - **타이핑 애니메이션 공용 로직**: `app/composables/useDiditTyping.ts`의 `buildDiditMessage()`(AI 메시지 → 채팅 말풍선 변환) / `typeDiditMessage()`(한 글자씩 타이핑)를 첫 질문·다음 질문·재개 복구 등 여러 곳에서 재사용. 새 위치에서 AI 메시지를 화면에 추가할 땐 이 두 함수를 그대로 쓸 것 — push한 메시지 객체를 직접 `reactive()`로 감싸지 않으면(평범한 객체만 push) 이후 `typedMain` 등을 mutate해도 화면이 갱신되지 않는 반응성 함정이 있음
-- **skippable**: 답변 응답의 `readyToComplete`가 true면 해당 질문은 `skippable: true`로 표시되어 "회고 마치기" 버튼이 뜸 → 누르면 `finish()` 호출 후 기존 v1 결과 생성 화면(`/retrospect/result`, `retro.complete()`)으로 연결
+- **회고 마치기 버튼**: 헤더 오른쪽 "회고 마치기"(`RetroHeader`의 `onFinish`)는 **항상 노출**되며, AI 응답 대기 중(=`generating` 자리표시자가 떠 있음)·초기 로딩·`finish()` 처리 중일 때만 잠긴다(`isFinishBlocked`)
+- **skippable / readyToComplete**: 답변 응답의 `readyToComplete`가 true면 해당 질문은 `skippable: true`로 표시됨. 단 이 로컬 신호는 마무리 시점에도 false로 남는 경우가 있어 **완료 판정 기준으로 쓰지 않는다**
+  - "회고 마치기"를 눌렀을 때 `getConversation()`(대화 조회)로 **서버의 `readyToComplete`를 직접 확인** → true면 `finish()` 호출 후 기존 v1 결과 생성 화면(`/retrospect/result`, `retro.complete()`)으로 연결
+  - false면 마치지 않고 안내 모달("아직 내용이 충분하지 않아요 / 결과 생성을 위해 내용을 더 작성해주세요 / 확인")만 표시
+- **뒤로가기**: 헤더 뒤로가기 → 확인 모달("아직 회고 결과 생성이 어려워요 / …지금 나가면 결과가 생성되지 않아요 / 계속하기 / 나가기"). "나가기"는 `finish()`(대화 종료 API)를 호출하고 `ACTIVE_RETROSPECTIVE_KEY`를 지운 뒤 `/home`으로 이동 — finish가 실패해도 이동은 막지 않음(`onBackConfirm`)
 
 ## 분석 (Amplitude)
 

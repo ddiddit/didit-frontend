@@ -212,7 +212,7 @@ const hasUnread = useState<boolean>('notifications:hasUnread', () => false)
 const homeLoaded = useState<boolean>('home:loaded', () => false)
 const isLoading = ref(!homeLoaded.value)
 
-const maxDaily = 50
+const maxDaily = 1000
 const remaining = computed(() => Math.max(0, maxDaily - todayRetrospectiveCount.value))
 const isCompleted = computed(() => remaining.value === 0)
 
