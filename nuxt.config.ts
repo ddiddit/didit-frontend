@@ -1,6 +1,6 @@
 import pkg from './package.json'
 
-const apiBase = process.env.NUXT_PUBLIC_API_BASE ?? 'https://dev-api.didit.io.kr'
+const apiBase = process.env.NUXT_PUBLIC_API_BASE
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
@@ -10,6 +10,8 @@ export default defineNuxtConfig({
   vite: {
     optimizeDeps: {
       include: ['firebase/app', 'firebase/messaging'],
+      // dotLottie 플레이어는 wasm/worker를 런타임에 로드 — 사전 번들링에서 제외해야 경로가 깨지지 않음
+      exclude: ['@lottiefiles/dotlottie-web'],
     },
     server: {
       proxy: {

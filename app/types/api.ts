@@ -217,24 +217,78 @@ export interface Retrospective {
 // 회고 질문 타입 (기본 질문 Q1~Q4, 이후 AI 심화질문)
 export type QuestionType = string
 
+// 초기 메시지 타입
+export type InitialMessage = {
+  id: string;
+  sender: string;
+  messageType: string;
+  title: string;
+  body: string;
+  content: string | null;
+  createdAt: string;
+} 
+
+// 어시스턴트 메시지 타입
+export type AssistantMessage = {
+  id: string
+  sender: string
+  messageType: string
+  title: string | null
+  body: string | null
+  content: string | null
+  createdAt: string | null
+}
+
 // 회고 시작 → 첫 질문 반환
 export interface StartRetrospectiveResponse {
   retrospectiveId: string
-  firstQuestionType: QuestionType
-  firstQuestionContent: string
+  conversationStatus: string
+  initialMessage: InitialMessage
+  readyToComplete: boolean
 }
 
-// 답변 제출(텍스트/음성 공통) → 다음 질문 또는 완료 준비 신호
+// 답변 제출 - 텍스트
 export interface SubmitAnswerResponse {
-  content: string | null // 음성 답변일 때 STT 변환 텍스트, 텍스트 답변이면 null
-  nextQuestionType: QuestionType | null
-  nextQuestionContent: string | null
-  isReadyToComplete: boolean
+  turnId: string
+  userMessageId: string
+  assistantMessage: AssistantMessage
+  readyToComplete: boolean
 }
 
 // 음성 → 텍스트 변환 전용 (전송 전 미리보기용)
 export interface TranscribeResponse {
   content: string
+}
+
+// 대화 조회에 나오는 AI 메시지 — AssistantMessage와 같은 모양
+export type ConversationMessage = AssistantMessage
+
+// 답변 제출(턴) 처리 상태
+export type TurnStatus = 'PENDING' | 'COMPLETED' | 'FAILED'
+
+export interface ConversationTurn {
+  id: string
+  clientMessageId: string
+  userMessageId: string
+  status: TurnStatus
+  attemptCount: number
+  errorCode: ApiErrorCode | null
+}
+
+// 대화 조회 — 앱 재진입/AI 응답 실패 후 현재 메시지·턴 상태 복구용
+export interface ConversationResponse {
+  retrospectiveId: string
+  conversationStatus: string
+  messages: ConversationMessage[]
+  turns: ConversationTurn[]
+  readyToComplete: boolean
+}
+
+// 대화 종료 — 결과 생성과는 분리된 API. 대화만 끝내고 결과 생성은 NOT_STARTED로 반환됨
+export interface FinishRetrospectiveResponse {
+  retrospectiveId: string
+  conversationStatus: string
+  resultGenerationStatus: string
 }
 
 // AI 심화질문 조회 (생성 대기 중이면 isReady=false 로 폴링)

@@ -78,6 +78,20 @@ AI 기반 회고(retrospective) 앱의 프론트엔드.
 - `app/middleware/auth.ts` — 보호 라우트 (CSR only)
 - 페이지에서 `definePageMeta({ middleware: 'auth' })` 로 적용
 
+## 회고 진행 플로우 (V2 대화 API)
+
+- 회고 진행 화면은 `app/pages/retrospect/start.vue` + `app/components/layout/RetroTextarea.vue`의 **채팅형 UI**로 구현 (질문이 타이핑 애니메이션으로 노출되고, 텍스트/음성(STT)으로 답변)
+- 회고 **시작·답변 제출·대화 조회·대화 종료는 V2 API**(`/api/v2/retrospectives/...`)로 전환됨. 음성 답변/STT/심화질문 조회/완료(결과 생성)는 아직 **V1 API** 그대로 사용 (`app/composables/useRetrospect.ts`에서 경로로 구분)
+  - `POST /api/v2/retrospectives` — 시작
+  - `POST /api/v2/retrospectives/{id}/messages` — 답변 제출. `clientMessageId`는 **요청마다 고유해야 하는 멱등키**(`crypto.randomUUID()`) — 회고 id처럼 고정값을 재사용하면 두 번째 제출부터 409 Conflict
+  - `GET /api/v2/retrospectives/{id}/conversation` — 대화 조회. **AI 메시지만** 내려주고 사용자가 입력한 답변 텍스트는 포함하지 않음 → 전체 대화 재구성은 불가능하고 "가장 마지막 질문" 복구만 가능
+  - `POST /api/v2/retrospectives/{id}/finish` — 대화 종료. 결과 생성(V1 `complete()`)과 **분리된 API**이며 응답의 `resultGenerationStatus`는 항상 `NOT_STARTED`
+- **진행 중 회고 재개**: `useRetrospect.ts`의 `ACTIVE_RETROSPECTIVE_KEY`(localStorage)에 회고 id를 보관 — 답변 도중 화면을 나갔다 들어와도 `start()`로 새 회고를 만들지 않고 `getConversation()`으로 이어서 진행. 대화 종료(`finish()`)·완료(`complete()`) 시 이 키를 제거
+  - 앱 백그라운드→포그라운드 복귀 시에도(`@capacitor/app`의 `appStateChange`) 대화 상태를 동기화해, 놓친 AI 응답을 복구
+  - 단, WebView 자체가 완전히 종료된 뒤 재실행되면 `no-direct-entry` 미들웨어가 먼저 `/home`으로 돌려보내 재개 불가 (정상 네비게이션·백그라운드 유지 상태에서만 재개됨)
+- **타이핑 애니메이션 공용 로직**: `app/composables/useDiditTyping.ts`의 `buildDiditMessage()`(AI 메시지 → 채팅 말풍선 변환) / `typeDiditMessage()`(한 글자씩 타이핑)를 첫 질문·다음 질문·재개 복구 등 여러 곳에서 재사용. 새 위치에서 AI 메시지를 화면에 추가할 땐 이 두 함수를 그대로 쓸 것 — push한 메시지 객체를 직접 `reactive()`로 감싸지 않으면(평범한 객체만 push) 이후 `typedMain` 등을 mutate해도 화면이 갱신되지 않는 반응성 함정이 있음
+- **skippable**: 답변 응답의 `readyToComplete`가 true면 해당 질문은 `skippable: true`로 표시되어 "회고 마치기" 버튼이 뜸 → 누르면 `finish()` 호출 후 기존 v1 결과 생성 화면(`/retrospect/result`, `retro.complete()`)으로 연결
+
 ## 분석 (Amplitude)
 
 - 이벤트 추적은 `app/composables/useAmplitude.ts`의 `track()` / `identify()` / `reset()` 사용

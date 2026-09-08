@@ -21,7 +21,7 @@
 
       <!-- 타이머: 빨간 점 + 시간 -->
       <div class="flex items-center gap-2 mt-7">
-        <span class="w-[6px] h-[6px] rounded-full" :class="isPaused ? 'bg-grey-6' : 'bg-accent'" />
+        <span class="w-[6px] h-[6px] rounded-full" :class="recognizing ? 'bg-grey-6' : 'bg-accent'" />
         <span class="text-[15px] font-medium leading-[1.5] tracking-[-0.3px] text-grey-8 w-16 text-center tabular-nums">
           {{ timeLabel }}
         </span>
@@ -40,39 +40,41 @@
         </div>
       </div>
 
-      <!-- 버튼: 일시정지/재생 + 전송 -->
-      <div class="flex items-center gap-3 mt-[30px]">
-        <button
-          class="w-12 h-12 rounded-full bg-grey-3 flex items-center justify-center"
-          :aria-label="isPaused ? '재생' : '일시정지'"
-          @click="togglePause"
+      <!-- 녹음 중: 안내 텍스트 → 엔터로 인식 시작 / 인식 중: 체크 표시 -->
+      <div class="flex items-center justify-center mt-[30px] h-12">
+        <p
+          v-if="!recognizing"
+          class="text-[15px] font-medium leading-[1.5] tracking-[-0.3px] text-grey-8"
         >
-          <img v-if="!isPaused" src="/icons/stt-pause.svg" alt="" class="w-3 h-[14px]" />
-          <img v-else src="/icons/stt-play.svg" alt="" class="w-6 h-6" />
-        </button>
-        <button
-          class="w-12 h-12 rounded-3xl bg-grey-3 flex items-center justify-center"
-          aria-label="전송"
-          @click="onSend"
+          음성 인식 중···
+        </p>
+        <div
+          v-else
+          class="w-12 h-12 rounded-full bg-primary flex items-center justify-center"
+          aria-label="음성 인식 완료"
         >
-          <img src="/icons/stt-send.svg" alt="" class="w-6 h-6" />
-        </button>
+          <Icon name="material-symbols:check-rounded" class="w-6 h-6 text-grey-13" />
+        </div>
       </div>
     </div>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-const emit = defineEmits<{ done: [blob: Blob]; cancel: []; blocked: [] }>()
+const props = defineProps<{ retrospectiveId: string }>()
+// done: STT 변환이 끝난 텍스트를 부모에 전달. cancel: 닫기. blocked: 권한 영구 거부.
+const emit = defineEmits<{ done: [text: string]; cancel: []; blocked: [] }>()
 const { show } = useToast()
 const recorder = useVoiceRecorder()
+const retro = useRetrospect()
 
-// 파형 막대 (녹음 중엔 좌→우로 흐르듯 갱신, 일시정지 시 정지) — 얇고 촘촘하게
+// 엔터를 눌러 녹음을 끝내고 STT 변환(transcribe)을 진행 중인 상태 — 이때 버튼 영역은 체크 표시로 바뀐다
+const recognizing = ref(false)
+
+// 파형 막대 (녹음 중엔 좌→우로 흐르듯 갱신) — 얇고 촘촘하게
 const BAR_COUNT = 84
 const bars = ref<number[]>(Array.from({ length: BAR_COUNT }, () => 8))
 let waveTimer: ReturnType<typeof setInterval> | null = null
-
-const isPaused = computed(() => recorder.isPaused.value)
 
 const timeLabel = computed(() => {
   const s = recorder.elapsed.value
@@ -95,24 +97,36 @@ function stopWave() {
     waveTimer = null
   }
 }
-function togglePause() {
-  if (recorder.isPaused.value) {
-    recorder.resume()
-    startWave()
-  } else {
-    recorder.pause()
-    stopWave()
+
+// 엔터 → 녹음 종료 후 transcribe API로 STT 변환, 결과 텍스트를 done으로 전달
+async function onRecognize() {
+  if (recognizing.value || !recorder.isRecording.value) return
+  recognizing.value = true
+  stopWave()
+  const blob = await recorder.stop()
+  if (!blob) {
+    emit('cancel')
+    return
+  }
+  try {
+    const content = await retro.transcribe(props.retrospectiveId, blob)
+    emit('done', content)
+  } catch (e) {
+    console.warn('[voice] STT 변환 실패:', e)
+    show('음성을 인식하지 못했어요. 다시 시도해 주세요.')
+    emit('cancel')
   }
 }
 
-async function onSend() {
-  stopWave()
-  const blob = await recorder.stop()
-  if (blob) emit('done', blob)
-  else emit('cancel')
+// 한글 조합 중 엔터(자모 확정)는 무시
+function onKeydown(e: KeyboardEvent) {
+  if (e.key !== 'Enter' || e.isComposing) return
+  e.preventDefault()
+  onRecognize()
 }
 
 function onCancel() {
+  if (recognizing.value) return // 변환 중엔 실수로 닫히지 않도록
   stopWave()
   recorder.cancel()
   emit('cancel')
@@ -131,6 +145,7 @@ onMounted(async () => {
     return
   }
   startWave()
+  window.addEventListener('keydown', onKeydown)
 })
 
 // 끌어내려 닫기 (다른 바텀시트와 동일 — 마우스/터치)
@@ -142,6 +157,7 @@ function pointerY(e: MouseEvent | TouchEvent): number {
   return 'touches' in e ? (e.touches[0]?.clientY ?? 0) : e.clientY
 }
 function onDragDown(e: MouseEvent | TouchEvent) {
+  if (recognizing.value) return
   dragging.value = true
   dragStartY = pointerY(e)
   window.addEventListener('mousemove', onDragMove)
@@ -171,5 +187,6 @@ function removeDragListeners() {
 onUnmounted(() => {
   stopWave()
   removeDragListeners()
+  window.removeEventListener('keydown', onKeydown)
 })
 </script>

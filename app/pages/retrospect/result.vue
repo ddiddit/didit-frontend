@@ -76,7 +76,7 @@
 import type { CompleteRetrospectiveResponse, Tag } from '~/types/api'
 import { isAuthError, toErrorVariant } from '~/utils/api-error'
 
-definePageMeta({ middleware: 'auth', layout: false })
+definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
 const retro = useRetrospect()
 const { show } = useToast()
@@ -139,6 +139,8 @@ async function generate() {
     const res = await retro.complete(completingId.value)
     result.value = res
     title.value = res.title
+    // 완료됐으니 start.vue가 재개용으로 들고 있던 id를 정리 — 다음 진입은 새 회고로 시작
+    localStorage.removeItem(ACTIVE_RETROSPECTIVE_KEY)
   } catch (e) {
     // 인증 만료는 인터셉터가 로그인으로 보냄 → 에러 화면 X
     if (!isAuthError(e)) errorVariant.value = toErrorVariant(e)

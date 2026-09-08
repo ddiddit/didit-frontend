@@ -6,6 +6,8 @@ import type {
   DeepQuestionResponse,
   CompleteRetrospectiveResponse,
   RetrospectiveDetail,
+  ConversationResponse,
+  FinishRetrospectiveResponse,
 } from '~/types/api'
 import { toUploadableAudio } from '~/utils/audio'
 
@@ -16,20 +18,48 @@ import { toUploadableAudio } from '~/utils/audio'
 // 정상 에러 응답(problem+json)을 주도록 한다(클라이언트가 먼저 abort하지 않게).
 const AI_TIMEOUT = 65_000
 
+// 진행 중인 회고 id를 저장하는 localStorage 키.
+// 답변 도중 화면을 나갔다 들어와도(뒤로가기·앱 재시작 등) start()를 다시 호출해 새 회고를
+// 만들지 않고, 이 id로 대화 조회부터 시도해 이어서 진행하기 위함.
+export const ACTIVE_RETROSPECTIVE_KEY = 'activeRetrospectiveId'
+
 export function useRetrospect() {
   const { $api } = useNuxtApp()
 
   // 회고 시작 → 첫 질문 반환
   async function start(): Promise<StartRetrospectiveResponse> {
-    const res = await $api.post<ApiResponse<StartRetrospectiveResponse>>('/api/v1/retrospectives')
+    const res = await $api.post<ApiResponse<StartRetrospectiveResponse>>('/api/v2/retrospectives')
     return res.data.data
   }
 
   // 텍스트 답변 제출 → 다음 질문 또는 완료 준비 신호
   async function answer(id: string, content: string): Promise<SubmitAnswerResponse> {
     const res = await $api.post<ApiResponse<SubmitAnswerResponse>>(
-      `/api/v1/retrospectives/${id}/answers`,
-      { content },
+      `/api/v2/retrospectives/${id}/messages`,
+      {
+        // 메시지마다 고유해야 하는 멱등성 키. 회고 id를 그대로 쓰면 같은 회고의 두 번째
+        // 메시지부터 서버가 중복 제출로 보고 409를 반환한다.
+        clientMessageId: crypto.randomUUID(),
+        content,
+        inputType: 'TEXT'
+      },
+    )
+    return res.data.data
+  }
+
+  // 대화 조회 — 앱 재진입이나 AI 응답 실패 후 현재 메시지·턴 상태 복구용
+  async function getConversation(id: string): Promise<ConversationResponse> {
+    const res = await $api.get<ApiResponse<ConversationResponse>>(
+      `/api/v2/retrospectives/${id}/conversation`,
+    )
+    return res.data.data
+  }
+
+  // 대화 종료 — 결과 생성과는 분리된 API. 대화만 끝내고 resultGenerationStatus는 NOT_STARTED로 온다.
+  // readyToComplete(=skippable)인 질문에서 "회고 마치기"를 눌렀을 때 사용.
+  async function finish(id: string): Promise<FinishRetrospectiveResponse> {
+    const res = await $api.post<ApiResponse<FinishRetrospectiveResponse>>(
+      `/api/v2/retrospectives/${id}/finish`,
     )
     return res.data.data
   }
@@ -141,6 +171,8 @@ export function useRetrospect() {
   return {
     start,
     answer,
+    getConversation,
+    finish,
     answerByVoice,
     transcribe,
     getDeepQuestion,

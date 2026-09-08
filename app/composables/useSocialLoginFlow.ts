@@ -23,13 +23,21 @@ export function useSocialLoginFlow() {
     provider: SocialProvider,
     credentialType: SocialCredentialType,
     credential: string,
+<<<<<<< HEAD
     redirectUri?: string,
+=======
+    redirectUri?: string
+>>>>>>> main
   ): Promise<void> {
     const { data } = await $api.post<ApiResponse<SocialLoginResponse>>('/api/v2/auth/social/login', {
       provider,
       credentialType,
       credential,
+<<<<<<< HEAD
       ...(redirectUri && { redirectUri }),
+=======
+      ...(redirectUri ? { redirectUri } : {}),
+>>>>>>> main
     })
     await handleResult(data.data, provider)
   }
