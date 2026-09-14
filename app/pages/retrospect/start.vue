@@ -4,9 +4,10 @@
     :style="keyboardOpen ? { height: `calc(100% - ${keyboardHeight}px)` } : undefined"
   >
     <!-- 헤더 영역 — 오른쪽 '회고 마치기'는 응답 대기 중에만 잠기고, 그 외에는 언제나 누를 수 있다 -->
-    <RetroHeader :title="'회고 마치기'" :isBusy="isBusy" :onBack="onBack" :onFinish="onFinishClick" :finishDisabled="isFinishBlocked" />
+    <RetroHeader :title="'회고 마치기'" :isBusy="isBusy" :finishDisabled="isFinishBlocked" :onBack="onBack" :onFinish="onFinishClick" />
 
-    <!-- 뒤로가기 모달 — 지금 나가면 결과가 생성되지 않음을 알리고, '나가기' 시 대화 종료(finish)까지 함께 처리 -->
+    <!-- 뒤로가기 모달 — 답변을 하나라도 한 경우에만 뜬다(그 전엔 확인 없이 바로 나감).
+         지금 나가면 결과가 생성되지 않음을 알리고, '나가기' 시 대화 종료(finish)까지 함께 처리 -->
     <UiPopup
       :modelValue="isBackModal"
       title="아직 회고 결과 생성이 어려워요"
@@ -22,7 +23,7 @@
     <UiPopup
       v-model="isNotReadyModal"
       title="아직 내용이 충분하지 않아요"
-      description="결과 생성을 위해 내용을 더 작성해주세요"
+      :description="'회고 결과 생성을 위해\n내용을 더 작성해주세요'"
       :showCancel="false"
       confirmText="확인"
       variant="dark"
@@ -66,22 +67,13 @@
     </div>
 
     <!-- 입력 영역 -->
-    <RetroTextarea
-      :retrospectId="retrospectiveId"
-      :accessMic="accessMic"
-      :messages="messages"
-    />
+    <RetroTextarea @send="onSend" @accessMic="accessMic" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { Capacitor } from '@capacitor/core'
 import type { PluginListenerHandle } from '@capacitor/core'
-import { App } from '@capacitor/app'
-import { Keyboard } from '@capacitor/keyboard'
 import { NativeSettings, AndroidSettings, IOSSettings } from 'capacitor-native-settings'
-import { getApiErrorMessage, isAuthError } from '~/utils/api-error'
-
 import { DotLottieVue } from '@lottiefiles/dotlottie-vue'
 
 import RetroHeader from '~/components/layout/RetroHeader.vue'
@@ -132,15 +124,14 @@ const voiceTranscript = useState<string>('retrospect:voice-transcript', () => ''
 // 회고 마치기(대화 종료) 관련 상태
 const isFinishing = ref(false) // finish() 호출 중 — 버튼 잠금
 const isNotReadyModal = ref(false) // 내용 부족 안내 모달 표시 여부
+// result.vue와 공유하는 채널 — 결과 생성 화면에 어떤 회고를 넘길지 전달
+const completingId = useState<string>('retrospect:completing-id')
 
 // AI가 답변에 응답 중인지 — generating 자리표시자가 떠 있으면 응답 대기 중
 const isAiResponding = computed(() => messages.value.some(m => m.role === 'generating'))
 
 // 회고 마치기 버튼 잠금 — 초기 로딩·AI 응답 대기·finish 처리 중일 때만 막고, 그 외엔 언제나 누를 수 있다
 const isFinishBlocked = computed(() => isBusy.value || isAiResponding.value || isFinishing.value)
-
-// result.vue와 공유하는 채널 — 결과 생성 화면에 어떤 회고를 넘길지 전달
-const completingId = useState<string>('retrospect:completing-id')
 
 // 앰플리튜드 분석용 — 회고 시작 시각/심화질문 노출·스킵 여부 추적
 const startedAt = ref(0)
@@ -149,21 +140,137 @@ const nickname = computed(() => profile.value?.nickname ?? '')
 
 const scrollEl = ref<HTMLElement | null>(null)
 
-function scrollToBottom() {
-  nextTick(() => {
-    scrollEl.value?.scrollTo({ top: scrollEl.value.scrollHeight, behavior: 'smooth' })
-  })
+
+
+// [iOS 전용] iOS는 리사이즈 모드 none(keyboard.client.ts)이라 키보드가 떠도 레이아웃이
+// 줄지 않아, OS가 알려주는 키보드 전체 높이(추천줄·툴바 포함)만큼 화면을 JS로 줄인다.
+// (visualViewport는 추천줄 높이를 누락하므로 네이티브 키보드 높이를 쓴다)
+// 안드로이드는 adjustResize(capacitor.config resize 'body')로 WebView 자체가 줄어 JS 보정 불필요.
+const keyboardOpen = ref(false)
+const keyboardHeight = ref(0)
+let kbShow: PluginListenerHandle | undefined
+let kbDidShow: PluginListenerHandle | undefined
+let kbHide: PluginListenerHandle | undefined
+let appStateListener: PluginListenerHandle | undefined
+
+function applyKeyboardHeight(raw: number) {
+  // 일부 기기는 물리 px로 주므로 CSS px로 정규화
+  const h = raw > window.innerHeight ? raw / window.devicePixelRatio : raw
+  keyboardHeight.value = h > 0 ? h : 0
+  keyboardOpen.value = keyboardHeight.value > 0
 }
 
-// 뒤로 가기 모달 재생
+// 첫 마운트 시 불러올 회고 시작
+async function startRetro() {
+  try {
+    const response = await retro.start()
+    retrospectiveId.value = response.retrospectiveId
+    // reactive()로 감싸지 않으면 typedText에서 typedMain을 mutate해도 화면이 갱신되지 않는다
+    const message = reactive({
+      id: response.retrospectiveId,
+      role: 'didit' as const,
+      main: response.initialMessage.body,
+      sub: response.initialMessage.title,
+      skippable: false,
+      typedMain: '',
+      showSub: false
+    })
+    messages.value = [message]
+    typedText(message)
+  } catch {
+    console.error('에러')
+  }
+}
+
+// 타이핑 애니메이션 — didit 메시지의 main을 한 글자씩 typedMain에 채워나간다
+function typedText(message: ChatMessage) {
+  if (message.role !== 'didit') return
+
+  let tempText = ''
+  let i = 0
+  const timer = setInterval(() => {
+    tempText += message.main[i] ?? ''
+    message.typedMain = tempText
+    i += 1
+    if (i >= message.main.length) {
+      clearInterval(timer)
+      // 본문 타이핑이 끝난 뒤 0.4초 있다가 가이드/서브 문구 노출
+      if (message.sub) {
+        setTimeout(() => {
+          message.showSub = true
+        }, 400)
+      }
+    }
+  }, 50)
+}
+
+// 답변 제출 — 사용자 채팅을 먼저 보여준 뒤, 로딩 자리표시자를 띄우고 AI 응답으로 교체한다
+async function onSend(content: string) {
+  if (!retrospectiveId.value) return
+
+  messages.value.push({ id: crypto.randomUUID(), role: 'user', text: content })
+
+  // AI 응답을 기다리는 동안 보여줄 자리표시자 — id를 기억해뒀다가 응답 도착 시 이 자리를 교체한다
+  const generatingId = crypto.randomUUID()
+  messages.value.push({ id: generatingId, role: 'generating' })
+
+  try {
+    const response = await retro.answer(retrospectiveId.value, content)
+    const idx = messages.value.findIndex(m => m.id === generatingId)
+    if (idx === -1) return
+
+    if (!response.assistantMessage) {
+      // 다음 질문 없이 완료 준비 신호만 온 경우 — 완료 플로우는 별도 처리 필요
+      messages.value.splice(idx, 1)
+      return
+    }
+
+    const message = reactive({
+      id: response.assistantMessage.id,
+      role: 'didit' as const,
+      main: response.assistantMessage.content ?? response.assistantMessage.title ?? '',
+      sub: response.assistantMessage.body ?? undefined,
+      skippable: response.readyToComplete,
+      typedMain: '',
+      showSub: false
+    })
+    messages.value.splice(idx, 1, message)
+    typedText(message)
+  } catch {
+    // 실패 시 자리표시자 제거하고 안내
+    const idx = messages.value.findIndex(m => m.id === generatingId)
+    if (idx !== -1) messages.value.splice(idx, 1)
+    show('답변을 보내지 못했어요. 잠시 후 다시 시도해주세요.')
+  }
+}
+
+// 뒤로가기 — 아직 답변을 하나도 안 한 상태(단순 이탈)면 확인 없이 바로 나가고(exit),
+// 답변을 한 번이라도 한 상태(진행 중인 회고를 끝내는 것)면 회고 종료 확인 모달을 띄운다.
 function onBack() {
-  if(isBusy.value) {
+  if (isBusy.value) return
+  const hasAnswered = messages.value.some(m => m.role === 'user')
+  if (!hasAnswered) {
+    exitWithoutFinish()
     return
   }
   isBackModal.value = true
 }
 
-// 뒤로 가기 확인('나가기') — v2 대화 종료(finish)로 대화를 끝내고 홈으로. 실패해도 나가는 것 자체는 막지 않음
+// 잃을 내용이 없는 단순 이탈 — 확인 모달 없이 바로 나간다.
+// V1 exit(): PENDING 상태면 삭제, 그 외엔 유지 (베스트에포트, 실패해도 나가는 것 자체는 막지 않음)
+async function exitWithoutFinish() {
+  if (retrospectiveId.value) {
+    try {
+      await retro.exit(retrospectiveId.value)
+      localStorage.removeItem(ACTIVE_RETROSPECTIVE_KEY)
+    } catch {
+      // 나가기 실패해도 화면을 나가는 것 자체는 막지 않음
+    }
+  }
+  navigateTo('/home')
+}
+
+// 뒤로가기 확인('나가기') — 답변이 있으니 v2 대화 종료(finish)로 정식으로 끝내고 홈으로.
 // (다음 진입 시 대화 조회에서 여전히 ACTIVE로 보이면 자연스럽게 이어서 진행됨)
 async function onBackConfirm() {
   if (isBackLeaving.value) return // 연타로 finish가 중복 호출되는 것 방지
@@ -176,19 +283,19 @@ async function onBackConfirm() {
       // 종료 실패 — localStorage는 그대로 둬서 다음 진입 시 다시 시도되게 한다
     }
   }
-  navigateTo("/home")
+  navigateTo('/home')
 }
 
-// 뒤로 가기 취소
+// 뒤로가기 취소
 function onBackCancel() {
   isBackModal.value = false
 }
 
-// 회고 마치기 — 대화만 종료(finish)하고, 곧바로 기존 v1 결과 생성 화면으로 넘긴다
-// (result.vue가 completingId로 기존 complete() API를 그대로 호출)
+// 회고 마치기 — 대화만 종료(finish)하고, 곧바로 결과 생성 화면으로 넘긴다.
+// (result.vue가 completingId로 complete() API를 호출해 AI 제목/요약을 자동으로 정리한다)
 async function onFinishClick() {
   if (isFinishBlocked.value || !retrospectiveId.value) return
-  isFinishing.value = true // 이 시점부터 버튼 잠금 (isFinishBlocked에 포함)
+  isFinishing.value = true
   try {
     // 로컬 skippable 신호가 늦게 갱신되는 경우가 있어, 대화 조회로 서버의 readyToComplete를 직접 확인
     const conversation = await retro.getConversation(retrospectiveId.value)
@@ -197,120 +304,15 @@ async function onFinishClick() {
       isFinishing.value = false // 계속 회고를 이어갈 수 있게 잠금 해제
       return
     }
+
     await retro.finish(retrospectiveId.value)
     localStorage.removeItem(ACTIVE_RETROSPECTIVE_KEY) // 대화가 끝났으니 재개 대상에서 제외
     completingId.value = retrospectiveId.value
     navigateTo('/retrospect/result')
     // 성공 시엔 isFinishing을 풀지 않는다 — 결과 화면으로 넘어가는 동안 버튼이 다시 눌리는 것 방지
-  } catch (e) {
+  } catch {
     isFinishing.value = false // 실패 — 다시 시도할 수 있게 잠금 해제
-    if (isAuthError(e)) return
-    show(getApiErrorMessage(e, '회고를 마치지 못했어요. 잠시 후 다시 시도해주세요.'))
-  }
-}
-
-// didit 메시지 타이핑 애니메이션 — RetroTextarea(다음 질문)와 공용으로 쓰는 컴포저블
-const { typeDiditMessage, clearTypingTimers } = useDiditTyping()
-
-// 진행 중이던 회고(localStorage에 저장된 id)가 있으면 이어서 보여준다.
-// 조회 실패(완료·삭제 등으로 더 이상 유효하지 않음)면 null을 반환해 새로 시작하게 한다.
-async function resumeActiveRetrospective(id: string) {
-  try {
-    const conversation = await retro.getConversation(id)
-    console.log('[resume] getConversation 응답', conversation)
-
-    if (conversation.conversationStatus !== 'ACTIVE') {
-      console.log('[resume] ACTIVE 아님 → 재사용 안 함', conversation.conversationStatus)
-      return null // 이미 끝난 회고 — 재사용 X
-    }
-
-    // getConversation은 AI 메시지만 내려주고 사용자가 입력한 답변 텍스트는 포함하지 않아서
-    // 전체 대화를 재구성할 수 없다 — 지금 답해야 할 마지막 질문만 복구한다
-    const lastMessage = conversation.messages.at(-1)
-    console.log('[resume] 복구할 마지막 메시지', lastMessage)
-    if (!lastMessage) {
-      console.log('[resume] ACTIVE인데 메시지가 없음 → 재사용 안 함')
-      return null
-    }
-
-    retrospectiveId.value = id
-    const diditMessage = buildDiditMessage(lastMessage, conversation.readyToComplete)
-    messages.value.push(diditMessage)
-    typeDiditMessage(diditMessage)
-    console.log('[resume] push 직후 messages.value', JSON.parse(JSON.stringify(messages.value)))
-    return conversation
-  } catch (e) {
-    console.log('[resume] getConversation 실패', e)
-    return null
-  }
-}
-
-// 회고 시작 → 첫 질문 (기존에 진행 중이던 대화가 있으면 새로 만들지 않고 이어서 진행)
-let initCalled = false
-async function init() {
-  if (initCalled) return // onMounted 중복 실행 등으로 회고가 2개 생성되는 것 방지
-  initCalled = true
-  isBusy.value = true
-  try {
-    const savedId = localStorage.getItem(ACTIVE_RETROSPECTIVE_KEY)
-    console.log('[init] localStorage에 저장된 id', savedId)
-
-    if (savedId && (await resumeActiveRetrospective(savedId))) {
-      console.log('[init] 재개 성공 — start() 호출 안 함')
-      return
-    }
-    if (savedId) {
-      console.log('[init] 재개 실패 — 저장된 id 제거하고 새로 시작')
-      localStorage.removeItem(ACTIVE_RETROSPECTIVE_KEY) // 유효하지 않은 id — 정리 후 새로 시작
-    }
-
-    const start_response = await retro.start()
-    console.log('[init] start() 응답 — 새 회고 생성', start_response)
-    retrospectiveId.value = start_response.retrospectiveId
-    localStorage.setItem(ACTIVE_RETROSPECTIVE_KEY, start_response.retrospectiveId)
-
-    const diditMessage = buildDiditMessage(start_response.initialMessage, start_response.readyToComplete)
-    messages.value.push(diditMessage)
-    typeDiditMessage(diditMessage)
-  } catch (e) {
-    if (isAuthError(e)) return // 401 등은 axios 인터셉터가 로그인 화면으로 리다이렉트
-    show(getApiErrorMessage(e, '회고를 시작하지 못했어요. 잠시 후 다시 시도해주세요.'))
-    navigateTo('/home')
-  } finally {
-    isBusy.value = false
-  }
-}
-
-// 앱 재진입(백그라운드→포그라운드) 시 대화 조회로 상태 복구.
-// AI 응답을 기다리던 중에 백그라운드로 갔다 온 경우를 위한 것이라, generating 자리표시자가
-// 떠 있을 때만 의미가 있다 (그 외엔 화면 상태가 서버와 어긋날 일이 없음).
-async function syncConversation() {
-  if (!retrospectiveId.value) return
-  const generatingIdx = messages.value.findLastIndex(m => m.role === 'generating')
-  if (generatingIdx === -1) return
-
-  try {
-    const conversation = await retro.getConversation(retrospectiveId.value)
-    const lastTurn = conversation.turns.at(-1)
-
-    if (lastTurn?.status === 'FAILED') {
-      // 백그라운드에 있는 동안 답변 처리가 실패로 끝남 — 자리표시자 제거하고 안내
-      messages.value.splice(generatingIdx, 1)
-      show('답변 처리에 실패했어요. 다시 시도해주세요.')
-      return
-    }
-    if (lastTurn?.status !== 'COMPLETED') return // 여전히 처리 중 — 자리표시자 유지
-
-    const lastMessage = conversation.messages.at(-1)
-    if (!lastMessage) return
-
-    // 백그라운드 동안 완료 기준을 채웠을 수 있으니 readyToComplete도 함께 반영
-    const diditMessage = buildDiditMessage(lastMessage, conversation.readyToComplete)
-    messages.value.splice(generatingIdx, 1, diditMessage)
-    typeDiditMessage(diditMessage)
-  } catch (e) {
-    if (isAuthError(e)) return
-    // 조회 자체가 실패해도 자리표시자는 그대로 둬서, 복귀 시 다시 시도할 수 있게 한다
+    show('회고를 마치지 못했어요. 잠시 후 다시 시도해주세요.')
   }
 }
 
@@ -371,52 +373,11 @@ async function openMicSettings() {
   }
 }
 
-// [iOS 전용] iOS는 리사이즈 모드 none(keyboard.client.ts)이라 키보드가 떠도 레이아웃이
-// 줄지 않아, OS가 알려주는 키보드 전체 높이(추천줄·툴바 포함)만큼 화면을 JS로 줄인다.
-// (visualViewport는 추천줄 높이를 누락하므로 네이티브 키보드 높이를 쓴다)
-// 안드로이드는 adjustResize(capacitor.config resize 'body')로 WebView 자체가 줄어 JS 보정 불필요.
-const keyboardOpen = ref(false)
-const keyboardHeight = ref(0)
-let kbShow: PluginListenerHandle | undefined
-let kbDidShow: PluginListenerHandle | undefined
-let kbHide: PluginListenerHandle | undefined
-let appStateListener: PluginListenerHandle | undefined
-
-function applyKeyboardHeight(raw: number) {
-  // 일부 기기는 물리 px로 주므로 CSS px로 정규화
-  const h = raw > window.innerHeight ? raw / window.devicePixelRatio : raw
-  keyboardHeight.value = h > 0 ? h : 0
-  keyboardOpen.value = keyboardHeight.value > 0
-}
-
-onMounted(async () => {
-  // 유저 정보 로드
-  loadProfile()
-
-  // 초기화 - 첫 회고 질문 불러오기 (질문 push 후 typeDiditMessage로 타이핑 시작)
-  init()
-
-  if (!import.meta.client || !isNative.value) return
-  // 앱이 백그라운드에 있던 사이 AI 응답이 왔을 수 있으니, 포그라운드로 돌아올 때 대화 상태를 복구
-  appStateListener = await App.addListener('appStateChange', ({ isActive }) => {
-    if (isActive) syncConversation()
-  })
-
-  if (Capacitor.getPlatform() === 'ios') {
-    kbShow = await Keyboard.addListener('keyboardWillShow', info => applyKeyboardHeight(info.keyboardHeight))
-    kbHide = await Keyboard.addListener('keyboardWillHide', () => { keyboardHeight.value = 0; keyboardOpen.value = false })
-  }
-  // 키보드가 다 올라온 뒤(레이아웃 축소 완료) 채팅을 맨 아래로 → 마지막 질문이 키보드에 가려지지 않음 (iOS·AOS 공통)
-  kbDidShow = await Keyboard.addListener('keyboardDidShow', () => scrollToBottom())
+// 첫 마운트 시 로직
+onMounted(() => {
+  startRetro()
 })
 
-onUnmounted(() => {
-  clearTypingTimers()
-  kbShow?.remove()
-  kbDidShow?.remove()
-  kbHide?.remove()
-  appStateListener?.remove()
-})
 </script>
 
 <style scoped>

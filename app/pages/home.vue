@@ -280,11 +280,11 @@ const loadError = ref<'network' | 'server' | 'generic' | null>(null)
 async function loadHome() {
   loadError.value = null
   isLoading.value = !homeLoaded.value
+
   try {
     // /api/v2/home 한 번이면 nickname·mission·알림까지 전부 받음
     const { data } = await $api.get<ApiResponse<HomeResponse>>('/api/v2/home')
     const home = data.data
-    console.log(home)
     nickname.value = home.nickname
     recentRetrospectives.value = home.recentRetrospectives
     todayRetrospectiveCount.value = home.todayRetrospectiveCount

@@ -50,10 +50,10 @@
         </p>
         <div
           v-else
-          class="w-12 h-12 rounded-full bg-primary flex items-center justify-center"
+          class="w-12 h-12 rounded-full bg-grey-13 flex items-center justify-center"
           aria-label="음성 인식 완료"
         >
-          <Icon name="material-symbols:check-rounded" class="w-6 h-6 text-grey-13" />
+          <Icon name="material-symbols:check-rounded" class="w-6 h-6 text-grey-1" />
         </div>
       </div>
     </div>
@@ -113,7 +113,7 @@ async function onRecognize() {
     emit('done', content)
   } catch (e) {
     console.warn('[voice] STT 변환 실패:', e)
-    show('음성을 인식하지 못했어요. 다시 시도해 주세요.')
+    show('음성 인식에 실패했어요. 텍스트로 입력해주세요.')
     emit('cancel')
   }
 }
