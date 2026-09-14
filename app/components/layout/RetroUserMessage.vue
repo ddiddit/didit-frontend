@@ -3,14 +3,14 @@
     <div class="user_message_box max-w-[350px] box-border p-[11px] bg-grey-13 rounded-[24px] text-grey-1 text-[14px] leading-[22px] overflow-hidden flex flex-col">
       <span ref="textRef" class="user_message_text break-words is-clamped">{{ text }}</span>
 
-      <!-- 8줄을 넘겨 잘린 경우에만 노출 — 말풍선(검은 영역) 안에 포함 -->
+      <!-- 7줄을 넘겨 잘린 경우에만 노출 — 말풍선(검은 영역) 안에 포함 -->
       <button
         v-if="overflowing"
         type="button"
         class="mt-[8px] self-end text-[12px] text-grey-5 flex items-center"
         @click="showFull = true"
       >
-        <span class="inline-block mt-[1px]">전체 보기</span>
+        <span class="inline-block mt-[1px]">전체보기</span>
         <img src="/icons/chevron-right.svg" alt="" class="w-4 h-4" />
       </button>
     </div>
@@ -43,7 +43,7 @@
   // 한 줄 높이(px) — .user_message_text 의 leading-[22px] 와 일치
   const LINE_HEIGHT = 22
   // 최대 표시 줄 수 (line-clamp 값과 일치)
-  const MAX_LINES = 8
+  const MAX_LINES = 7
   const MAX_HEIGHT = LINE_HEIGHT * MAX_LINES
 
   const textRef = ref<HTMLElement | null>(null)
@@ -76,14 +76,14 @@
   .user_message_text {
     overflow-wrap: break-word;
   }
-  /* 접힌 상태에서만 8줄로 클램프 (마지막 줄 … 처리) */
+  /* 접힌 상태에서만 7줄로 클램프 (마지막 줄 … 처리) */
   .user_message_text.is-clamped {
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 8;
-    line-clamp: 8;
-    /* line-clamp 미지원/스트립 시에도 콘텐츠 박스 안에서만 잘리도록 하드 캡 (8줄 * 22px) */
-    max-height: 176px;
+    -webkit-line-clamp: 7;
+    line-clamp: 7;
+    /* line-clamp 미지원/스트립 시에도 콘텐츠 박스 안에서만 잘리도록 하드 캡 (7줄 * 22px) */
+    max-height: 154px;
     overflow: hidden;
   }
 
