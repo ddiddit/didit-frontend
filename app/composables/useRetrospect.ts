@@ -33,7 +33,7 @@ export function useRetrospect() {
   }
 
   // 텍스트 답변 제출 → 다음 질문 또는 완료 준비 신호
-  async function answer(id: string, content: string): Promise<SubmitAnswerResponse> {
+  async function answer(id: string, content: string, attachmentIds: string[] = []): Promise<SubmitAnswerResponse> {
     const res = await $api.post<ApiResponse<SubmitAnswerResponse>>(
       `/api/v2/retrospectives/${id}/messages`,
       {
@@ -41,7 +41,8 @@ export function useRetrospect() {
         // 메시지부터 서버가 중복 제출로 보고 409를 반환한다.
         clientMessageId: crypto.randomUUID(),
         content,
-        inputType: 'TEXT'
+        inputType: 'TEXT',
+        attachmentIds,
       },
     )
     return res.data.data
@@ -55,7 +56,9 @@ export function useRetrospect() {
     return res.data.data
   }
 
-  // 대화 종료 — 결과 생성과는 분리된 API. 대화만 끝내고 resultGenerationStatus는 NOT_STARTED로 온다.
+  // 대화 종료 — 종료와 동시에 확인된 대화 내용을 구조화해 결과(title/result)를 생성한다.
+  // 이미 완료된 회고에 다시 요청하면 저장된 결과를 그대로 반환하고(멱등),
+  // 생성 실패 상태였다면 재요청으로 생성 상태를 복구해 재시도할 수 있다.
   // readyToComplete(=skippable)인 질문에서 "회고 마치기"를 눌렀을 때 사용.
   async function finish(id: string): Promise<FinishRetrospectiveResponse> {
     const res = await $api.post<ApiResponse<FinishRetrospectiveResponse>>(

@@ -28,7 +28,7 @@ export function buildDiditMessage(
 export function useDiditTyping() {
   const typingTimers: ReturnType<typeof setInterval>[] = []
 
-  function typeDiditMessage(msg: Extract<ChatMessage, { role: 'didit' }>, delay = 50) {
+  function typeDiditMessage(msg: Extract<ChatMessage, { role: 'didit' }>, delay = 50, onComplete?: () => void) {
     msg.typedMain = ''
     msg.showSub = false
     let i = 0
@@ -41,6 +41,8 @@ export function useDiditTyping() {
         // 타이핑 완료 후 0.4초 뒤에 가이드 말풍선을 노출 (Transition으로 부드럽게 등장)
         // 가이드 문구가 없는 질문(심화질문 Q4_DEEP 등)은 빈 말풍선이 뜨지 않도록 건너뜀
         if (msg.sub) typingTimers.push(setTimeout(() => { msg.showSub = true }, 400))
+
+        onComplete?.()
       }
     }, delay)
     typingTimers.push(timer)

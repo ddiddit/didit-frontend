@@ -1,11 +1,11 @@
 <template>
-    <div class="retro__input p-[10px] mx-[16px] box-border border border-grey-4 bg-grey-4 rounded-[24px] flex" :class="isWrapped ? 'items-end' : 'items-center'">
-        <button class="w-[24px] h-[24px] flex justify-center items-center shrink-0" :class="isWrapped ? 'mb-[2px]' : ''">
+    <div class="retro__input p-[10px] mx-[16px] box-border border border-grey-4 bg-grey-4 rounded-[24px] flex" :class="[isWrapped ? 'items-end' : 'items-center', disabled ? 'opacity-50' : '']">
+        <button class="w-[24px] h-[24px] flex justify-center items-center shrink-0" :class="isWrapped ? 'mb-[2px]' : ''" :disabled="disabled">
             <img src="/icons/attach_file.png" alt="첨부파일" />
         </button>
         <input type="file" multiple accept=".pdf,image/*" class="hidden" />
-        <textarea @input="handleTextareaChange" @keydown="handleKeydown" ref="textRef" :value="textareaValue" rows="1" class="resize-none outline-none bg-transparent flex-1 mx-[6px]" />
-        <button class="shrink-0" :class="isWrapped ? 'mb-[2px]' : ''" @click="emit('accessMic')">
+        <textarea @input="handleTextareaChange" @keydown="handleKeydown" ref="textRef" :value="textareaValue" :disabled="disabled" rows="1" class="resize-none outline-none bg-transparent flex-1 mx-[6px]" />
+        <button class="shrink-0" :class="isWrapped ? 'mb-[2px]' : ''" :disabled="disabled" @click="emit('accessMic')">
             <img src="/icons/voice.svg" alt="마이크접근" />
         </button>
     </div>
@@ -13,6 +13,9 @@
 <style scoped>
 </style>
 <script setup lang="ts">
+
+  // disabled: AI 메시지 타이핑 중 등 — 첨부·마이크·전송을 모두 잠근다
+  const props = defineProps<{ disabled?: boolean }>()
 
   // Textarea Value
   const textareaValue = ref<string>('')
@@ -33,7 +36,7 @@
 
   // Enter로 전송 (Shift+Enter는 줄바꿈, 한글 조합 확정 Enter는 무시)
   function handleKeydown(e: KeyboardEvent) {
-    if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return
+    if (props.disabled || e.key !== 'Enter' || e.shiftKey || e.isComposing) return
     e.preventDefault() // 기본 동작(줄바꿈) 삽입을 막아야 하므로 동기적으로 먼저 호출
 
     const content = textareaValue.value.trim()
