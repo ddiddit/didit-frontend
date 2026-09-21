@@ -369,6 +369,23 @@ export interface UploadURL {
   expiresAt: string
 }
 
+// 첨부파일 업로드 완료 확인 — S3 PUT 이후 호출
+export interface AttachmentComplete {
+  id: string
+  filename: string
+  fileType: string
+  contentType: string
+  size: number
+  uploadStatus: string
+  analysisStatus: string
+}
+
+// 첨부파일 상세보기(다운로드) URL — S3 GET presigned URL
+export interface AttachmentDownloadUrl {
+  url: string
+  expiresAt: string
+}
+
 // Calendar
 export interface CalendarDay {
   date: string

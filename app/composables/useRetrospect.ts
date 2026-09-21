@@ -10,6 +10,8 @@ import type {
   FinishRetrospectiveResponse,
   UploadURL,
   UploadUrlRequest,
+  AttachmentComplete,
+  AttachmentDownloadUrl,
 } from '~/types/api'
 import { toUploadableAudio } from '~/utils/audio'
 
@@ -34,16 +36,18 @@ export function useRetrospect() {
     return res.data.data
   }
 
-  // 텍스트 답변 제출 → 다음 질문 또는 완료 준비 신호
+  // 텍스트/첨부 답변 제출 → 다음 질문 또는 완료 준비 신호.
+  // 첨부만 보내는 경우 content는 비워도 되는데, 이때 서버는 content/inputType 필드 자체가
+  // 없는 요청을 기대하므로(빈 문자열이 아니라) content가 없으면 두 필드를 통째로 뺀다.
   async function answer(id: string, content: string, attachmentIds: string[] = []): Promise<SubmitAnswerResponse> {
+    const trimmed = content.trim()
     const res = await $api.post<ApiResponse<SubmitAnswerResponse>>(
       `/api/v2/retrospectives/${id}/messages`,
       {
         // 메시지마다 고유해야 하는 멱등성 키. 회고 id를 그대로 쓰면 같은 회고의 두 번째
         // 메시지부터 서버가 중복 제출로 보고 409를 반환한다.
         clientMessageId: crypto.randomUUID(),
-        content,
-        inputType: 'TEXT',
+        ...(trimmed ? { content: trimmed, inputType: 'TEXT' } : {}),
         attachmentIds,
       },
     )
@@ -168,9 +172,35 @@ export function useRetrospect() {
     await $api.delete(`/api/v1/retrospectives/${id}/tags/${tagId}`)
   }
 
-  // 첨부파일 업로드 URL 발급 — 파일 자체는 이 응답의 uploadUrl로 별도 PUT
-  async function generateURL(id: string, file: UploadUrlRequest): Promise<UploadURL> {
-    const res = await $api.post<ApiResponse<UploadURL>>(`/api/v2/retrospectives/${id}/attachments`, file)
+  // 첨부파일 업로드 URL 발급 — 파일 자체는 이 응답의 uploadUrl로 별도 PUT.
+  // signal을 넘기면 업로드 중 삭제(×)했을 때 이 요청도 함께 취소할 수 있다.
+  async function generateURL(id: string, file: UploadUrlRequest, signal?: AbortSignal): Promise<UploadURL> {
+    const res = await $api.post<ApiResponse<UploadURL>>(`/api/v2/retrospectives/${id}/attachments`, file, { signal })
+    return res.data.data
+  }
+
+  // 첨부파일 업로드 완료 확인 — S3에 PUT한 뒤 호출해 uploadStatus를 확정한다
+  async function completeUpload(id: string, attachmentId: string, signal?: AbortSignal): Promise<AttachmentComplete> {
+    const res = await $api.post<ApiResponse<AttachmentComplete>>(
+      `/api/v2/retrospectives/${id}/attachments/${attachmentId}/complete`,
+      undefined,
+      { signal },
+    )
+    return res.data.data
+  }
+
+  // 전송된 메시지의 첨부파일 삭제 — 일반 첨부는 답변 편집 정책상 불가하고, 서버가 민감정보를
+  // 감지해 삭제를 권고한 첨부만 삭제할 수 있다(그 외 요청은 서버가 거부).
+  async function deleteAttachment(id: string, attachmentId: string): Promise<void> {
+    await $api.delete(`/api/v2/retrospectives/${id}/attachments/${attachmentId}`)
+  }
+
+  // 첨부파일 상세보기 URL 발급 — S3 GET presigned URL. 클릭해서 열어볼 때마다 새로 발급받아 쓴다
+  // (만료 시각이 있어 캐싱해서 재사용하면 만료 후 깨질 수 있음)
+  async function getAttachmentDownloadUrl(id: string, attachmentId: string): Promise<AttachmentDownloadUrl> {
+    const res = await $api.get<ApiResponse<AttachmentDownloadUrl>>(
+      `/api/v2/retrospectives/${id}/attachments/${attachmentId}/download-url`,
+    )
     return res.data.data
   }
 
@@ -193,6 +223,9 @@ export function useRetrospect() {
     detachProject,
     addTag,
     removeTag,
-    generateURL
+    getAttachmentDownloadUrl,
+    generateURL,
+    completeUpload,
+    deleteAttachment,
   }
 }

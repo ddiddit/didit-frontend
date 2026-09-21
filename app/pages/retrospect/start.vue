@@ -4,22 +4,33 @@
     :style="keyboardOpen ? { height: `calc(100% - ${keyboardHeight}px)` } : undefined"
   >
     <!-- 헤더 영역 — 오른쪽 '회고 마치기'는 응답 대기 중·마치기 처리 중에만 잠기고, 그 외에는 언제나 누를 수 있다 -->
-    <RetroHeader :title="'회고 마치기'" :isBusy="isBusy" :finishDisabled="isBusy || isFinishing" :onBack="onBack" :onFinish="onFinishClick" />
+    <RetroHeader :title="'회고 마치기'" :isBusy="isBusy" :finishDisabled="isBusy || isFinishing || isCheckingReady" :onBack="onBack" :onFinish="onFinishClick" />
 
     <!-- 마이크 접근 모달 — 권한이 아직 없을 때만. 이미 허용된 경우 accessMic()에서 바로 레코더를 연다 -->
     <UiPopup :modelValue="isAccessMicModal" :title="'디딧(didit)이(가) 마이크에 접근하려고 합니다.'" :description="'회고를 음성으로 기록하기 위해 마이크 접근 권한이 필요해요.'" :confirmText="'허용'" :cancelText="'허용 안 함'" :loading="micRequesting" @cancel="isAccessMicModal = false" @confirm="confirmAccessMic" />
 
-    <!-- 뒤로가기 확인 모달 — 답변은 저장되어 나중에 이어할 수 있으니, 실수로 나가는 것만 막는 가벼운 확인 -->
-    <UiPopup :modelValue="isBackModal" :title="'회고를 그만하시겠어요?'" :description="'지금 나가도 답변은 저장돼요. 다음에 이어서 할 수 있어요.'" :confirmText="'나가기'" :cancelText="'계속하기'" @cancel="onBackCancel" @confirm="onBackConfirm" />
+    <!-- 뒤로가기 확인 모달 — 답변 여부에 따라 나가기의 실제 결과(마무리 vs 삭제)가 다르므로 문구도 그에 맞게 -->
+    <UiPopup :modelValue="isBackModal" :title="backModalTitle" :description="backModalDescription" :confirmText="'나가기'" :cancelText="'계속하기'" :loading="isBackLeaving" @cancel="onBackCancel" @confirm="onBackConfirm" />
 
     <!-- 회고 마치기 확인 모달 — 실수로 대화를 끝내지 않도록 확인 후 결과를 생성한다 -->
     <UiPopup :modelValue="isFinishModal" :title="'회고를 마칠까요?'" :description="'지금까지의 답변으로 회고 결과를 만들어요.'" :confirmText="'마치기'" :cancelText="'계속하기'" :loading="isFinishing" @cancel="onFinishCancel" @confirm="onFinishConfirm" />
+
+    <!-- 내용 부족 모달 — 회고 마치기를 눌렀지만 서버가 아직 결과를 만들 만큼 충분하지 않다고 판단한 경우 -->
+    <UiPopup
+      v-model="isNotReadyModal"
+      title="아직 내용이 충분하지 않아요"
+      :description="'회고 결과 생성을 위해\n내용을 더 작성해주세요'"
+      :showCancel="false"
+      confirmText="확인"
+      variant="dark"
+      @confirm="isNotReadyModal = false"
+    />
 
     <!-- 음성 레코더 (녹음 중 파형·타이머, 엔터로 STT 변환) -->
     <RetrospectVoiceRecorder v-if="isRecorderOpen" :retrospectiveId="retrospectiveId" @done="onVoiceDone" @cancel="isRecorderOpen = false" @blocked="onVoiceBlocked" />
 
     <!-- 대화 영역 -->
-    <div class="message_wrapper h-[calc(100%-112px)] overflow-y-auto">
+    <div ref="scrollEl" class="message_wrapper h-[calc(100%-112px)] overflow-y-auto">
       <div class="message_area px-[20px] pt-[20px] flex flex-col" v-for="(m, i) in messages" :key="m.id">
         <div class="didit_message_wrapper self-start" v-if="m.role === 'didit'">
           <div class="didit_profile flex flex-col mb-[20px]">
@@ -44,7 +55,13 @@
             </div>
           </div>
         </div>
-        <RetroUserMessage v-else-if="m.role === 'user'" :text="m.text" />
+        <RetroUserMessage
+          v-else-if="m.role === 'user'"
+          :text="m.text"
+          :attachments="m.attachments"
+          :retrospective-id="retrospectiveId"
+          @delete-attachment="onDeleteAttachment(m, $event)"
+        />
       </div>
     </div>
 
@@ -55,6 +72,7 @@
 
 <script setup lang="ts">
 import type { PluginListenerHandle } from '@capacitor/core'
+import { App } from '@capacitor/app'
 import { NativeSettings, AndroidSettings, IOSSettings } from 'capacitor-native-settings'
 import { DotLottieVue } from '@lottiefiles/dotlottie-vue'
 
@@ -62,8 +80,10 @@ import RetroHeader from '~/components/layout/RetroHeader.vue'
 import RetroTextarea from '~/components/layout/RetroTextarea.vue'
 import RetroUserMessage from '~/components/layout/RetroUserMessage.vue'
 import RetrospectVoiceRecorder from '~/components/RetrospectVoiceRecorder.vue'
+import UiPopup from '~/components/ui/UiPopup.vue'
 import { isServerError } from '~/utils/api-error'
 import type { RetrospectiveResultStash } from '~/types/api'
+import type { SentAttachment } from '~/utils/attachment'
 
 definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
@@ -81,7 +101,7 @@ export type ChatMessage =
       showSub: boolean // 본문 타이핑 완료 후 가이드/스킵 노출
     }
   | { id: string; role: 'generating'; text?: string }
-  | { id: string; role: 'user'; text: string }
+  | { id: string; role: 'user'; text: string; attachments?: SentAttachment[] }
 
 const retro = useRetrospect()
 const { show } = useToast()
@@ -99,8 +119,11 @@ const isBusy = ref(false) // API 호출 중(질문 전환/완료)·AI 메시지 
 
 const isAccessMicModal = ref(false) // 마이크 접근 모달 여부
 const isBackModal = ref(false) // 뒤로가기 확인 모달 여부
+const isBackLeaving = ref(false) // 뒤로가기 확인('나가기') 처리 중(finish 호출) — 버튼 잠금
 const isFinishModal = ref(false) // 회고 마치기 확인 모달 여부
 const isFinishing = ref(false) // finish() 처리 중 — 결과 화면으로 넘어가는 라우팅 전환까지는 풀지 않는다
+const isCheckingReady = ref(false) // 회고 마치기 클릭 시 readyToComplete 조회 중 — 버튼 잠금
+const isNotReadyModal = ref(false) // 내용 부족 안내 모달 여부
 const micRequesting = ref(false) // 권한 요청 진행 중 — '허용' 버튼 잠금
 const isRecorderOpen = ref(false) // 음성 레코더 표시 여부
 // 음성 레코더가 변환한 텍스트를 입력창(RetroTextarea)으로 넘기는 초안 채널
@@ -110,6 +133,16 @@ const voiceTranscript = useState<string>('retrospect:voice-transcript', () => ''
 const completingId = useState<string>('retrospect:completing-id')
 const resultStash = useState<RetrospectiveResultStash | null>('retrospect:result', () => null)
 
+
+// 대화 스크롤 영역 — 내용이 늘어날 때(새 메시지, 타이핑 애니메이션 등) 자동으로 바닥까지 따라 내려간다
+const scrollEl = ref<HTMLElement | null>(null)
+let scrollObserver: MutationObserver | undefined
+
+function scrollToBottom() {
+  const el = scrollEl.value
+  if (!el) return
+  el.scrollTop = el.scrollHeight
+}
 
 // 앰플리튜드 분석용 — 회고 시작 시각/심화질문 노출·스킵 여부 추적
 const startedAt = ref(0)
@@ -166,15 +199,40 @@ async function initialApplication() {
   }
 }
 
-// 헤더 뒤로가기 — 실수로 나가서 회고를 잃지 않도록 바로 이동하지 않고 확인 모달을 띄운다.
+// 답변을 하나라도 했는지 — 뒤로가기 시 exit(삭제될 수 있음) vs finish(마무리됨) 중 뭘 호출할지,
+// 모달 문구를 뭘로 보여줄지 여기서 갈린다.
+const hasAnswered = computed(() => messages.value.some((m) => m.role === 'user'))
+const backModalTitle = computed(() => (hasAnswered.value ? '나가면 회고가 마무리돼요' : '회고를 종료할까요?'))
+const backModalDescription = computed(() =>
+  hasAnswered.value
+    ? '지금까지의 답변으로 회고가 완료돼요. 계속 작성하고 싶다면 계속하기를 눌러주세요.'
+    : '작성한 내용이 없어 나가면 이 회고는 삭제돼요.',
+)
+
+// 헤더 뒤로가기 — 답변 여부와 관계없이 항상 확인 모달을 한 번 더 띄운 뒤에만 나간다.
 function onBack() {
   if (isBusy.value) return
   isBackModal.value = true
 }
 
-// 뒤로가기 확인('나가기') — 회고 나가기(exit) API는 호출하지 않는다. 진행 중인 회고는
-// ACTIVE_RETROSPECTIVE_KEY로 남아있어 다음 진입 시 대화 조회로 이어서 진행할 수 있다.
-function onBackConfirm() {
+// 뒤로가기 확인('나가기') — 답변이 있으면 finish()로 정식 마무리, 없으면 exit()로 정리(PENDING이면 삭제).
+// 실패해도 나가는 것 자체는 막지 않음 — ACTIVE_RETROSPECTIVE_KEY가 남아있으면 다음 진입 시 이어서 진행 가능
+async function onBackConfirm() {
+  if (isBackLeaving.value) return
+  isBackLeaving.value = true
+  if (retrospectiveId.value) {
+    try {
+      if (hasAnswered.value) {
+        await retro.finish(retrospectiveId.value)
+      } else {
+        await retro.exit(retrospectiveId.value)
+      }
+      localStorage.removeItem(ACTIVE_RETROSPECTIVE_KEY)
+    } catch (err) {
+      console.log(err)
+    }
+  }
+  isBackLeaving.value = false
   isBackModal.value = false
   navigateTo('/home')
 }
@@ -184,10 +242,25 @@ function onBackCancel() {
   isBackModal.value = false
 }
 
-// 헤더 '회고 마치기' — 바로 종료하지 않고 확인 모달을 띄운다.
-function onFinishClick() {
-  if (isBusy.value || isFinishing.value || !retrospectiveId.value) return
-  isFinishModal.value = true
+// 헤더 '회고 마치기' — 대화 조회로 서버의 readyToComplete를 먼저 확인한다.
+// (로컬 skippable 신호는 마무리 시점에도 false로 남는 경우가 있어 신뢰하지 않음)
+async function onFinishClick() {
+  if (isBusy.value || isFinishing.value || isCheckingReady.value || !retrospectiveId.value) return
+  isCheckingReady.value = true
+  try {
+    const conversation = await retro.getConversation(retrospectiveId.value)
+    if (!conversation.readyToComplete) {
+      isNotReadyModal.value = true
+      return
+    }
+    isFinishModal.value = true
+  } catch (err) {
+    console.log(err)
+    if (isServerError(err)) show('알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
+    else show('회고 상태를 확인하지 못했어요. 잠시 후 다시 시도해주세요.')
+  } finally {
+    isCheckingReady.value = false
+  }
 }
 
 // 회고 마치기 확인 — 대화를 종료(finish)한다. v2는 종료와 동시에 확인된 대화 내용을 구조화해
@@ -225,21 +298,33 @@ function onFinishCancel() {
 
 // 답변 제출 — 사용자 메시지를 먼저 반영하고, AI 응답을 기다리는 동안 generating 자리표시자를 보여준 뒤
 // 도착하면 didit 메시지로 교체해 타이핑 애니메이션을 시작한다 (배열은 매번 새로 만들어 불변성 유지)
-async function onSend(content: string, attachmentIds: string[] = []) {
+async function onSend(content: string, attachments: SentAttachment[] = []) {
   if (!retrospectiveId.value || isBusy.value) return
+  if (!content.trim() && attachments.length === 0) return // 텍스트도 첨부도 없으면 보낼 게 없음
 
-  const userMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', text: content }
+  // reactive()로 감싸지 않으면 이후 onDeleteAttachment에서 attachments를 mutate해도 화면이 안 갱신된다
+  const userMessage = reactive<ChatMessage>({ id: crypto.randomUUID(), role: 'user', text: content, attachments })
   messages.value = [...messages.value, userMessage]
 
   const generatingId = crypto.randomUUID()
-  messages.value = [...messages.value, { id: generatingId, role: 'generating' }]
+  // 첨부가 있으면 파일 분석(비동기)을 기다리는 거라 일반 "다음 질문 대기"와 다르게 문구를 보여준다
+  messages.value = [
+    ...messages.value,
+    { id: generatingId, role: 'generating', text: attachments.length ? '첨부파일을 확인하고 있어요' : undefined },
+  ]
 
   isBusy.value = true
   try {
+    const attachmentIds = attachments.map((a) => a.attachmentId)
     const response = await retro.answer(retrospectiveId.value, content, attachmentIds)
 
     if (!response.assistantMessage) {
-      // 아직 AI 응답이 준비되지 않은 경우 — generating 자리표시자만 지운다
+      if (attachments.length > 0) {
+        // 첨부가 있으면 파일 분석이 비동기로 진행 중이라는 뜻 — 해당 턴이 끝날 때까지 대화 조회로 폴링
+        pollAnalysisTurn(response.turnId, generatingId)
+        return
+      }
+      // 첨부 없이도 null이 오는 경우(그 외 사유) — generating 자리표시자만 지운다
       messages.value = messages.value.filter((m) => m.id !== generatingId)
       isBusy.value = false
       return
@@ -257,6 +342,69 @@ async function onSend(content: string, attachmentIds: string[] = []) {
   }
 }
 
+// 첨부파일 분석 중엔 assistantMessage가 null로 오므로, 대화 조회로 해당 턴(turnId)이
+// PENDING(분석 중)에서 COMPLETED/FAILED로 바뀔 때까지 짧은 간격으로 확인한다.
+// (읽을 수 없는 파일도 실패로 남지 않고 안내 메시지와 함께 COMPLETED로 끝나므로, FAILED는 진짜 오류일 때만)
+let pollTimer: ReturnType<typeof setTimeout> | undefined
+const POLL_INTERVAL = 2000
+const POLL_MAX_ATTEMPTS = 20 // 대략 40초 — 그 이상 걸리면 안내하고 포기
+
+async function pollAnalysisTurn(turnId: string, generatingId: string, attempt = 0) {
+  if (!retrospectiveId.value) return
+  try {
+    const conversation = await retro.getConversation(retrospectiveId.value)
+    const turn = conversation.turns.find((t) => t.id === turnId)
+
+    if (turn?.status === 'COMPLETED') {
+      const lastMessage = conversation.messages.at(-1)
+      if (!lastMessage) {
+        messages.value = messages.value.filter((m) => m.id !== generatingId)
+        isBusy.value = false
+        return
+      }
+      const diditMessage = buildDiditMessage(lastMessage, conversation.readyToComplete)
+      messages.value = messages.value.map((m) => (m.id === generatingId ? diditMessage : m))
+      typeDiditMessage(diditMessage, 50, () => { isBusy.value = false })
+      return
+    }
+
+    if (turn?.status === 'FAILED') {
+      messages.value = messages.value.filter((m) => m.id !== generatingId)
+      isBusy.value = false
+      show('첨부파일을 처리하지 못했어요. 잠시 후 다시 시도해주세요.')
+      return
+    }
+
+    if (attempt >= POLL_MAX_ATTEMPTS) {
+      messages.value = messages.value.filter((m) => m.id !== generatingId)
+      isBusy.value = false
+      show('분석이 오래 걸리고 있어요. 잠시 후 다시 확인해주세요.')
+      return
+    }
+
+    pollTimer = setTimeout(() => pollAnalysisTurn(turnId, generatingId, attempt + 1), POLL_INTERVAL)
+  } catch (err) {
+    console.log(err)
+    messages.value = messages.value.filter((m) => m.id !== generatingId)
+    isBusy.value = false
+    if (isServerError(err)) show('알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
+    else show('첨부파일 처리 결과를 확인하지 못했어요. 잠시 후 다시 시도해주세요.')
+  }
+}
+
+// 전송된 첨부파일 삭제(×) — 일반 첨부는 답변 편집 정책상 서버가 거부하고, 서버가 민감정보를
+// 감지해 삭제를 권고한 첨부만 실제로 삭제된다. message는 v-for로 순회 중인(반응형) 항목을 그대로 받는다.
+async function onDeleteAttachment(message: ChatMessage, attachmentId: string) {
+  if (message.role !== 'user' || !retrospectiveId.value) return
+  try {
+    await retro.deleteAttachment(retrospectiveId.value, attachmentId)
+    message.attachments = message.attachments?.filter((a) => a.attachmentId !== attachmentId)
+  } catch (err) {
+    console.log(err)
+    show('이 첨부파일은 삭제할 수 없어요.')
+  }
+}
+
 
 // [iOS 전용] iOS는 리사이즈 모드 none(keyboard.client.ts)이라 키보드가 떠도 레이아웃이
 // 줄지 않아, OS가 알려주는 키보드 전체 높이(추천줄·툴바 포함)만큼 화면을 JS로 줄인다.
@@ -268,6 +416,7 @@ let kbShow: PluginListenerHandle | undefined
 let kbDidShow: PluginListenerHandle | undefined
 let kbHide: PluginListenerHandle | undefined
 let appStateListener: PluginListenerHandle | undefined
+let backButtonListener: PluginListenerHandle | undefined
 
 function applyKeyboardHeight(raw: number) {
   // 일부 기기는 물리 px로 주므로 CSS px로 정규화
@@ -335,12 +484,30 @@ async function openMicSettings() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   initialApplication()
+
+  // 대화 영역 안 내용(새 메시지 추가, 타이핑 애니메이션의 글자 변화 등)이 바뀔 때마다 바닥으로 스크롤
+  if (scrollEl.value) {
+    scrollObserver = new MutationObserver(scrollToBottom)
+    scrollObserver.observe(scrollEl.value, { childList: true, subtree: true, characterData: true })
+  }
+
+  // 안드로이드 하드웨어/제스처 뒤로가기 — 헤더의 뒤로가기 버튼과 동일하게 확인 모달을 띄운다.
+  // 리스너를 등록하면 Capacitor의 기본 동작(뒤로 이동/앱 종료)이 자동으로 실행되지 않고,
+  // 여기서 직접 처리해야 한다.
+  if (isNative.value) {
+    backButtonListener = await App.addListener('backButton', () => {
+      onBack()
+    })
+  }
 })
 
 onUnmounted(() => {
   clearTypingTimers()
+  clearTimeout(pollTimer) // 첨부 분석 폴링 중 화면을 벗어나면 예약된 다음 조회를 멈춘다
+  scrollObserver?.disconnect()
+  backButtonListener?.remove()
 })
 
 </script>

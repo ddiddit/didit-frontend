@@ -165,6 +165,11 @@
 
 <script setup lang="ts">
 import type { ApiResponse, HomeResponse, CurrentMissionResponse } from '~/types/api'
+import HomeMissionCard from '~/components/HomeMissionCard.vue'
+import HomeMissionMaxCard from '~/components/HomeMissionMaxCard.vue'
+import HomeMissionPopup from '~/components/HomeMissionPopup.vue'
+import HomeMissionFailurePopup from '~/components/HomeMissionFailurePopup.vue'
+import UiErrorState from '~/components/ui/UiErrorState.vue'
 import { getTagColor } from '~/utils/tag-color'
 import { parseServerDate } from '~/utils/date'
 import { toErrorVariant, isAuthError } from '~/utils/api-error'
