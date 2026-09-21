@@ -226,7 +226,7 @@ export type InitialMessage = {
   body: string;
   content: string | null;
   createdAt: string;
-} 
+}
 
 // 어시스턴트 메시지 타입
 export type AssistantMessage = {
@@ -352,6 +352,21 @@ export interface RetrospectiveDetail {
   completedAt: string | null
   project: { id: string; name: string } | null
   tags: Tag[]
+}
+
+// 첨부파일 업로드 URL 발급 요청
+export interface UploadUrlRequest {
+  filename: string
+  contentType: string
+  size: number
+  checksumSha256: string // 파일 본문 SHA-256을 base64로 인코딩한 값
+}
+
+// 첨부파일 업로드 URL
+export interface UploadURL {
+  attachmentId: string
+  uploadUrl: string
+  expiresAt: string
 }
 
 // Calendar

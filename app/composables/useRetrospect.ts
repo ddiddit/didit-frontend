@@ -8,6 +8,8 @@ import type {
   RetrospectiveDetail,
   ConversationResponse,
   FinishRetrospectiveResponse,
+  UploadURL,
+  UploadUrlRequest,
 } from '~/types/api'
 import { toUploadableAudio } from '~/utils/audio'
 
@@ -102,11 +104,6 @@ export function useRetrospect() {
     return res.data.data
   }
 
-  // 심화질문 스킵
-  async function skipDeepQuestion(id: string): Promise<void> {
-    await $api.post(`/api/v1/retrospectives/${id}/skip`)
-  }
-
   // 다시 시작 → 기존 회고 삭제 후 새 회고 시작 (첫 질문 반환). 하루 횟수 정책 적용됨.
   async function restart(id: string): Promise<StartRetrospectiveResponse> {
     const res = await $api.post<ApiResponse<StartRetrospectiveResponse>>(
@@ -171,6 +168,12 @@ export function useRetrospect() {
     await $api.delete(`/api/v1/retrospectives/${id}/tags/${tagId}`)
   }
 
+  // 첨부파일 업로드 URL 발급 — 파일 자체는 이 응답의 uploadUrl로 별도 PUT
+  async function generateURL(id: string, file: UploadUrlRequest): Promise<UploadURL> {
+    const res = await $api.post<ApiResponse<UploadURL>>(`/api/v2/retrospectives/${id}/attachments`, file)
+    return res.data.data
+  }
+
   return {
     start,
     answer,
@@ -179,7 +182,6 @@ export function useRetrospect() {
     answerByVoice,
     transcribe,
     getDeepQuestion,
-    skipDeepQuestion,
     restart,
     exit,
     complete,
@@ -191,5 +193,6 @@ export function useRetrospect() {
     detachProject,
     addTag,
     removeTag,
+    generateURL
   }
 }

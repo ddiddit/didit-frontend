@@ -49,7 +49,7 @@
     </div>
 
     <!-- 입력 영역 -->
-    <RetroTextarea :disabled="isBusy" @send="onSend" @accessMic="accessMic" />
+    <RetroTextarea :disabled="isBusy" :retrospectiveId="retrospectiveId" @send="onSend" @accessMic="accessMic" />
   </div>
 </template>
 
@@ -225,7 +225,7 @@ function onFinishCancel() {
 
 // 답변 제출 — 사용자 메시지를 먼저 반영하고, AI 응답을 기다리는 동안 generating 자리표시자를 보여준 뒤
 // 도착하면 didit 메시지로 교체해 타이핑 애니메이션을 시작한다 (배열은 매번 새로 만들어 불변성 유지)
-async function onSend(content: string) {
+async function onSend(content: string, attachmentIds: string[] = []) {
   if (!retrospectiveId.value || isBusy.value) return
 
   const userMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', text: content }
@@ -236,7 +236,7 @@ async function onSend(content: string) {
 
   isBusy.value = true
   try {
-    const response = await retro.answer(retrospectiveId.value, content)
+    const response = await retro.answer(retrospectiveId.value, content, attachmentIds)
 
     if (!response.assistantMessage) {
       // 아직 AI 응답이 준비되지 않은 경우 — generating 자리표시자만 지운다
