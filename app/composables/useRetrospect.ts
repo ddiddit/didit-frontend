@@ -8,6 +8,10 @@ import type {
   RetrospectiveDetail,
   ConversationResponse,
   FinishRetrospectiveResponse,
+  UploadURL,
+  UploadUrlRequest,
+  AttachmentComplete,
+  AttachmentDownloadUrl,
 } from '~/types/api'
 import { toUploadableAudio } from '~/utils/audio'
 
@@ -32,16 +36,19 @@ export function useRetrospect() {
     return res.data.data
   }
 
-  // 텍스트 답변 제출 → 다음 질문 또는 완료 준비 신호
-  async function answer(id: string, content: string): Promise<SubmitAnswerResponse> {
+  // 텍스트/첨부 답변 제출 → 다음 질문 또는 완료 준비 신호.
+  // 첨부만 보내는 경우 content는 비워도 되는데, 이때 서버는 content/inputType 필드 자체가
+  // 없는 요청을 기대하므로(빈 문자열이 아니라) content가 없으면 두 필드를 통째로 뺀다.
+  async function answer(id: string, content: string, attachmentIds: string[] = []): Promise<SubmitAnswerResponse> {
+    const trimmed = content.trim()
     const res = await $api.post<ApiResponse<SubmitAnswerResponse>>(
       `/api/v2/retrospectives/${id}/messages`,
       {
         // 메시지마다 고유해야 하는 멱등성 키. 회고 id를 그대로 쓰면 같은 회고의 두 번째
         // 메시지부터 서버가 중복 제출로 보고 409를 반환한다.
         clientMessageId: crypto.randomUUID(),
-        content,
-        inputType: 'TEXT'
+        ...(trimmed ? { content: trimmed, inputType: 'TEXT' } : {}),
+        attachmentIds,
       },
     )
     return res.data.data
@@ -55,7 +62,9 @@ export function useRetrospect() {
     return res.data.data
   }
 
-  // 대화 종료 — 결과 생성과는 분리된 API. 대화만 끝내고 resultGenerationStatus는 NOT_STARTED로 온다.
+  // 대화 종료 — 종료와 동시에 확인된 대화 내용을 구조화해 결과(title/result)를 생성한다.
+  // 이미 완료된 회고에 다시 요청하면 저장된 결과를 그대로 반환하고(멱등),
+  // 생성 실패 상태였다면 재요청으로 생성 상태를 복구해 재시도할 수 있다.
   // readyToComplete(=skippable)인 질문에서 "회고 마치기"를 눌렀을 때 사용.
   async function finish(id: string): Promise<FinishRetrospectiveResponse> {
     const res = await $api.post<ApiResponse<FinishRetrospectiveResponse>>(
@@ -97,11 +106,6 @@ export function useRetrospect() {
       { timeout: AI_TIMEOUT },
     )
     return res.data.data
-  }
-
-  // 심화질문 스킵
-  async function skipDeepQuestion(id: string): Promise<void> {
-    await $api.post(`/api/v1/retrospectives/${id}/skip`)
   }
 
   // 다시 시작 → 기존 회고 삭제 후 새 회고 시작 (첫 질문 반환). 하루 횟수 정책 적용됨.
@@ -168,6 +172,38 @@ export function useRetrospect() {
     await $api.delete(`/api/v1/retrospectives/${id}/tags/${tagId}`)
   }
 
+  // 첨부파일 업로드 URL 발급 — 파일 자체는 이 응답의 uploadUrl로 별도 PUT.
+  // signal을 넘기면 업로드 중 삭제(×)했을 때 이 요청도 함께 취소할 수 있다.
+  async function generateURL(id: string, file: UploadUrlRequest, signal?: AbortSignal): Promise<UploadURL> {
+    const res = await $api.post<ApiResponse<UploadURL>>(`/api/v2/retrospectives/${id}/attachments`, file, { signal })
+    return res.data.data
+  }
+
+  // 첨부파일 업로드 완료 확인 — S3에 PUT한 뒤 호출해 uploadStatus를 확정한다
+  async function completeUpload(id: string, attachmentId: string, signal?: AbortSignal): Promise<AttachmentComplete> {
+    const res = await $api.post<ApiResponse<AttachmentComplete>>(
+      `/api/v2/retrospectives/${id}/attachments/${attachmentId}/complete`,
+      undefined,
+      { signal },
+    )
+    return res.data.data
+  }
+
+  // 전송된 메시지의 첨부파일 삭제 — 일반 첨부는 답변 편집 정책상 불가하고, 서버가 민감정보를
+  // 감지해 삭제를 권고한 첨부만 삭제할 수 있다(그 외 요청은 서버가 거부).
+  async function deleteAttachment(id: string, attachmentId: string): Promise<void> {
+    await $api.delete(`/api/v2/retrospectives/${id}/attachments/${attachmentId}`)
+  }
+
+  // 첨부파일 상세보기 URL 발급 — S3 GET presigned URL. 클릭해서 열어볼 때마다 새로 발급받아 쓴다
+  // (만료 시각이 있어 캐싱해서 재사용하면 만료 후 깨질 수 있음)
+  async function getAttachmentDownloadUrl(id: string, attachmentId: string): Promise<AttachmentDownloadUrl> {
+    const res = await $api.get<ApiResponse<AttachmentDownloadUrl>>(
+      `/api/v2/retrospectives/${id}/attachments/${attachmentId}/download-url`,
+    )
+    return res.data.data
+  }
+
   return {
     start,
     answer,
@@ -176,7 +212,6 @@ export function useRetrospect() {
     answerByVoice,
     transcribe,
     getDeepQuestion,
-    skipDeepQuestion,
     restart,
     exit,
     complete,
@@ -188,5 +223,9 @@ export function useRetrospect() {
     detachProject,
     addTag,
     removeTag,
+    getAttachmentDownloadUrl,
+    generateURL,
+    completeUpload,
+    deleteAttachment,
   }
 }

@@ -85,7 +85,7 @@ AI 기반 회고(retrospective) 앱의 프론트엔드.
   - `POST /api/v2/retrospectives` — 시작
   - `POST /api/v2/retrospectives/{id}/messages` — 답변 제출. `clientMessageId`는 **요청마다 고유해야 하는 멱등키**(`crypto.randomUUID()`) — 회고 id처럼 고정값을 재사용하면 두 번째 제출부터 409 Conflict
   - `GET /api/v2/retrospectives/{id}/conversation` — 대화 조회. **AI 메시지만** 내려주고 사용자가 입력한 답변 텍스트는 포함하지 않음 → 전체 대화 재구성은 불가능하고 "가장 마지막 질문" 복구만 가능
-  - `POST /api/v2/retrospectives/{id}/finish` — 대화 종료. 결과 생성(V1 `complete()`)과 **분리된 API**이며 응답의 `resultGenerationStatus`는 항상 `NOT_STARTED`
+  - `POST /api/v2/retrospectives/{id}/finish` — 대화 종료. **종료와 동시에 결과도 생성**한다(V1 `complete()`와 달리 분리되어 있지 않음). 성공 시 응답의 `resultGenerationStatus`가 `GENERATED`이고 `title`/`result`(요약·강점·개선점·진행 과정·배운 점·인사이트·다음 행동 제안, 타입 `RetrospectiveResultV2`)가 함께 내려옴. 이미 완료된 회고에 다시 요청해도 저장된 결과를 그대로 반환(멱등)하고, 생성 실패 상태였다면 재요청으로 재시도됨
 - **진행 중 회고 재개**: `useRetrospect.ts`의 `ACTIVE_RETROSPECTIVE_KEY`(localStorage)에 회고 id를 보관 — 답변 도중 화면을 나갔다 들어와도 `start()`로 새 회고를 만들지 않고 `getConversation()`으로 이어서 진행. 대화 종료(`finish()`)·완료(`complete()`) 시 이 키를 제거
   - 앱 백그라운드→포그라운드 복귀 시에도(`@capacitor/app`의 `appStateChange`) 대화 상태를 동기화해, 놓친 AI 응답을 복구
   - 단, WebView 자체가 완전히 종료된 뒤 재실행되면 `no-direct-entry` 미들웨어가 먼저 `/home`으로 돌려보내 재개 불가 (정상 네비게이션·백그라운드 유지 상태에서만 재개됨)
@@ -96,7 +96,7 @@ AI 기반 회고(retrospective) 앱의 프론트엔드.
   - "회고 마치기"를 눌렀을 때 `getConversation()`(대화 조회)로 **서버의 `readyToComplete`를 직접 확인** → true면 `finish()` 호출 후 기존 v1 결과 생성 화면(`/retrospect/result`, `retro.complete()`)으로 연결
   - false면 마치지 않고 안내 모달("아직 내용이 충분하지 않아요 / 결과 생성을 위해 내용을 더 작성해주세요 / 확인")만 표시
 - **뒤로가기**: 헤더 뒤로가기 → 확인 모달("아직 회고 결과 생성이 어려워요 / …지금 나가면 결과가 생성되지 않아요 / 계속하기 / 나가기"). "나가기"는 `finish()`(대화 종료 API)를 호출하고 `ACTIVE_RETROSPECTIVE_KEY`를 지운 뒤 `/home`으로 이동 — finish가 실패해도 이동은 막지 않음(`onBackConfirm`)
-- **알려진 이슈 — `complete()` 재호출 400**: `retrospect/result.vue`는 마운트마다 `retro.complete(completingId)`를 호출하고, 중복 방지용 `resultStash`(`useState('retrospect:result')`)에 값을 넣는 코드가 없어 dead code다. 같은 회고로 결과 화면이 두 번 실행되면(dev HMR·뒤로가기 재진입·타임아웃 후 재시도 등) 2번째 `complete()`가 `RETROSPECTIVE_ALREADY_COMPLETED`(400)로 실패한다. 해결하려면 `result.value` 존재 시 재호출 skip + 해당 코드일 때 `getDetail()`로 기존 결과 로드
+- **결과 화면(`retrospect/result.vue`)은 v2 `finish()` 기반**: `start.vue`가 회고 마치기 확인 후 `finish()`를 호출해 받은 `title`/`result`를 `resultStash`(`useState('retrospect:result')`)에 담고 `completingId`(`useState('retrospect:completing-id')`)와 함께 결과 화면으로 이동. `result.vue`는 stash가 있으면 그대로 쓰고, 없이 직접 진입한 경우(새로고침 등)엔 `finish()`를 다시 호출해 저장된 결과를 받는다 — v1 `complete()`와 달리 재호출이 멱등이라, 같은 회고로 결과 화면이 두 번 실행돼도 400이 나지 않는다(과거 `complete()` 재호출 400 이슈는 해소됨)
 
 ## 분석 (Amplitude)
 

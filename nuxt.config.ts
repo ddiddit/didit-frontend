@@ -6,12 +6,29 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   ssr: false,
   devtools: { enabled: false },
-
+  components: false,
   vite: {
     optimizeDeps: {
       include: ['firebase/app', 'firebase/messaging'],
       // dotLottie 플레이어는 wasm/worker를 런타임에 로드 — 사전 번들링에서 제외해야 경로가 깨지지 않음
       exclude: ['@lottiefiles/dotlottie-web'],
+    },
+    build: {
+      // 프로덕션 빌드(nuxt build/generate)에서 node_modules 의존성만 하나의 vendor 청크로 합치고,
+      // 페이지/컴포넌트는 Nuxt 기본 라우트별 lazy 분할을 그대로 유지한다.
+      // (한때 전체를 한 파일로 합쳤었는데, components: false라 컴포넌트마다 직접 import해야 하는
+      // 이 프로젝트 특성상 그러면 어떤 페이지에서 import 하나만 고쳐도 앱 전체의 첫 로딩 용량이
+      // 계속 커지는 문제가 있어 되돌림 — 페이지별로만 커지게 분리)
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            if (id.includes('node_modules')) return 'vendor'
+          },
+        },
+      },
+      // vendor 청크는 라이브러리를 다 모아서 기본 500KB 경고 기준을 넘는 게 정상이라 기준만 올림.
+      // 페이지별 청크는 전부 수십 KB대라, 이 값을 올려도 실제로 비대해진 페이지를 가릴 위험은 없다.
+      chunkSizeWarningLimit: 1000,
     },
     server: {
       proxy: {

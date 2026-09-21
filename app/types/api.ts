@@ -226,7 +226,7 @@ export type InitialMessage = {
   body: string;
   content: string | null;
   createdAt: string;
-} 
+}
 
 // 어시스턴트 메시지 타입
 export type AssistantMessage = {
@@ -237,6 +237,7 @@ export type AssistantMessage = {
   body: string | null
   content: string | null
   createdAt: string | null
+  attachments: unknown[] // 첨부파일 기능 미구현 — 정확한 형태는 아직 정의되지 않음
 }
 
 // 회고 시작 → 첫 질문 반환
@@ -251,7 +252,7 @@ export interface StartRetrospectiveResponse {
 export interface SubmitAnswerResponse {
   turnId: string
   userMessageId: string
-  assistantMessage: AssistantMessage
+  assistantMessage: AssistantMessage | null // AI 응답 생성이 아직 끝나지 않은 경우 null로 옴
   readyToComplete: boolean
 }
 
@@ -284,11 +285,34 @@ export interface ConversationResponse {
   readyToComplete: boolean
 }
 
-// 대화 종료 — 결과 생성과는 분리된 API. 대화만 끝내고 결과 생성은 NOT_STARTED로 반환됨
+// 대화 종료 — v2는 종료와 동시에 확인된 대화 내용을 구조화해 결과를 생성한다.
+// 이미 완료된 회고에 다시 요청하면 저장된 결과를 그대로 반환하고(멱등),
+// 생성 실패 상태였다면 재요청으로 생성 상태를 복구해 재시도할 수 있다.
+// 성공(resultGenerationStatus === 'GENERATED') 시에만 title/result가 채워진다.
 export interface FinishRetrospectiveResponse {
   retrospectiveId: string
   conversationStatus: string
   resultGenerationStatus: string
+  title?: string
+  result?: RetrospectiveResultV2
+}
+
+// v2 회고 결과 — finish()로 생성됨. v1 CompleteRetrospectiveResponse.content(RetrospectiveContent)와 필드명이 다르다
+// (blockedPoint/solutionProcess/lessonLearned/nextAction(단수) → strengths/improvements/processes/learnings/nextActions(복수))
+export interface RetrospectiveResultV2 {
+  summary: string
+  strengths: string[]
+  improvements: string[]
+  processes: string[]
+  learnings: string[]
+  insight: RetrospectiveInsight
+  nextActions: RetrospectiveInsight[]
+}
+
+// start.vue에서 finish() 완료 후 result.vue로 결과를 넘길 때 쓰는 stash 값
+export interface RetrospectiveResultStash {
+  title: string
+  result: RetrospectiveResultV2
 }
 
 // AI 심화질문 조회 (생성 대기 중이면 isReady=false 로 폴링)
@@ -328,6 +352,38 @@ export interface RetrospectiveDetail {
   completedAt: string | null
   project: { id: string; name: string } | null
   tags: Tag[]
+}
+
+// 첨부파일 업로드 URL 발급 요청
+export interface UploadUrlRequest {
+  filename: string
+  contentType: string
+  size: number
+  checksumSha256: string // 파일 본문 SHA-256을 base64로 인코딩한 값
+}
+
+// 첨부파일 업로드 URL
+export interface UploadURL {
+  attachmentId: string
+  uploadUrl: string
+  expiresAt: string
+}
+
+// 첨부파일 업로드 완료 확인 — S3 PUT 이후 호출
+export interface AttachmentComplete {
+  id: string
+  filename: string
+  fileType: string
+  contentType: string
+  size: number
+  uploadStatus: string
+  analysisStatus: string
+}
+
+// 첨부파일 상세보기(다운로드) URL — S3 GET presigned URL
+export interface AttachmentDownloadUrl {
+  url: string
+  expiresAt: string
 }
 
 // Calendar
