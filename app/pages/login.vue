@@ -98,8 +98,8 @@ declare const google: {
 }
 declare const AppleID: {
   auth: {
-    init: (cfg: { clientId: string; scope: string; redirectURI: string; usePopup: boolean }) => void
-    signIn: () => Promise<{ authorization: { id_token: string } }>
+    init: (cfg: { clientId: string; scope: string; redirectURI: string; state: string; nonce: string; usePopup: boolean }) => void
+    signIn: () => Promise<{ authorization: { code?: string; state?: string } }>
   }
 }
 
@@ -109,6 +109,14 @@ definePageMeta({ layout: false })
 const googleContent = ref<HTMLElement | null>(null)
 const syncWidth = ref('')
 const isLoading = ref(false)
+const APPLE_LOGIN_REQUEST_KEY = 'appleLoginRequest'
+const APPLE_LOGIN_REQUEST_TTL_MS = 5 * 60 * 1000
+
+interface AppleLoginRequest {
+  state: string
+  nonce: string
+  createdAt: number
+}
 // 로그인 실패·안내 토스트는 notice 아이콘 표시 (피그마 8088:31255)
 const { show } = useToast()
 const showToast = (msg: string) => show(msg, { icon: true })
@@ -172,10 +180,15 @@ function isUserCancelled(e: unknown): boolean {
   return /cancel|취소|dismiss|popup_closed|closed_by_user|user_trigger/.test(text)
 }
 
-async function submitLogin(provider: SocialProvider, credentialType: SocialCredentialType, credential: string) {
+async function submitLogin(
+  provider: SocialProvider,
+  credentialType: SocialCredentialType,
+  credential: string,
+  options?: { redirectUri: string; nonce: string },
+) {
   isLoading.value = true
   try {
-    await socialLoginFlow.startSocialLogin(provider, credentialType, credential)
+    await socialLoginFlow.startSocialLogin(provider, credentialType, credential, options)
   } catch (e) {
     track('login_failed', { provider: provider.toLowerCase() })
     // 백엔드 에러 코드(WITHDRAWN_USER, OAUTH_USER_INFO_FAILED 등)에 맞는 문구 노출
@@ -183,6 +196,48 @@ async function submitLogin(provider: SocialProvider, credentialType: SocialCrede
   } finally {
     isLoading.value = false
   }
+}
+
+function createAppleLoginRequest(): AppleLoginRequest {
+  const request = {
+    state: createSecureToken(),
+    nonce: createSecureToken(),
+    createdAt: Date.now(),
+  }
+  sessionStorage.setItem(APPLE_LOGIN_REQUEST_KEY, JSON.stringify(request))
+  return request
+}
+
+function consumeAppleLoginRequest(callbackState: string | undefined): AppleLoginRequest | null {
+  const raw = sessionStorage.getItem(APPLE_LOGIN_REQUEST_KEY)
+  sessionStorage.removeItem(APPLE_LOGIN_REQUEST_KEY)
+  if (!raw || !callbackState) return null
+
+  try {
+    const request = JSON.parse(raw) as AppleLoginRequest
+    if (
+      !request.state
+      || !request.nonce
+      || callbackState !== request.state
+      || Date.now() - request.createdAt > APPLE_LOGIN_REQUEST_TTL_MS
+    ) {
+      return null
+    }
+    return request
+  }
+  catch {
+    return null
+  }
+}
+
+function clearAppleLoginRequest() {
+  sessionStorage.removeItem(APPLE_LOGIN_REQUEST_KEY)
+}
+
+function createSecureToken(): string {
+  const bytes = new Uint8Array(32)
+  crypto.getRandomValues(bytes)
+  return btoa(String.fromCharCode(...bytes)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')
 }
 
 async function loginWithKakao() {
@@ -248,17 +303,31 @@ async function loginWithApple() {
     }
     return
   }
+  const redirectUri = `${window.location.origin}/auth/apple/callback`
+  const appleLoginRequest = createAppleLoginRequest()
+
   // 웹: AppleID JS SDK 팝업
   AppleID.auth.init({
     clientId: config.public.appleClientId,
     scope: 'name email',
-    redirectURI: window.location.origin,
+    redirectURI: redirectUri,
+    state: appleLoginRequest.state,
+    nonce: appleLoginRequest.nonce,
     usePopup: true,
   })
   try {
     const result = await AppleID.auth.signIn()
-    await submitLogin('APPLE', 'ID_TOKEN', result.authorization.id_token)
+    const verifiedRequest = consumeAppleLoginRequest(result.authorization.state)
+    if (!result.authorization.code || !verifiedRequest) {
+      showToast('Apple 로그인에 실패했어요. 다시 시도해 주세요.')
+      return
+    }
+    await submitLogin('APPLE', 'AUTHORIZATION_CODE', result.authorization.code, {
+      redirectUri,
+      nonce: verifiedRequest.nonce,
+    })
   } catch (e) {
+    clearAppleLoginRequest()
     if (isUserCancelled(e)) return
     showToast('Apple 로그인에 실패했어요. 다시 시도해 주세요.')
   }
