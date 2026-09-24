@@ -93,17 +93,17 @@
         </template>
       </div>
 
-      <!-- 인사이트 / 다음 행동 제안 -->
+      <!-- 인사이트 / 다음 행동 제안 (v2는 다음 행동 제안이 여러 개일 수 있음) -->
       <div class="flex flex-col gap-4">
         <div class="bg-grey-3 rounded-2xl p-[22px] flex flex-col gap-[6px]">
           <p class="text-label2 font-semibold text-green-hover">인사이트</p>
           <p class="text-body2-reading font-semibold text-grey-10">{{ content.insight.title }}</p>
           <p class="text-body3-reading text-grey-13 whitespace-pre-line">{{ content.insight.description }}</p>
         </div>
-        <div class="bg-grey-3 rounded-2xl p-[22px] flex flex-col gap-[6px]">
+        <div v-for="(action, i) in nextActions" :key="i" class="bg-grey-3 rounded-2xl p-[22px] flex flex-col gap-[6px]">
           <p class="text-label2 font-semibold text-green-hover">다음 행동 제안</p>
-          <p class="text-body2-reading font-semibold text-grey-10">{{ content.nextAction.title }}</p>
-          <p class="text-body3-reading text-grey-13 whitespace-pre-line">{{ content.nextAction.description }}</p>
+          <p class="text-body2-reading font-semibold text-grey-10">{{ action.title }}</p>
+          <p class="text-body3-reading text-grey-13 whitespace-pre-line">{{ action.description }}</p>
         </div>
       </div>
     </div>
@@ -111,13 +111,14 @@
 </template>
 
 <script setup lang="ts">
-import type { RetrospectiveContent, Tag } from '~/types/api'
+import type { RetrospectiveContent, RetrospectiveResultV2, Tag } from '~/types/api'
 import { getTagColor } from '~/utils/tag-color'
 
 const props = withDefaults(
   defineProps<{
     title: string
-    content: RetrospectiveContent
+    // v1(RetrospectiveContent)·v2(RetrospectiveResultV2) 필드명이 달라 두 형태 모두 받아 화면에서 흡수한다
+    content: RetrospectiveContent | RetrospectiveResultV2
     projectName?: string | null
     tags?: Tag[]
     editableTitle?: boolean // 저장 화면에서 제목 입력 가능
@@ -131,9 +132,27 @@ const props = withDefaults(
 
 defineEmits<{ delete: []; 'edit-project': []; 'edit-tags': []; 'open-project': []; 'update:title': [value: string] }>()
 
-const listSections = computed(() => [
-  { key: 'blocked', label: '막힌 지점', items: props.content.blockedPoint ?? [] },
-  { key: 'solution', label: '해결 과정', items: props.content.solutionProcess ?? [] },
-  { key: 'lesson', label: '배운 점', items: props.content.lessonLearned ?? [] },
-])
+// v2는 강점/개선점/진행 과정/배운 점, v1은 막힌 지점/해결 과정/배운 점 — 필드명으로 형태를 구분한다
+const listSections = computed(() => {
+  const c = props.content
+  if ('strengths' in c) {
+    return [
+      { key: 'strengths', label: '잘한 점', items: c.strengths ?? [] },
+      { key: 'improvements', label: '개선점', items: c.improvements ?? [] },
+      { key: 'processes', label: '진행 과정', items: c.processes ?? [] },
+      { key: 'learnings', label: '배운 점', items: c.learnings ?? [] },
+    ]
+  }
+  return [
+    { key: 'blocked', label: '막힌 지점', items: c.blockedPoint ?? [] },
+    { key: 'solution', label: '해결 과정', items: c.solutionProcess ?? [] },
+    { key: 'lesson', label: '배운 점', items: c.lessonLearned ?? [] },
+  ]
+})
+
+// v1은 다음 행동 제안이 하나(nextAction), v2는 여러 개(nextActions) — 항상 배열로 통일해 노출한다
+const nextActions = computed(() => {
+  const c = props.content
+  return 'nextActions' in c ? (c.nextActions ?? []) : c.nextAction ? [c.nextAction] : []
+})
 </script>

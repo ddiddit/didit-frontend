@@ -43,7 +43,7 @@
       <div class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5" style="padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px))">
         <RetrospectiveResult
           v-model:title="title"
-          :content="result.content"
+          :content="result"
           :project-name="selectedProject?.name ?? null"
           :tags="selectedTags"
           editable-title
@@ -73,10 +73,10 @@
 </template>
 
 <script setup lang="ts">
-import type { CompleteRetrospectiveResponse, Tag } from '~/types/api'
+import type { RetrospectiveResultStash, RetrospectiveResultV2, Tag } from '~/types/api'
 import { isAuthError, toErrorVariant } from '~/utils/api-error'
 
-definePageMeta({ middleware: 'auth', layout: false })
+definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
 const retro = useRetrospect()
 const { show } = useToast()
@@ -86,8 +86,8 @@ const { fetchUnnotified } = useBadges()
 const { show: showBadge } = useBadgeAcquired()
 
 const completingId = useState<string>('retrospect:completing-id')
-// 채팅(start.vue)에서 이미 생성한 결과 — 있으면 재생성 없이 사용
-const resultStash = useState<CompleteRetrospectiveResponse | null>('retrospect:result', () => null)
+// 채팅(start.vue)에서 회고 마치기로 이미 생성한 결과 — 있으면 재생성 없이 사용
+const resultStash = useState<RetrospectiveResultStash | null>('retrospect:result', () => null)
 
 const isLoading = ref(true)
 const errorVariant = ref<'network' | 'server' | 'generic' | null>(null)
@@ -99,7 +99,7 @@ const errorTitle = computed(() =>
     ? '인터넷 연결을 확인해 주세요.\n연결 후 다시 시도해 주세요.'
     : '회고 결과를 생성하지 못했어요',
 )
-const result = ref<CompleteRetrospectiveResponse | null>(null)
+const result = ref<RetrospectiveResultV2 | null>(null)
 const title = ref('')
 
 // 프로젝트/태그 선택 (오버레이에서 API로 즉시 반영 후 화면 표시값 갱신)
@@ -124,21 +124,27 @@ async function generate() {
     navigateTo('/home')
     return
   }
-  // 채팅에서 생성을 마치고 넘어온 경우: stash된 결과를 그대로 사용(중복 생성 방지)
+  // 채팅에서 회고 마치기로 생성을 마치고 넘어온 경우: stash된 결과를 그대로 사용(중복 생성 방지)
   if (resultStash.value) {
-    result.value = resultStash.value
+    result.value = resultStash.value.result
     title.value = resultStash.value.title
     resultStash.value = null
     isLoading.value = false
     return
   }
-  // 직접 진입/재시도 등 stash가 없을 때만 생성 (폴백)
+  // 직접 진입/새로고침/재시도 등 stash가 없을 때만 호출 (폴백).
+  // finish()는 이미 완료된 회고에 다시 요청해도 저장된 결과를 그대로 반환(멱등)하고,
+  // 생성 실패 상태였다면 재요청으로 생성 상태를 복구해 재시도한다 — v1 complete()처럼
+  // 두 번째 호출이 400으로 실패하는 문제가 없다.
   isLoading.value = true
   errorVariant.value = null
   try {
-    const res = await retro.complete(completingId.value)
-    result.value = res
-    title.value = res.title
+    const res = await retro.finish(completingId.value)
+    if (!res.result) throw new Error('회고 결과가 아직 생성되지 않았어요')
+    result.value = res.result
+    title.value = res.title ?? ''
+    // 완료됐으니 start.vue가 재개용으로 들고 있던 id를 정리 — 다음 진입은 새 회고로 시작
+    localStorage.removeItem(ACTIVE_RETROSPECTIVE_KEY)
   } catch (e) {
     // 인증 만료는 인터셉터가 로그인으로 보냄 → 에러 화면 X
     if (!isAuthError(e)) errorVariant.value = toErrorVariant(e)

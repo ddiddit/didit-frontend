@@ -83,6 +83,7 @@
         :disabled="isCompleted"
         class="mt-5 mx-5"
         @start="startRetrospect"
+        @intro="introRetrospect"
       />
 
       <!-- 최근 제안 받은 행동 (단일 카드 + 구분선) — Figma 새 홈 UI: 날짜·제목·프로젝트·태그 -->
@@ -164,6 +165,11 @@
 
 <script setup lang="ts">
 import type { ApiResponse, HomeResponse, CurrentMissionResponse } from '~/types/api'
+import HomeMissionCard from '~/components/HomeMissionCard.vue'
+import HomeMissionMaxCard from '~/components/HomeMissionMaxCard.vue'
+import HomeMissionPopup from '~/components/HomeMissionPopup.vue'
+import HomeMissionFailurePopup from '~/components/HomeMissionFailurePopup.vue'
+import UiErrorState from '~/components/ui/UiErrorState.vue'
 import { getTagColor } from '~/utils/tag-color'
 import { parseServerDate } from '~/utils/date'
 import { toErrorVariant, isAuthError } from '~/utils/api-error'
@@ -211,7 +217,7 @@ const hasUnread = useState<boolean>('notifications:hasUnread', () => false)
 const homeLoaded = useState<boolean>('home:loaded', () => false)
 const isLoading = ref(!homeLoaded.value)
 
-const maxDaily = 3
+const maxDaily = 1000
 const remaining = computed(() => Math.max(0, maxDaily - todayRetrospectiveCount.value))
 const isCompleted = computed(() => remaining.value === 0)
 
@@ -279,6 +285,7 @@ const loadError = ref<'network' | 'server' | 'generic' | null>(null)
 async function loadHome() {
   loadError.value = null
   isLoading.value = !homeLoaded.value
+
   try {
     // /api/v2/home 한 번이면 nickname·mission·알림까지 전부 받음
     const { data } = await $api.get<ApiResponse<HomeResponse>>('/api/v2/home')
@@ -398,5 +405,10 @@ function goToNotifications() {
 function startRetrospect() {
   track('retrospect_started', { source: 'home' })
   navigateTo('/retrospect/start')
+}
+
+function introRetrospect() {
+  track('retrospect_started', { source: 'home' })
+  navigateTo('/retrospect/intro')
 }
 </script>

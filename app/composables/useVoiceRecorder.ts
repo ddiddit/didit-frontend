@@ -55,6 +55,19 @@ export function useVoiceRecorder() {
     }
   }
 
+  // 마이크 권한이 이미 허용('granted') 상태인지 — true면 접근 모달 없이 바로 녹음을 시작할 수 있다.
+  // Permissions API 미지원(iOS WKWebView 등) 환경은 false로 폴백해 기존 접근 모달 흐름을 탄다.
+  async function isPermissionGranted(): Promise<boolean> {
+    try {
+      const perms = navigator.permissions
+      if (!perms?.query) return false
+      const status = await perms.query({ name: 'microphone' as PermissionName })
+      return status.state === 'granted'
+    } catch {
+      return false
+    }
+  }
+
   // 마이크 권한 요청 (성공 시 true). 네이티브에선 권한 다이얼로그로 대체.
   async function requestPermission(): Promise<boolean> {
     try {
@@ -131,6 +144,7 @@ export function useVoiceRecorder() {
     isPaused: readonly(isPaused),
     elapsed: readonly(elapsed),
     isPermissionBlocked,
+    isPermissionGranted,
     requestPermission,
     start,
     stop,

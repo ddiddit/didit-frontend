@@ -3,722 +3,408 @@
     class="relative h-full bg-white flex flex-col overflow-hidden"
     :style="keyboardOpen ? { height: `calc(100% - ${keyboardHeight}px)` } : undefined"
   >
-    <!-- 헤더: 뒤로가기 + 다시 시작 -->
-    <div class="flex items-center justify-between h-[50px] px-5 shrink-0">
-      <button class="p-1 -ml-1" aria-label="뒤로" @click="onBack">
-        <img src="/icons/back.svg" alt="뒤로" class="w-6 h-6" />
-      </button>
-      <button
-        class="text-body2 font-semibold text-grey-7 disabled:opacity-40"
-        :disabled="isBusy"
-        @click="onRestartClick"
-      >
-        다시 시작
-      </button>
-    </div>
+    <!-- 헤더 영역 — 오른쪽 '회고 마치기'는 응답 대기 중·마치기 처리 중에만 잠기고, 그 외에는 언제나 누를 수 있다 -->
+    <RetroHeader :title="'회고 마치기'" :isBusy="isBusy" :finishDisabled="isBusy || isFinishing || isCheckingReady" :onBack="onBack" :onFinish="onFinishClick" />
+
+    <!-- 마이크 접근 모달 — 권한이 아직 없을 때만. 이미 허용된 경우 accessMic()에서 바로 레코더를 연다 -->
+    <UiPopup :modelValue="isAccessMicModal" :title="'디딧(didit)이(가) 마이크에 접근하려고 합니다.'" :description="'회고를 음성으로 기록하기 위해 마이크 접근 권한이 필요해요.'" :confirmText="'허용'" :cancelText="'허용 안 함'" :loading="micRequesting" @cancel="isAccessMicModal = false" @confirm="confirmAccessMic" />
+
+    <!-- 뒤로가기 확인 모달 — 답변 여부에 따라 나가기의 실제 결과(마무리 vs 삭제)가 다르므로 문구도 그에 맞게 -->
+    <UiPopup :modelValue="isBackModal" :title="backModalTitle" :description="backModalDescription" :confirmText="'나가기'" :cancelText="'계속하기'" :loading="isBackLeaving" @cancel="onBackCancel" @confirm="onBackConfirm" />
+
+    <!-- 회고 마치기 확인 모달 — 실수로 대화를 끝내지 않도록 확인 후 결과를 생성한다 -->
+    <UiPopup :modelValue="isFinishModal" :title="'회고를 마칠까요?'" :description="'지금까지의 답변으로 회고 결과를 만들어요.'" :confirmText="'마치기'" :cancelText="'계속하기'" :loading="isFinishing" @cancel="onFinishCancel" @confirm="onFinishConfirm" />
+
+    <!-- 내용 부족 모달 — 회고 마치기를 눌렀지만 서버가 아직 결과를 만들 만큼 충분하지 않다고 판단한 경우 -->
+    <UiPopup
+      v-model="isNotReadyModal"
+      title="아직 내용이 충분하지 않아요"
+      :description="'회고 결과 생성을 위해\n내용을 더 작성해주세요'"
+      :showCancel="false"
+      confirmText="확인"
+      variant="dark"
+      @confirm="isNotReadyModal = false"
+    />
+
+    <!-- 음성 레코더 (녹음 중 파형·타이머, 엔터로 STT 변환) -->
+    <RetrospectVoiceRecorder v-if="isRecorderOpen" :retrospectiveId="retrospectiveId" @done="onVoiceDone" @cancel="isRecorderOpen = false" @blocked="onVoiceBlocked" />
 
     <!-- 대화 영역 -->
-    <!-- 하단 여백: 오버레이 입력바에 마지막 메시지가 가려지지 않도록 -->
-    <div ref="scrollEl" class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pb-28">
-      <div class="flex flex-col">
-        <template v-for="(msg, i) in messages" :key="msg.id">
-          <!-- 디닷 질문 -->
-          <div
-            v-if="msg.role === 'didit'"
-            class="chat-in flex flex-col gap-2 items-start w-[280px]"
-            :class="{ 'mt-5': i > 0 }"
-          >
-            <!-- Question N/4 -->
-            <div v-if="msg.questionNo" class="flex gap-1 items-start pt-2.5 text-caption1">
-              <span class="font-semibold text-grey-13">Question</span>
-              <span class="flex items-center">
-                <span class="font-semibold text-grey-13">{{ msg.questionNo }}</span>
-                <span class="font-normal text-grey-6">/{{ TOTAL_QUESTIONS }}</span>
-              </span>
+    <div ref="scrollEl" class="message_wrapper h-[calc(100%-112px)] overflow-y-auto">
+      <div class="message_area px-[20px] pt-[20px] flex flex-col" v-for="(m, i) in messages" :key="m.id">
+        <div class="didit_message_wrapper self-start" v-if="m.role === 'didit'">
+          <div class="didit_profile flex flex-col mb-[20px]">
+            <img src="/icons/icon_chat_didit.png" alt="디딧" class="w-6 h-6" />
+            <div class="didit_message_box mt-[10px] px-[12px] max-w-[250px] py-[14px] bg-grey-3 inline-block text-[14px] rounded-[24px] self-start">
+              {{ m.typedMain }}
             </div>
-            <!-- 질문 버블 -->
-            <div class="bg-grey-3 rounded-3xl px-5 py-3.5 w-full flex flex-col gap-1">
-              <p class="text-body2 font-semibold text-grey-13 whitespace-pre-line">{{ msg.typedMain }}</p>
-              <p v-if="msg.sub && msg.showSub" class="text-label2-reading text-grey-8 whitespace-pre-line">{{ msg.sub }}</p>
-              <!-- 심화질문 스킵 -->
-              <div v-if="msg.skippable && msg.id === lastDeepId && msg.showSub" class="flex justify-end pt-1">
-                <button
-                  class="bg-accent rounded-lg px-3 py-1.5 text-label2 font-medium text-grey-1 disabled:opacity-40"
-                  :disabled="isBusy"
-                  @click="onSkipDeep"
-                >
-                  Skip
-                </button>
+            <Transition name="sub-bubble">
+              <div v-if="m.showSub" class="didit_sub_message_box mt-[10px] max-w-[250px] px-[12px] py-[14px] bg-grey-3 inline-block text-[14px] rounded-[24px] whitespace-pre-line self-start">
+                {{ m.sub }}
               </div>
+            </Transition>
+          </div>
+        </div>
+        <div class="didit_message_wrapper self-start" v-else-if="m.role === 'generating'">
+          <div class="didit_profile flex flex-col">
+            <img src="/icons/icon_chat_didit.png" alt="디딧" class="w-6 h-6" />
+            <div class="didit_message_box max-w-[350px] mt-[10px] px-[12px] py-[14px] bg-grey-3 inline-flex items-center gap-[6px] text-[14px] rounded-[24px] self-start text-grey-7">
+              <!-- 텍스트 없는 자리표시자(답변 후 다음 질문 대기 등)는 로티만, 텍스트가 있으면(결과 정리 등) 함께 노출 -->
+              <DotLottieVue v-if="!m.text" class="w-5 h-5 shrink-0" autoplay loop :src="GENERATING_LOTTIE" />
+              <span v-else>{{ m.text }}</span>
             </div>
           </div>
-
-          <!-- 심화질문 생성 중 (버블 아님: 초록 스피너 + 텍스트, figma 24371) -->
-          <div v-else-if="msg.role === 'generating'" class="chat-in flex items-center gap-[10px] mt-5">
-            <span class="spinner shrink-0" />
-            <span class="text-label1 font-medium text-grey-13">{{ msg.text ?? '심화 질문을 생성 중이에요...' }}</span>
-          </div>
-
-          <!-- 사용자 답변 -->
-          <div v-else class="chat-in flex flex-col items-end mt-3.5">
-            <div class="bg-grey-12 rounded-3xl px-5 py-3.5 w-[280px]">
-              <p
-                class="text-body3 text-grey-1 whitespace-pre-line"
-                :class="{ 'line-clamp-[7]': isLong(msg.text) }"
-              >
-                {{ msg.text }}
-              </p>
-              <!-- 200자 초과 시 전체보기 → 풀스크린 모달 (CHAT_006) -->
-              <button
-                v-if="isLong(msg.text)"
-                class="flex items-center gap-[5px] pt-3 ml-auto text-primary"
-                @click="openFullView(msg)"
-              >
-                <span class="text-label2 font-semibold">전체 보기</span>
-                <svg class="w-[10px] h-[18px]" viewBox="0 0 10 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3 4.5L6.5 9L3 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </template>
-      </div>
-    </div>
-
-    <!-- 입력 바: 채팅 위에 겹치는 오버레이 — 흰 블록 대신 투명→흰색 그라데이션 배경 (카카오톡 스타일) -->
-    <div
-      class="absolute bottom-0 left-0 right-0 px-5 pt-2.5"
-      :style="{ paddingBottom: keyboardOpen ? '16px' : 'max(16px, env(safe-area-inset-bottom, 16px))' }"
-    >
-      <!-- 배경: 반투명 흰색 → 위로 갈수록 투명. 채팅이 입력바 뒤로 비쳐 보임 (카카오톡 스타일) -->
-      <div class="absolute -top-8 bottom-0 left-0 right-0 bg-gradient-to-t from-white/85 to-white/0 pointer-events-none" />
-      <!-- 질문 불러오기 실패 시 인라인 에러 배너 (figma err3) -->
-      <UiInlineError
-        v-if="chatError"
-        variant="dark"
-        :message="chatError.message"
-        class="relative mb-2.5"
-        @retry="chatError.retry()"
-      />
-      <!-- figma: padding 10/8/10/20, gap 15, radius 22. 여러 줄이면 전송 버튼이 하단 정렬 -->
-      <div class="relative flex items-end gap-[15px] bg-grey-3 rounded-[22px] pl-5 pr-2 py-2.5">
-        <textarea
-          ref="inputEl"
-          v-model="inputText"
-          rows="1"
-          placeholder="회고를 입력하세요"
-          class="flex-1 bg-transparent resize-none outline-none text-body3 text-grey-13 placeholder:text-grey-7 max-h-[120px] min-h-7 py-[3px] scrollbar-hide leading-[1.5]"
-          :disabled="isBusy || isInputDisabled || typing"
-          @input="autoGrow"
-          @keydown.enter.exact="onEnterKey"
+        </div>
+        <RetroUserMessage
+          v-else-if="m.role === 'user'"
+          :text="m.text"
+          :attachments="m.attachments"
+          :retrospective-id="retrospectiveId"
+          @delete-attachment="onDeleteAttachment(m, $event)"
         />
-        <!-- 음성 입력(네이티브 전용) — voice.svg는 28px 원형 배경+글리프 포함 -->
-        <button v-if="showVoice" class="shrink-0" :class="isMultiline ? 'self-end' : 'self-center'" aria-label="음성 입력" @click="onVoice">
-          <img src="/icons/voice.svg" alt="" class="w-7 h-7" />
-        </button>
-        <!-- 전송 (빈 값이어도 탭 가능 → 토스트, CHAT_007) -->
-        <button
-          v-else
-          class="bg-grey-13 rounded-full w-7 h-7 flex items-center justify-center shrink-0"
-          aria-label="전송"
-          @click="onSend"
-        >
-          <!-- 인라인 SVG(비동기 아이콘 resolve 제거) — 검은 원만 뜨는 첫 마운트 깜빡임 방지. 모양은 famicons:arrow-up-sharp와 동일 -->
-          <svg viewBox="0 0 512 512" class="w-4 h-4 text-grey-1" aria-hidden="true">
-            <path
-              fill="none"
-              stroke="currentColor"
-              stroke-linecap="square"
-              stroke-miterlimit="10"
-              stroke-width="48"
-              d="M112 244l144-144 144 144M256 120v292"
-            />
-          </svg>
-        </button>
       </div>
     </div>
 
-    <!-- 나가기 확인 (CHAT_008: 답변 전/후 문구 다름) -->
-    <UiPopup
-      v-model="showExitPopup"
-      title="지금 나가시겠어요?"
-      :description="exitDescription"
-      confirm-text="나가기"
-      cancel-text="취소"
-      variant="destructive"
-      @confirm="onConfirmExit"
-    />
-
-    <!-- 다시 시작 확인 (CHAT_009) -->
-    <UiPopup
-      v-model="showRestartPopup"
-      title="다시 시작하시겠어요?"
-      description="지금까지 작성한 내용은 모두 삭제되며, 오늘 회고 횟수 1회가 차감돼요."
-      confirm-text="다시 시작"
-      cancel-text="취소"
-      @confirm="onConfirmRestart"
-    />
-
-    <!-- 내 답변 전체보기 (풀스크린, CHAT_006 / figma 24498): 질문 + 답변 전문 -->
-    <Teleport to="#app-container">
-      <!-- inset-0이 앱 컨테이너의 safe-top 패딩 영역까지 덮으므로 오버레이에도 safe-top 적용 (상태바 겹침 방지) -->
-      <div v-if="fullView" class="absolute inset-0 z-50 bg-grey-1 flex flex-col safe-top">
-        <!-- 헤더: 뒤로가기만 -->
-        <div class="flex items-center h-[50px] px-5 shrink-0">
-          <button class="p-1 -ml-1" aria-label="뒤로" @click="fullView = null">
-            <img src="/icons/back.svg" alt="뒤로" class="w-6 h-6" />
-          </button>
-        </div>
-        <div class="flex-1 overflow-y-auto scrollbar-hide px-5 pb-10">
-          <div class="flex flex-col gap-5">
-            <!-- 질문 -->
-            <div class="flex flex-col gap-2">
-              <div v-if="fullView.questionNo" class="flex gap-1 items-start pt-2.5 text-caption1">
-                <span class="font-semibold text-grey-13">Question</span>
-                <span class="flex items-center">
-                  <span class="font-semibold text-grey-13">{{ fullView.questionNo }}</span>
-                  <span class="font-normal text-grey-6">/{{ TOTAL_QUESTIONS }}</span>
-                </span>
-              </div>
-              <p class="text-heading2 font-semibold text-grey-13 leading-[1.4]">{{ fullView.question }}</p>
-            </div>
-            <!-- 답변 전문 -->
-            <p class="text-body3-reading text-grey-10 whitespace-pre-line">{{ fullView.answer }}</p>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
-    <!-- 마이크 권한 안내 (figma 4374-17929) -->
-    <Teleport to="#app-container">
-      <Transition name="mic-fade">
-        <div v-if="showMicPopup" class="absolute inset-0 z-50 flex items-center justify-center px-5" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
-          <div class="absolute inset-0 bg-black/40" @click="showMicPopup = false" />
-          <div class="relative w-full max-w-[300px] bg-grey-1 rounded-2xl px-5 py-4 flex flex-col gap-[14px]">
-            <div class="flex flex-col items-center gap-2 py-3 text-center">
-              <p class="text-[17px] font-semibold text-grey-13 leading-[1.4] tracking-[-0.02em]">
-                디딧(didit)이(가)<br />마이크에 접근하려고 합니다.
-              </p>
-              <p class="text-[14px] font-normal text-grey-8 leading-[1.6] tracking-[-0.02em]">
-                회고를 음성으로 기록하기 위해<br />마이크 접근 권한이 필요해요.
-              </p>
-            </div>
-            <div class="flex gap-2 pb-1">
-              <button
-                class="flex-1 h-[50px] rounded-xl border border-grey-5 bg-grey-1 text-[15px] font-semibold text-grey-13 active:bg-grey-3 transition-colors"
-                @click="showMicPopup = false"
-              >
-                허용 안 함
-              </button>
-              <button
-                class="flex-1 h-[50px] rounded-xl bg-primary text-[15px] font-semibold text-grey-13 active:opacity-80 transition-opacity"
-                @click="onMicAllow"
-              >
-                허용
-              </button>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
-
-    <!-- 음성 레코더 (figma 2225-7905) -->
-    <RetrospectVoiceRecorder v-if="showRecorder" @done="onRecorderDone" @cancel="onRecorderCancel" @blocked="onMicBlocked" />
-
-    <!-- 마이크 권한 영구 거부 → 설정 유도 (OS 다이얼로그가 더는 안 뜨는 상태) -->
-    <Teleport to="#app-container">
-      <Transition name="mic-fade">
-        <div v-if="showMicBlockedPopup" class="absolute inset-0 z-50 flex items-center justify-center px-5" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
-          <div class="absolute inset-0 bg-black/40" @click="showMicBlockedPopup = false" />
-          <div class="relative w-full max-w-[300px] bg-grey-1 rounded-2xl px-5 py-4 flex flex-col gap-[14px]">
-            <div class="flex flex-col items-center gap-2 py-3 text-center">
-              <p class="text-[17px] font-semibold text-grey-13 leading-[1.4] tracking-[-0.02em]">
-                마이크 권한이<br />꺼져 있어요.
-              </p>
-              <p class="text-[14px] font-normal text-grey-8 leading-[1.6] tracking-[-0.02em]">
-                음성으로 회고를 기록하려면<br />설정에서 마이크 권한을 켜주세요.
-              </p>
-            </div>
-            <div class="flex gap-2 pb-1">
-              <button
-                class="flex-1 h-[50px] rounded-xl border border-grey-5 bg-grey-1 text-[15px] font-semibold text-grey-13 active:bg-grey-3 transition-colors"
-                @click="showMicBlockedPopup = false"
-              >
-                닫기
-              </button>
-              <button
-                class="flex-1 h-[50px] rounded-xl bg-primary text-[15px] font-semibold text-grey-13 active:opacity-80 transition-opacity"
-                @click="onOpenAppSettings"
-              >
-                설정으로 이동
-              </button>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
-
-    <!-- 음성 → 텍스트 변환 중 (figma 2229-8319) -->
-    <Teleport to="#app-container">
-      <div v-if="isTranscribing" class="absolute inset-0 z-[70] bg-black/40 flex items-center justify-center px-10">
-        <div class="bg-grey-1 rounded-2xl w-full max-w-[300px] flex flex-col items-center gap-4 px-5 py-8">
-          <span class="spinner" />
-          <div class="flex flex-col items-center gap-1.5 text-center">
-            <p class="text-body1 font-semibold text-grey-13 leading-[1.4]">
-              {{ nickname || '회고' }}님의 음성 회고를<br />텍스트로 변환하고 있어요
-            </p>
-            <p class="text-label1 font-normal text-grey-8">잠시만 기다려 주세요!</p>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <!-- 입력 영역 -->
+    <RetroTextarea :disabled="isBusy" :retrospectiveId="retrospectiveId" @send="onSend" @accessMic="accessMic" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { Capacitor } from '@capacitor/core'
 import type { PluginListenerHandle } from '@capacitor/core'
-import { Keyboard } from '@capacitor/keyboard'
+import { App } from '@capacitor/app'
 import { NativeSettings, AndroidSettings, IOSSettings } from 'capacitor-native-settings'
-import type { QuestionType, CompleteRetrospectiveResponse } from '~/types/api'
-import { getApiErrorCode, getApiErrorMessage, isAuthError } from '~/utils/api-error'
+import { DotLottieVue } from '@lottiefiles/dotlottie-vue'
 
-definePageMeta({ middleware: 'auth', layout: false })
+import RetroHeader from '~/components/layout/RetroHeader.vue'
+import RetroTextarea from '~/components/layout/RetroTextarea.vue'
+import RetroUserMessage from '~/components/layout/RetroUserMessage.vue'
+import RetrospectVoiceRecorder from '~/components/RetrospectVoiceRecorder.vue'
+import UiPopup from '~/components/ui/UiPopup.vue'
+import { isServerError } from '~/utils/api-error'
+import type { RetrospectiveResultStash } from '~/types/api'
+import type { SentAttachment } from '~/utils/attachment'
 
-// 회고 진행 = 3개 기본 질문 + 1개 AI 심화질문 (디자인 기준 /4)
-// TODO(백엔드 확인): 기본 질문 개수가 고정 3개인지, 심화질문이 항상 1개인지 확정 필요
-const TOTAL_QUESTIONS = 4
+definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
-type ChatMessage =
+// generating 자리표시자(다음 질문 대기 중)에서 재생할 로티 — public/icons/loading.lottie
+const GENERATING_LOTTIE = '/icons/loading.lottie'
+
+export type ChatMessage =
   | {
-      id: number
+      id: string
       role: 'didit'
-      questionNo: number | null
       main: string
       sub?: string
       skippable?: boolean
       typedMain: string // 타이핑으로 점차 노출되는 본문
       showSub: boolean // 본문 타이핑 완료 후 가이드/스킵 노출
     }
-  | { id: number; role: 'generating'; text?: string }
-  | { id: number; role: 'user'; text: string }
-type DiditMessage = Extract<ChatMessage, { role: 'didit' }>
+  | { id: string; role: 'generating'; text?: string }
+  | { id: string; role: 'user'; text: string; attachments?: SentAttachment[] }
 
 const retro = useRetrospect()
 const { show } = useToast()
-const { track } = useAmplitude()
 const { isNative } = useIsNative()
+// 마이크 권한 요청·상태 판정은 음성 레코더 컴포저블과 동일 로직을 재사용
+const {
+  requestPermission: requestMicPermission,
+  isPermissionBlocked: isMicPermissionBlocked,
+  isPermissionGranted: isMicPermissionGranted,
+} = useVoiceRecorder()
 
 const retrospectiveId = ref('')
 const messages = ref<ChatMessage[]>([])
-const inputText = ref('')
-const isBusy = ref(false) // API 호출 중(질문 전환/완료) — 입력·전송 잠금
-// 다음 질문 불러오기/결과 생성 실패 시 입력창 위 인라인 에러 배너 (figma 31182 / 31141)
-const chatError = ref<{ message: string; retry: () => void } | null>(null)
-// 결과 화면과 공유: 채팅에서 생성한 결과를 stash, 결과 화면이 재생성 없이 사용
+const isBusy = ref(false) // API 호출 중(질문 전환/완료)·AI 메시지 타이핑 중 — 입력·전송·헤더 버튼 잠금
+
+const isAccessMicModal = ref(false) // 마이크 접근 모달 여부
+const isBackModal = ref(false) // 뒤로가기 확인 모달 여부
+const isBackLeaving = ref(false) // 뒤로가기 확인('나가기') 처리 중(finish 호출) — 버튼 잠금
+const isFinishModal = ref(false) // 회고 마치기 확인 모달 여부
+const isFinishing = ref(false) // finish() 처리 중 — 결과 화면으로 넘어가는 라우팅 전환까지는 풀지 않는다
+const isCheckingReady = ref(false) // 회고 마치기 클릭 시 readyToComplete 조회 중 — 버튼 잠금
+const isNotReadyModal = ref(false) // 내용 부족 안내 모달 여부
+const micRequesting = ref(false) // 권한 요청 진행 중 — '허용' 버튼 잠금
+const isRecorderOpen = ref(false) // 음성 레코더 표시 여부
+// 음성 레코더가 변환한 텍스트를 입력창(RetroTextarea)으로 넘기는 초안 채널
+const voiceTranscript = useState<string>('retrospect:voice-transcript', () => '')
+
+// 회고 마치기 성공 시 result.vue로 넘길 값 — completingId로 대상 회고를, resultStash로 finish() 결과를 전달한다
 const completingId = useState<string>('retrospect:completing-id')
-const resultStash = useState<CompleteRetrospectiveResponse | null>('retrospect:result', () => null)
-const isInputDisabled = ref(false) // 더 이상 입력받지 않는 상태(완료 진행 등)
-const typing = ref(false) // 질문 타이핑 애니메이션 중 — 입력 잠금 (CHAT_001)
-const questionNo = ref(0) // 화면에 표시한 질문 순번
-const deepAsked = ref(false) // 심화질문을 이미 1회 노출했는지(중복 폴링 방지)
-const lastDeepId = ref<number | null>(null) // 마지막 심화질문 메시지 id(스킵 버튼 노출 대상)
+const resultStash = useState<RetrospectiveResultStash | null>('retrospect:result', () => null)
+
+
+// 대화 스크롤 영역 — 내용이 늘어날 때(새 메시지, 타이핑 애니메이션 등) 자동으로 바닥까지 따라 내려간다
+const scrollEl = ref<HTMLElement | null>(null)
+let scrollObserver: MutationObserver | undefined
+
+function scrollToBottom() {
+  const el = scrollEl.value
+  if (!el) return
+  el.scrollTop = el.scrollHeight
+}
 
 // 앰플리튜드 분석용 — 회고 시작 시각/심화질문 노출·스킵 여부 추적
 const startedAt = ref(0)
-const deepShown = ref(false) // 심화질문이 실제로 화면에 노출됐는지
-const deepSkipped = ref(false) // 심화질문을 스킵했는지
-
-const showExitPopup = ref(false)
-const showRestartPopup = ref(false)
-
-// 음성 입력(STT) — 웹·네이티브 모두 지원
-const showMicPopup = ref(false) // 마이크 권한 안내 팝업 (CHAT_001)
-const showMicBlockedPopup = ref(false) // 마이크 권한 영구 거부 → 설정 유도 팝업
-const micExplained = ref(false) // 안내 팝업을 이미 거쳤는지
-const showRecorder = ref(false) // 녹음 레코더 노출
-const isTranscribing = ref(false) // 음성 → 텍스트 변환 중
-// 닉네임은 authoritative한 프로필에서 사용 (홈과 동일 — /api/v2/home 의 stale nickname 미사용)
 const { profile, load: loadProfile } = useProfile()
 const nickname = computed(() => profile.value?.nickname ?? '')
-// 전체보기 모달: 답변과 그에 해당하는 질문을 함께 표시
-const fullView = ref<{ questionNo: number | null; question: string; answer: string } | null>(null)
 
-const scrollEl = ref<HTMLElement | null>(null)
-const inputEl = ref<HTMLTextAreaElement | null>(null)
+// 타이핑 애니메이션 공용 로직 (buildDiditMessage: AI 메시지 → 채팅 말풍선 변환 / typeDiditMessage: 한 글자씩 타이핑)
+const { typeDiditMessage, clearTypingTimers } = useDiditTyping()
 
-let uid = 0
-const nextId = () => ++uid
+// 진행 중이던 회고 이어가기 — 대화 조회(getConversation)로 상태를 복구해 이어서 진행할 수 있으면 true.
+// AI 메시지만 내려오고 사용자 답변 텍스트는 포함되지 않아, 전체 대화 재구성은 불가능하고
+// '가장 마지막 질문' 복구만 가능하다.
+async function resumeActiveRetrospective(id: string): Promise<boolean> {
+  try {
+    const conversation = await retro.getConversation(id)
+    if (conversation.conversationStatus !== 'ACTIVE') return false
 
-// 답변을 1회라도 전송했는지 — 회고 횟수 차감/팝업 문구 분기 (CHAT_008/009)
+    const lastMessage = conversation.messages.at(-1)
+    if (!lastMessage) return false
+
+    retrospectiveId.value = id
+    const diditMessage = buildDiditMessage(lastMessage, conversation.readyToComplete)
+    // 이미 노출됐던 메시지 — 재진입 시에는 타이핑 애니메이션 없이 바로 전체 노출 (sub이 없으면 노출 안 함)
+    diditMessage.typedMain = diditMessage.main
+    diditMessage.showSub = !!diditMessage.sub
+    messages.value = [diditMessage]
+    return true
+  } catch (err) {
+    console.log(err)
+    return false
+  }
+}
+
+// 처음 start.vue 페이지에 접근 시 실행할 함수 — 저장된 진행 중 회고 id가 있으면 새로 만들지 않고 이어서 진행
+async function initialApplication() {
+  try {
+    const savedId = localStorage.getItem(ACTIVE_RETROSPECTIVE_KEY)
+    if (savedId) {
+      if (await resumeActiveRetrospective(savedId)) return
+      localStorage.removeItem(ACTIVE_RETROSPECTIVE_KEY) // 유효하지 않은 id — 정리 후 새로 시작
+    }
+
+    const first_response = await retro.start()
+    if (first_response.conversationStatus !== 'ACTIVE') return;
+    retrospectiveId.value = first_response.retrospectiveId
+    localStorage.setItem(ACTIVE_RETROSPECTIVE_KEY, first_response.retrospectiveId)
+    const diditMessage = buildDiditMessage(first_response.initialMessage)
+    messages.value = [diditMessage]
+    isBusy.value = true
+    typeDiditMessage(diditMessage, 50, () => { isBusy.value = false })
+  } catch(err) {
+    console.log(err)
+    if (isServerError(err)) show('알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
+  }
+}
+
+// 답변을 하나라도 했는지 — 뒤로가기 시 exit(삭제될 수 있음) vs finish(마무리됨) 중 뭘 호출할지,
+// 모달 문구를 뭘로 보여줄지 여기서 갈린다.
 const hasAnswered = computed(() => messages.value.some((m) => m.role === 'user'))
-// 음성 입력(STT)은 웹·네이티브 모두 노출. getUserMedia 미지원(비보안 컨텍스트 등)이면 숨김.
-const voiceSupported = computed(
-  () => isNative.value || (import.meta.client && !!navigator.mediaDevices?.getUserMedia),
-)
-// 한글 IME 조합 중에는 v-model(inputText)이 갱신되지 않아, DOM 값을 직접 추적해 즉시 반영
-const hasInput = ref(false)
-const showVoice = computed(() => voiceSupported.value && !hasInput.value)
-const exitDescription = computed(() =>
+const backModalTitle = computed(() => (hasAnswered.value ? '나가면 회고가 마무리돼요' : '회고를 종료할까요?'))
+const backModalDescription = computed(() =>
   hasAnswered.value
-    ? '지금까지 작성한 내용은 저장되지 않으며, 오늘 회고 횟수 1회가 차감돼요.'
-    : '작성한 내용이 없어 저장되지 않아요.',
+    ? '지금까지의 답변으로 회고가 완료돼요. 계속 작성하고 싶다면 계속하기를 눌러주세요.'
+    : '작성한 내용이 없어 나가면 이 회고는 삭제돼요.',
 )
 
-// 200자 초과 시 '전체 보기' 노출 (CHAT_006)
-function isLong(text: string) {
-  return text.length > 200
-}
-
-// 전체보기 모달 열기 — 해당 답변 바로 앞의 질문을 함께 표시
-function openFullView(answerMsg: ChatMessage) {
-  if (answerMsg.role !== 'user') return
-  const idx = messages.value.findIndex((m) => m.id === answerMsg.id)
-  let q: Extract<ChatMessage, { role: 'didit' }> | null = null
-  for (let i = idx - 1; i >= 0; i--) {
-    const m = messages.value[i]
-    if (m.role === 'didit') {
-      q = m
-      break
-    }
-  }
-  fullView.value = {
-    questionNo: q?.questionNo ?? null,
-    question: q?.main ?? '',
-    answer: answerMsg.text,
-  }
-}
-
-function scrollToBottom() {
-  nextTick(() => {
-    scrollEl.value?.scrollTo({ top: scrollEl.value.scrollHeight, behavior: 'smooth' })
-  })
-}
-
-// 여러 줄 여부 — 한 줄이면 우측 버튼을 세로 중앙, 여러 줄이면 하단 정렬
-const isMultiline = ref(false)
-
-function autoGrow() {
-  const el = inputEl.value
-  if (!el) return
-  el.style.height = 'auto'
-  el.style.height = `${Math.min(el.scrollHeight, 120)}px`
-  isMultiline.value = el.scrollHeight > 40
-  // 조합 중 글자를 포함해 실제 입력 유무 판단 (IME 대응)
-  hasInput.value = el.value.trim().length > 0
-}
-
-// 질문 순번 계산: questionType('Q1'..)에서 숫자 추출, 없으면 카운터 증가
-function resolveQuestionNo(type: QuestionType | null): number {
-  const parsed = type ? Number.parseInt(type.replace(/\D/g, ''), 10) : NaN
-  questionNo.value = Number.isNaN(parsed) ? questionNo.value + 1 : parsed
-  return questionNo.value
-}
-
-// 질문 타입별 가이드 보조문구 — API는 질문 본문만 내려주므로 프론트에서 매핑 (심화질문 Q4_DEEP은 가이드 없음)
-const QUESTION_GUIDES: Record<string, string> = {
-  Q1: '오늘 진행한 일 중 하나를 떠올려, 작업 내용과\n함께 결과나 상태도 같이 적어보세요.',
-  Q2: '새롭게 해 본 방법이나, 잘 풀리지 않았던 순간을\n떠올려 보세요. 작은 부분도 괜찮아요.',
-  Q3: '다음에 적용해보고 싶은 생각이나 방법을 떠올려 보세요.',
-}
-
-function pushQuestion(type: QuestionType | null, content: string, skippable = false) {
-  const id = nextId()
-  const sub = type ? QUESTION_GUIDES[type] : undefined
-  const msg: DiditMessage = {
-    id,
-    role: 'didit',
-    questionNo: resolveQuestionNo(type),
-    main: content,
-    sub,
-    skippable,
-    typedMain: '',
-    showSub: false,
-  }
-  messages.value.push(msg)
-  if (skippable) lastDeepId.value = id
-  scrollToBottom()
-  // 반응형 배열의 프록시를 변경해야 글자 단위 타이핑이 화면에 반영됨 (raw msg 변경은 미반영 → 전체가 한 번에 뜨던 버그)
-  typeQuestion(messages.value[messages.value.length - 1] as DiditMessage)
-}
-
-// 질문 본문을 한 글자씩 타이핑 → 완료 후 가이드/스킵 노출. 타이핑 중 입력 잠금. (CHAT_001)
-async function typeQuestion(msg: DiditMessage) {
-  typing.value = true
-  for (let i = 1; i <= msg.main.length; i++) {
-    msg.typedMain = msg.main.slice(0, i)
-    if (i % 3 === 0) scrollToBottom()
-    await delay(28)
-  }
-  msg.typedMain = msg.main
-  msg.showSub = true
-  typing.value = false
-  scrollToBottom()
-}
-
-// 회고 시작 → 첫 질문
-async function init() {
-  isBusy.value = true
-  try {
-    const res = await retro.start()
-    retrospectiveId.value = res.retrospectiveId
-    startedAt.value = Date.now()
-    pushQuestion(res.firstQuestionType, res.firstQuestionContent)
-  } catch (e: unknown) {
-    // 분석 reason은 안정적인 에러 코드(예: DAILY_LIMIT_EXCEEDED), 화면 문구는 코드별 한국어 메시지
-    track('retrospect_start_failed', { reason: getApiErrorCode(e) ?? 'unknown' })
-    show(getApiErrorMessage(e, '회고를 시작하지 못했어요. 잠시 후 다시 시도해주세요.'))
-    navigateTo('/home')
-  } finally {
-    isBusy.value = false
-  }
-}
-
-// 엔터 전송 — 한글 IME 조합 중(isComposing)에는 전송하지 않음(마지막 글자 누락 방지)
-function onEnterKey(e: KeyboardEvent) {
-  if (e.isComposing || e.keyCode === 229) return
-  e.preventDefault()
-  onSend()
-}
-
-async function onSend() {
-  if (isBusy.value || isInputDisabled.value || typing.value) return
-  const text = inputText.value.trim()
-  if (!text) {
-    show('답변을 입력해 주세요.') // CHAT_007
-    return
-  }
-
-  messages.value.push({ id: nextId(), role: 'user', text })
-  inputText.value = ''
-  scrollToBottom()
-  // 값이 비워진 뒤(DOM 업데이트 후) 높이를 다시 계산해야 1줄로 초기화됨
-  nextTick(autoGrow)
-
-  await submitAnswer(text)
-}
-
-// 답변 전송 + 다음 질문 진행. 실패하면 입력창 위 인라인 배너로 같은 답변 재시도 (figma err3)
-async function submitAnswer(text: string) {
-  chatError.value = null
-  isBusy.value = true
-  try {
-    const res = await retro.answer(retrospectiveId.value, text)
-    track('answer_submitted', { question_no: questionNo.value, is_deep: deepShown.value })
-    if (res.nextQuestionType === 'Q4_DEEP') {
-      // Q3 답변 시 백엔드가 Q4_DEEP(심화질문)을 비동기 생성 → 로딩 후 폴링으로 노출
-      await showDeepQuestion()
-    } else if (res.nextQuestionContent) {
-      // 다음 기본 질문
-      pushQuestion(res.nextQuestionType, res.nextQuestionContent)
-    } else if (res.isReadyToComplete) {
-      // 심화질문 답변까지 끝남 → 완료
-      await finish()
-    }
-  } catch (e) {
-    if (isAuthError(e)) return // 인증 만료 → 로그인 이동, 배너 X
-    chatError.value = {
-      message: '질문을 불러오지 못했어요.\n다시 시도해 주세요.',
-      retry: () => submitAnswer(text),
-    }
-  } finally {
-    isBusy.value = false
-  }
-}
-
-// 심화질문(Q4_DEEP): 비동기 생성 대기(로딩 버블 + /deep-question 폴링) 후 노출. 생성 실패 시 바로 완료.
-async function showDeepQuestion() {
-  if (deepAsked.value) {
-    await finish()
-    return
-  }
-  deepAsked.value = true
-
-  const loadingId = nextId()
-  messages.value.push({ id: loadingId, role: 'generating' })
-  scrollToBottom()
-
-  const started = Date.now()
-  try {
-    // 최대 ~30초 폴링 (1.2초 간격)
-    for (let i = 0; i < 25; i++) {
-      const res = await retro.getDeepQuestion(retrospectiveId.value)
-      if (res.isReady) {
-        await waitUntil(started, 1000) // 명세: 생성 중 화면 최소 1초 노출
-        removeMessage(loadingId)
-        if (res.content) {
-          pushQuestion('Q4_DEEP', res.content, true)
-          deepShown.value = true
-          track('deep_question_shown')
-          return
-        }
-        break
-      }
-      await delay(1200)
-    }
-  } catch {
-    // 심화질문 생성 실패는 치명적이지 않음 → 완료 단계로
-  }
-  removeMessage(loadingId)
-  await finish()
-}
-
-async function onSkipDeep() {
-  if (isBusy.value) return
-  isBusy.value = true
-  try {
-    await retro.skipDeepQuestion(retrospectiveId.value)
-    deepSkipped.value = true
-    track('deep_question_skipped')
-    if (lastDeepId.value !== null) {
-      const m = messages.value.find((x) => x.id === lastDeepId.value)
-      if (m && m.role === 'didit') m.skippable = false
-    }
-    await finish()
-  } catch {
-    show('잠시 후 다시 시도해주세요.')
-  } finally {
-    isBusy.value = false
-  }
-}
-
-// 회고 완료 → AI 결과 생성을 채팅에서 수행. 실패 시 채팅에 에러 배너(figma 31141), 성공 시 결과 화면 이동.
-async function finish() {
-  chatError.value = null
-  isInputDisabled.value = true
-  isBusy.value = true
-  const loadingId = nextId()
-  messages.value.push({ id: loadingId, role: 'generating', text: '회고 결과를 정리하고 있어요...' })
-  scrollToBottom()
-  try {
-    const result = await retro.complete(retrospectiveId.value)
-    track('retrospect_completed', {
-      answer_count: messages.value.filter((m) => m.role === 'user').length,
-      deep_question_answered: deepShown.value && !deepSkipped.value,
-      duration_sec: startedAt.value ? Math.round((Date.now() - startedAt.value) / 1000) : 0,
-    })
-    // 생성된 결과를 stash → 결과 화면이 재생성 없이 즉시 표시
-    resultStash.value = result
-    completingId.value = retrospectiveId.value
-    await navigateTo('/retrospect/result')
-  } catch (e) {
-    removeMessage(loadingId)
-    isInputDisabled.value = false
-    if (isAuthError(e)) return // 인증 만료 → 로그인 이동, 배너 X
-    chatError.value = {
-      message: '회고 결과를 생성하지 못했어요.\n다시 시도해 주세요.',
-      retry: finish,
-    }
-  } finally {
-    isBusy.value = false
-  }
-}
-
-function removeMessage(id: number) {
-  messages.value = messages.value.filter((m) => m.id !== id)
-}
-
-function delay(ms: number) {
-  return new Promise((r) => setTimeout(r, ms))
-}
-// 시작 시점부터 최소 ms가 지나도록 대기
-function waitUntil(startedAt: number, minMs: number) {
-  const remain = minMs - (Date.now() - startedAt)
-  return remain > 0 ? delay(remain) : Promise.resolve()
-}
-
-// 음성 버튼 → (최초) 마이크 권한 안내 팝업 → 레코더
-function onVoice() {
-  if (micExplained.value) showRecorder.value = true
-  else showMicPopup.value = true
-}
-function onMicAllow() {
-  micExplained.value = true
-  showMicPopup.value = false
-  showRecorder.value = true
-}
-// 녹음 완료 → 음성을 텍스트로 변환해 입력창에 채움(사용자가 검토 후 전송)
-async function onRecorderDone(blob: Blob) {
-  showRecorder.value = false
-  isTranscribing.value = true
-  try {
-    const text = await retro.transcribe(retrospectiveId.value, blob)
-    inputText.value = text
-    nextTick(autoGrow)
-  } catch {
-    show('음성 인식에 실패했어요. 텍스트로 입력해 주세요.')
-  } finally {
-    isTranscribing.value = false
-  }
-}
-function onRecorderCancel() {
-  showRecorder.value = false
-}
-// 마이크 권한 영구 거부 → 레코더 닫고 설정 유도 팝업 노출
-function onMicBlocked() {
-  showRecorder.value = false
-  showMicBlockedPopup.value = true
-}
-// OS 앱 설정 화면으로 이동 (사용자가 직접 마이크 권한 토글). 웹에선 무동작.
-async function onOpenAppSettings() {
-  showMicBlockedPopup.value = false
-  if (!isNative.value) return
-  if (Capacitor.getPlatform() === 'ios') {
-    await NativeSettings.openIOS({ option: IOSSettings.App })
-  } else {
-    await NativeSettings.openAndroid({ option: AndroidSettings.ApplicationDetails })
-  }
-}
-
+// 헤더 뒤로가기 — 답변 여부와 관계없이 항상 확인 모달을 한 번 더 띄운 뒤에만 나간다.
 function onBack() {
-  if (messages.value.length === 0) {
-    navigateTo('/home')
-    return
-  }
-  showExitPopup.value = true
+  if (isBusy.value) return
+  isBackModal.value = true
 }
 
-async function onConfirmExit() {
-  showExitPopup.value = false
-  // 진행 중 회고 정리(PENDING이면 삭제). 베스트에포트라 실패해도 홈 이동.
-  try {
-    await retro.exit(retrospectiveId.value)
-  } catch {
-    /* noop */
+// 뒤로가기 확인('나가기') — 답변이 있으면 finish()로 정식 마무리, 없으면 exit()로 정리(PENDING이면 삭제).
+// 실패해도 나가는 것 자체는 막지 않음 — ACTIVE_RETROSPECTIVE_KEY가 남아있으면 다음 진입 시 이어서 진행 가능
+async function onBackConfirm() {
+  if (isBackLeaving.value) return
+  isBackLeaving.value = true
+  if (retrospectiveId.value) {
+    try {
+      if (hasAnswered.value) {
+        await retro.finish(retrospectiveId.value)
+      } else {
+        await retro.exit(retrospectiveId.value)
+      }
+      localStorage.removeItem(ACTIVE_RETROSPECTIVE_KEY)
+    } catch (err) {
+      console.log(err)
+    }
   }
+  isBackLeaving.value = false
+  isBackModal.value = false
   navigateTo('/home')
 }
 
-// 다시 시작: 답변 전이면 무동작(초기 상태 유지·차감 없음), 답변 후에만 확인 팝업 (CHAT_009)
-function onRestartClick() {
-  if (isBusy.value) return
-  if (!hasAnswered.value) return
-  showRestartPopup.value = true
+// 뒤로가기 취소 — 모달만 닫고 계속 진행
+function onBackCancel() {
+  isBackModal.value = false
 }
 
-async function onConfirmRestart() {
-  showRestartPopup.value = false
-  if (isBusy.value) return
-  isBusy.value = true
+// 헤더 '회고 마치기' — 대화 조회로 서버의 readyToComplete를 먼저 확인한다.
+// (로컬 skippable 신호는 마무리 시점에도 false로 남는 경우가 있어 신뢰하지 않음)
+async function onFinishClick() {
+  if (isBusy.value || isFinishing.value || isCheckingReady.value || !retrospectiveId.value) return
+  isCheckingReady.value = true
   try {
-    // 기존 회고 삭제 + 새 회고 시작(첫 질문 반환). 홈 이동 없이 화면 내 재시작.
-    const res = await retro.restart(retrospectiveId.value)
-    retrospectiveId.value = res.retrospectiveId
-    messages.value = []
-    inputText.value = ''
-    hasInput.value = false
-    questionNo.value = 0
-    deepAsked.value = false
-    lastDeepId.value = null
-    isInputDisabled.value = false
-    fullView.value = null
-    pushQuestion(res.firstQuestionType, res.firstQuestionContent)
-  } catch {
-    show('다시 시작하지 못했어요. 잠시 후 다시 시도해주세요.')
+    const conversation = await retro.getConversation(retrospectiveId.value)
+    if (!conversation.readyToComplete) {
+      isNotReadyModal.value = true
+      return
+    }
+    isFinishModal.value = true
+  } catch (err) {
+    console.log(err)
+    if (isServerError(err)) show('알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
+    else show('회고 상태를 확인하지 못했어요. 잠시 후 다시 시도해주세요.')
   } finally {
-    isBusy.value = false
+    isCheckingReady.value = false
   }
 }
+
+// 회고 마치기 확인 — 대화를 종료(finish)한다. v2는 종료와 동시에 확인된 대화 내용을 구조화해
+// 결과를 생성하므로, 응답의 title/result를 그대로 결과 화면(result.vue)에 넘긴다.
+async function onFinishConfirm() {
+  if (isFinishing.value || !retrospectiveId.value) return
+  isFinishing.value = true
+  try {
+    const res = await retro.finish(retrospectiveId.value)
+    if (!res.result || !res.title) {
+      show('회고 결과를 생성하지 못했어요. 잠시 후 다시 시도해주세요.')
+      isFinishing.value = false
+      return
+    }
+    resultStash.value = { title: res.title, result: res.result }
+    completingId.value = retrospectiveId.value
+    localStorage.removeItem(ACTIVE_RETROSPECTIVE_KEY) // 대화가 끝났으니 재개 대상에서 제외
+    navigateTo('/retrospect/result')
+    // 결과 화면으로 넘어가는 라우팅 전환 중 확인 버튼이 다시 눌려 finish가 중복 호출되는 것을
+    // 막기 위해 성공 케이스에서는 isFinishing을 여기서 풀지 않는다.
+  } catch (err) {
+    isFinishing.value = false
+    console.log(err)
+    if (isServerError(err)) show('알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
+    else show('회고를 마치지 못했어요. 잠시 후 다시 시도해주세요.')
+  } finally {
+    isFinishModal.value = false
+  }
+}
+
+// 회고 마치기 취소 — 모달만 닫고 계속 진행
+function onFinishCancel() {
+  isFinishModal.value = false
+}
+
+// 답변 제출 — 사용자 메시지를 먼저 반영하고, AI 응답을 기다리는 동안 generating 자리표시자를 보여준 뒤
+// 도착하면 didit 메시지로 교체해 타이핑 애니메이션을 시작한다 (배열은 매번 새로 만들어 불변성 유지)
+async function onSend(content: string, attachments: SentAttachment[] = []) {
+  if (!retrospectiveId.value || isBusy.value) return
+  if (!content.trim() && attachments.length === 0) return // 텍스트도 첨부도 없으면 보낼 게 없음
+
+  // reactive()로 감싸지 않으면 이후 onDeleteAttachment에서 attachments를 mutate해도 화면이 안 갱신된다
+  const userMessage = reactive<ChatMessage>({ id: crypto.randomUUID(), role: 'user', text: content, attachments })
+  messages.value = [...messages.value, userMessage]
+
+  const generatingId = crypto.randomUUID()
+  // 첨부가 있으면 파일 분석(비동기)을 기다리는 거라 일반 "다음 질문 대기"와 다르게 문구를 보여준다
+  messages.value = [
+    ...messages.value,
+    { id: generatingId, role: 'generating', text: attachments.length ? '첨부파일을 확인하고 있어요' : undefined },
+  ]
+
+  isBusy.value = true
+  try {
+    const attachmentIds = attachments.map((a) => a.attachmentId)
+    const response = await retro.answer(retrospectiveId.value, content, attachmentIds)
+
+    if (!response.assistantMessage) {
+      if (attachments.length > 0) {
+        // 첨부가 있으면 파일 분석이 비동기로 진행 중이라는 뜻 — 해당 턴이 끝날 때까지 대화 조회로 폴링
+        pollAnalysisTurn(response.turnId, generatingId)
+        return
+      }
+      // 첨부 없이도 null이 오는 경우(그 외 사유) — generating 자리표시자만 지운다
+      messages.value = messages.value.filter((m) => m.id !== generatingId)
+      isBusy.value = false
+      return
+    }
+
+    const diditMessage = buildDiditMessage(response.assistantMessage, response.readyToComplete)
+    messages.value = messages.value.map((m) => (m.id === generatingId ? diditMessage : m))
+    typeDiditMessage(diditMessage, 50, () => { isBusy.value = false })
+  } catch (err) {
+    messages.value = messages.value.filter((m) => m.id !== generatingId)
+    isBusy.value = false
+    console.log(err)
+    if (isServerError(err)) show('알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
+    else show('답변을 보내지 못했어요. 잠시 후 다시 시도해주세요.')
+  }
+}
+
+// 첨부파일 분석 중엔 assistantMessage가 null로 오므로, 대화 조회로 해당 턴(turnId)이
+// PENDING(분석 중)에서 COMPLETED/FAILED로 바뀔 때까지 짧은 간격으로 확인한다.
+// (읽을 수 없는 파일도 실패로 남지 않고 안내 메시지와 함께 COMPLETED로 끝나므로, FAILED는 진짜 오류일 때만)
+let pollTimer: ReturnType<typeof setTimeout> | undefined
+const POLL_INTERVAL = 2000
+const POLL_MAX_ATTEMPTS = 20 // 대략 40초 — 그 이상 걸리면 안내하고 포기
+
+async function pollAnalysisTurn(turnId: string, generatingId: string, attempt = 0) {
+  if (!retrospectiveId.value) return
+  try {
+    const conversation = await retro.getConversation(retrospectiveId.value)
+    const turn = conversation.turns.find((t) => t.id === turnId)
+
+    if (turn?.status === 'COMPLETED') {
+      const lastMessage = conversation.messages.at(-1)
+      if (!lastMessage) {
+        messages.value = messages.value.filter((m) => m.id !== generatingId)
+        isBusy.value = false
+        return
+      }
+      const diditMessage = buildDiditMessage(lastMessage, conversation.readyToComplete)
+      messages.value = messages.value.map((m) => (m.id === generatingId ? diditMessage : m))
+      typeDiditMessage(diditMessage, 50, () => { isBusy.value = false })
+      return
+    }
+
+    if (turn?.status === 'FAILED') {
+      messages.value = messages.value.filter((m) => m.id !== generatingId)
+      isBusy.value = false
+      show('첨부파일을 처리하지 못했어요. 잠시 후 다시 시도해주세요.')
+      return
+    }
+
+    if (attempt >= POLL_MAX_ATTEMPTS) {
+      messages.value = messages.value.filter((m) => m.id !== generatingId)
+      isBusy.value = false
+      show('분석이 오래 걸리고 있어요. 잠시 후 다시 확인해주세요.')
+      return
+    }
+
+    pollTimer = setTimeout(() => pollAnalysisTurn(turnId, generatingId, attempt + 1), POLL_INTERVAL)
+  } catch (err) {
+    console.log(err)
+    messages.value = messages.value.filter((m) => m.id !== generatingId)
+    isBusy.value = false
+    if (isServerError(err)) show('알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
+    else show('첨부파일 처리 결과를 확인하지 못했어요. 잠시 후 다시 시도해주세요.')
+  }
+}
+
+// 전송된 첨부파일 삭제(×) — 일반 첨부는 답변 편집 정책상 서버가 거부하고, 서버가 민감정보를
+// 감지해 삭제를 권고한 첨부만 실제로 삭제된다. message는 v-for로 순회 중인(반응형) 항목을 그대로 받는다.
+async function onDeleteAttachment(message: ChatMessage, attachmentId: string) {
+  if (message.role !== 'user' || !retrospectiveId.value) return
+  try {
+    await retro.deleteAttachment(retrospectiveId.value, attachmentId)
+    message.attachments = message.attachments?.filter((a) => a.attachmentId !== attachmentId)
+  } catch (err) {
+    console.log(err)
+    show('이 첨부파일은 삭제할 수 없어요.')
+  }
+}
+
 
 // [iOS 전용] iOS는 리사이즈 모드 none(keyboard.client.ts)이라 키보드가 떠도 레이아웃이
 // 줄지 않아, OS가 알려주는 키보드 전체 높이(추천줄·툴바 포함)만큼 화면을 JS로 줄인다.
@@ -729,6 +415,8 @@ const keyboardHeight = ref(0)
 let kbShow: PluginListenerHandle | undefined
 let kbDidShow: PluginListenerHandle | undefined
 let kbHide: PluginListenerHandle | undefined
+let appStateListener: PluginListenerHandle | undefined
+let backButtonListener: PluginListenerHandle | undefined
 
 function applyKeyboardHeight(raw: number) {
   // 일부 기기는 물리 px로 주므로 CSS px로 정규화
@@ -737,58 +425,100 @@ function applyKeyboardHeight(raw: number) {
   keyboardOpen.value = keyboardHeight.value > 0
 }
 
-onMounted(async () => {
-  loadProfile()
-  init()
-  if (!import.meta.client || !isNative.value) return
-  if (Capacitor.getPlatform() === 'ios') {
-    kbShow = await Keyboard.addListener('keyboardWillShow', info => applyKeyboardHeight(info.keyboardHeight))
-    kbHide = await Keyboard.addListener('keyboardWillHide', () => { keyboardHeight.value = 0; keyboardOpen.value = false })
+
+
+// 마이크 버튼 — 권한이 이미 허용돼 있으면 접근 모달을 건너뛰고 바로 레코더를 연다.
+// (Permissions API 미지원 환경은 항상 접근 모달을 거쳐 requestPermission으로 처리)
+async function accessMic() {
+  if (await isMicPermissionGranted()) {
+    isRecorderOpen.value = true
+    return
   }
-  // 키보드가 다 올라온 뒤(레이아웃 축소 완료) 채팅을 맨 아래로 → 마지막 질문이 키보드에 가려지지 않음 (iOS·AOS 공통)
-  kbDidShow = await Keyboard.addListener('keyboardDidShow', () => scrollToBottom())
+  isAccessMicModal.value = true
+}
+
+// 마이크 접근 모달 '허용' — 웹은 브라우저 권한 다이얼로그, 네이티브는 OS 권한 요청을 띄운다.
+// 성공하면 레코더를 열고, 영구 거부('denied')면 설정 화면으로 유도, 그 외(1회 거부·장치 없음)엔 안내만 한다.
+async function confirmAccessMic() {
+  if (micRequesting.value) return
+  micRequesting.value = true
+  try {
+    const granted = await requestMicPermission()
+    isAccessMicModal.value = false
+    if (granted) {
+      isRecorderOpen.value = true
+      return
+    }
+    if (await isMicPermissionBlocked()) {
+      await openMicSettings()
+    } else {
+      show('마이크 권한이 필요해요. 다시 시도해 주세요.')
+    }
+  } finally {
+    micRequesting.value = false
+  }
+}
+
+// STT 변환 완료 — 레코더를 닫고, 변환된 텍스트를 입력창 초안으로 넘긴다 (전송은 사용자가 직접).
+function onVoiceDone(text: string) {
+  isRecorderOpen.value = false
+  const trimmed = text.trim()
+  if (trimmed) voiceTranscript.value = trimmed
+}
+
+// 레코더 진입 시점에 권한이 영구 거부로 바뀐 경우 — 설정으로 유도
+function onVoiceBlocked() {
+  isRecorderOpen.value = false
+  openMicSettings()
+}
+
+// 마이크 권한이 영구 거부된 경우 — 네이티브는 앱 설정 화면, 웹은 안내 문구로 대체.
+async function openMicSettings() {
+  if (isNative.value) {
+    await NativeSettings.open({
+      optionAndroid: AndroidSettings.ApplicationDetails,
+      optionIOS: IOSSettings.App,
+    })
+  } else {
+    show('브라우저 주소창의 사이트 설정에서 마이크 접근을 허용해 주세요.')
+  }
+}
+
+onMounted(async () => {
+  initialApplication()
+
+  // 대화 영역 안 내용(새 메시지 추가, 타이핑 애니메이션의 글자 변화 등)이 바뀔 때마다 바닥으로 스크롤
+  if (scrollEl.value) {
+    scrollObserver = new MutationObserver(scrollToBottom)
+    scrollObserver.observe(scrollEl.value, { childList: true, subtree: true, characterData: true })
+  }
+
+  // 안드로이드 하드웨어/제스처 뒤로가기 — 헤더의 뒤로가기 버튼과 동일하게 확인 모달을 띄운다.
+  // 리스너를 등록하면 Capacitor의 기본 동작(뒤로 이동/앱 종료)이 자동으로 실행되지 않고,
+  // 여기서 직접 처리해야 한다.
+  if (isNative.value) {
+    backButtonListener = await App.addListener('backButton', () => {
+      onBack()
+    })
+  }
 })
 
 onUnmounted(() => {
-  kbShow?.remove()
-  kbDidShow?.remove()
-  kbHide?.remove()
+  clearTypingTimers()
+  clearTimeout(pollTimer) // 첨부 분석 폴링 중 화면을 벗어나면 예약된 다음 조회를 멈춘다
+  scrollObserver?.disconnect()
+  backButtonListener?.remove()
 })
+
 </script>
 
 <style scoped>
-.spinner {
-  width: 24px;
-  height: 24px;
-  border-radius: 9999px;
-  border: 3px solid theme('colors.green.light-active');
-  border-top-color: theme('colors.primary');
-  animation: spin 0.8s linear infinite;
+/* 가이드 말풍선 등장 애니메이션 — 아래에서 살짝 떠오르며 페이드인 */
+.sub-bubble-enter-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.sub-bubble-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
 }
-
-/* 채팅 메시지 등장: 아래에서 위로 + 페이드인 */
-.chat-in {
-  animation: chatIn 0.38s cubic-bezier(0.22, 1, 0.36, 1);
-}
-@keyframes chatIn {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 마이크 권한 팝업 페이드 */
-.mic-fade-enter-active { transition: opacity 0.2s ease; }
-.mic-fade-leave-active { transition: opacity 0.15s ease; }
-.mic-fade-enter-from,
-.mic-fade-leave-to { opacity: 0; }
 </style>

@@ -1,7 +1,12 @@
 import * as amplitude from '@amplitude/analytics-browser'
 
+// 임시 스위치 — 실제 Amplitude API 키가 준비되기 전까지 init 자체를 막아둔다.
+// (지금 .env의 NUXT_PUBLIC_AMPLITUDE_API_KEY는 자리표시자라 프로덕션 빌드에서 SDK가
+// "Invalid API key" 에러를 찍음) 키가 준비되면 이 줄을 지운다.
+const AMPLITUDE_INIT_DISABLED = true
+
 export default defineNuxtPlugin(() => {
-  if (import.meta.dev) return
+  if (import.meta.dev || AMPLITUDE_INIT_DISABLED) return
 
   const config = useRuntimeConfig()
   const apiKey = config.public.amplitudeApiKey as string

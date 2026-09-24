@@ -25,7 +25,11 @@
             >{{ cancelText ?? '취소' }}</button>
             <button
               class="flex-1 h-[50px] rounded-xl text-[15px] font-semibold tracking-[-0.02em] leading-[150%] transition-opacity active:opacity-80 disabled:opacity-60"
-              :class="variant === 'destructive' ? 'bg-danger-50 text-grey-1' : 'bg-primary text-grey-13'"
+              :class="{
+                'bg-danger-50 text-grey-1': variant === 'destructive',
+                'bg-grey-13 text-grey-1': variant === 'dark',
+                'bg-primary text-grey-13': variant === 'confirm',
+              }"
               :disabled="loading"
               @click="$emit('confirm')"
             >{{ confirmText ?? '확인' }}</button>
@@ -43,7 +47,7 @@ withDefaults(defineProps<{
   description?: string
   confirmText?: string
   cancelText?: string
-  variant?: 'confirm' | 'destructive'
+  variant?: 'confirm' | 'destructive' | 'dark'
   showCancel?: boolean
   loading?: boolean
   closeOnBackdrop?: boolean
