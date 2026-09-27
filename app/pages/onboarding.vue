@@ -221,6 +221,8 @@
 </template>
 
 <script setup lang="ts">
+import UiTextInput from '~/components/ui/UiTextInput.vue'
+import UiButton from '~/components/ui/UiButton.vue'
 import { useDebounceFn } from '@vueuse/core'
 import type { ApiResponse, JobType, AgeType, ExperienceType, NicknameCheckResponse } from '~/types/api'
 import { getApiErrorMessage, isApiError } from '~/utils/api-error'

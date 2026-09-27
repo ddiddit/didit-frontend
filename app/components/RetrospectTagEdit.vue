@@ -87,6 +87,7 @@
 </template>
 
 <script setup lang="ts">
+import UiPopup from '~/components/ui/UiPopup.vue'
 import type { Tag } from '~/types/api'
 import { getTagColorClasses } from '~/utils/tag-color'
 import { getApiErrorMessage } from '~/utils/api-error'

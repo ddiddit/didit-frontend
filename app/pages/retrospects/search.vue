@@ -92,6 +92,7 @@
 </template>
 
 <script setup lang="ts">
+import UiTag from '~/components/ui/UiTag.vue'
 import type { Tag } from '~/types/api'
 import { getTagColor } from '~/utils/tag-color'
 

@@ -343,6 +343,8 @@
 </template>
 
 <script setup lang="ts">
+import UiTag from '~/components/ui/UiTag.vue'
+import UiInlineError from '~/components/ui/UiInlineError.vue'
 import type { ApiResponse, CalendarResponse, DailyRetrospective, Project, Retrospective } from '~/types/api'
 import { getTagColor } from '~/utils/tag-color'
 import { parseServerDate } from '~/utils/date'

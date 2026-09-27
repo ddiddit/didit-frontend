@@ -125,6 +125,7 @@
 </template>
 
 <script setup lang="ts">
+import UiLoadError from '~/components/ui/UiLoadError.vue'
 import type { JobType } from '~/types/api'
 import type { BadgeView } from '~/composables/useBadges'
 import { mapAcquiredBadge } from '~/composables/useBadges'

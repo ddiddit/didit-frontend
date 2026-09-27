@@ -8,6 +8,9 @@
 </template>
 
 <script setup lang="ts">
+// components: false라 자동 import가 꺼져 있어 직접 import 해야 탭바가 렌더링된다
+import LayoutBottomTabBar from '~/components/layout/BottomTabBar.vue'
+
 // 탭바 노출 여부는 각 페이지의 route meta(hideTabBar)로 제어 (전환 시 race 없이 동기 평가)
 const route = useRoute()
 const hideTabBar = computed(() => route.meta.hideTabBar === true)
