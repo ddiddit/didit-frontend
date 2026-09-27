@@ -73,6 +73,10 @@
 </template>
 
 <script setup lang="ts">
+import RetrospectTagEdit from '~/components/RetrospectTagEdit.vue'
+import RetrospectiveResult from '~/components/RetrospectiveResult.vue'
+import RetrospectProjectSelect from '~/components/RetrospectProjectSelect.vue'
+import UiButton from '~/components/ui/UiButton.vue'
 import type { RetrospectiveResultStash, RetrospectiveResultV2, Tag } from '~/types/api'
 import { isAuthError, toErrorVariant } from '~/utils/api-error'
 

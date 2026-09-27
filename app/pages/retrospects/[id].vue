@@ -123,6 +123,12 @@
 </template>
 
 <script setup lang="ts">
+import RetrospectTagEdit from '~/components/RetrospectTagEdit.vue'
+import RetrospectiveResult from '~/components/RetrospectiveResult.vue'
+import RetrospectProjectSelect from '~/components/RetrospectProjectSelect.vue'
+import UiBottomSheet from '~/components/ui/UiBottomSheet.vue'
+import UiErrorState from '~/components/ui/UiErrorState.vue'
+import UiPopup from '~/components/ui/UiPopup.vue'
 import type { RetrospectiveDetail, Tag } from '~/types/api'
 import { isAuthError } from '~/utils/api-error'
 import { parseServerDate } from '~/utils/date'

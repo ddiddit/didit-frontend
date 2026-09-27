@@ -18,6 +18,8 @@
 </template>
 
 <script setup lang="ts">
+import UiErrorState from '~/components/ui/UiErrorState.vue'
+import UiInlineError from '~/components/ui/UiInlineError.vue'
 // 데이터 로드 페이지 공통 에러 표시. useLoadState()의 loadError/slowLoading과 함께 사용.
 interface Props {
   error?: 'network' | 'server' | 'generic' | null

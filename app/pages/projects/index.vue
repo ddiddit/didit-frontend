@@ -117,6 +117,9 @@
 </template>
 
 <script setup lang="ts">
+import UiPopup from '~/components/ui/UiPopup.vue'
+import UiLoadError from '~/components/ui/UiLoadError.vue'
+import UiButton from '~/components/ui/UiButton.vue'
 import { useSortable } from '@vueuse/integrations/useSortable'
 import type { ApiResponse, Project } from '~/types/api'
 
