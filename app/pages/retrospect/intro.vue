@@ -10,7 +10,7 @@
                 <img src="/chatbot_anime.gif" alt="챗봇애니메이션" class="w-[72px] h-[72px] chc_ani" />
                 <p class="text-center leading-[1.7] font-bold mt-[10px] whitespace-pre-line text-[17px] text-grey-13" v-html="styledMessage" />
             </div>
-            <div class="button_wrapper absolute left-0 right-0 mx-auto bottom-[60px]">
+            <div class="button_wrapper absolute left-0 right-0 mx-auto" style="bottom: calc(24px + env(safe-area-inset-bottom, 0px))">
                 <button class="char_anime2 w-[350px] mx-auto block bg-green py-[18px] rounded-[12px] text-grey-13 font-bold disabled:opacity-50 enabled:hover:translate-y-[-10px] transition-all duration-300" :disabled="isBusy" @click="stepIntro++">회고하는 방법 살펴보기</button>
             </div>
         </template>
