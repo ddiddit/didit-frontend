@@ -40,21 +40,17 @@
         </div>
       </div>
 
-      <!-- 녹음 중: 안내 텍스트 → 엔터로 인식 시작 / 인식 중: 체크 표시 -->
+      <!-- 녹음 완료 버튼: 항상 노출 — 누르면 녹음을 끝내고 STT 변환을 시작, 변환 중엔 비활성화 -->
       <div class="flex items-center justify-center mt-[30px] h-12">
-        <p
-          v-if="!recognizing"
-          class="text-[15px] font-medium leading-[1.5] tracking-[-0.3px] text-grey-8"
-        >
-          음성 인식 중···
-        </p>
-        <div
-          v-else
-          class="w-12 h-12 rounded-full bg-grey-13 flex items-center justify-center"
-          aria-label="음성 인식 완료"
+        <button
+          type="button"
+          class="w-12 h-12 rounded-full bg-grey-13 flex items-center justify-center disabled:opacity-60"
+          :disabled="recognizing"
+          aria-label="녹음 완료"
+          @click="onRecognize"
         >
           <Icon name="material-symbols:check-rounded" class="w-6 h-6 text-grey-1" />
-        </div>
+        </button>
       </div>
     </div>
   </Teleport>

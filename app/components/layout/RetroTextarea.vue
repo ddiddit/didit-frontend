@@ -50,7 +50,10 @@
             </button>
             <input ref="fileInputRef" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.txt,.md" class="hidden" @change="handleFileChange" />
             <textarea @input="handleTextareaChange" @keydown="handleKeydown" ref="textRef" :value="textareaValue" :disabled="disabled" rows="1" class="resize-none outline-none bg-transparent flex-1 mx-[6px]" />
-            <button class="shrink-0" :class="isWrapped ? 'mb-[2px]' : ''" :disabled="disabled" @click="emit('accessMic')">
+            <button v-if="hasText" class="shrink-0" :class="isWrapped ? 'mb-[2px]' : ''" :disabled="disabled" @click="submitAnswer">
+                <img src="/icons/stt-send.svg" alt="전송" />
+            </button>
+            <button v-else class="shrink-0" :class="isWrapped ? 'mb-[2px]' : ''" :disabled="disabled" @click="emit('accessMic')">
                 <img src="/icons/voice.svg" alt="마이크접근" />
             </button>
         </div>
@@ -127,10 +130,12 @@
   // 부모(start.vue)에 답변 제출·마이크 접근 요청을 알림 — 채팅 반영·API 호출·권한 처리는 부모 책임
   const emit = defineEmits<{ send: [content: string, attachments: SentAttachment[]]; accessMic: [] }>()
 
-  // Enter로 전송 (Shift+Enter는 줄바꿈, 한글 조합 확정 Enter는 무시)
-  function handleKeydown(e: KeyboardEvent) {
-    if (props.disabled || e.key !== 'Enter' || e.shiftKey || e.isComposing) return
-    e.preventDefault() // 기본 동작(줄바꿈) 삽입을 막아야 하므로 동기적으로 먼저 호출
+  // 텍스트 1자 이상 입력되면 마이크 버튼이 전송 버튼으로 바뀐다
+  const hasText = computed(() => textareaValue.value.trim().length > 0)
+
+  // 답변 제출 — Enter 키와 전송 버튼 클릭이 공유한다
+  function submitAnswer() {
+    if (props.disabled) return
 
     const content = textareaValue.value.trim()
     if (attachments.value.some(a => a.status === 'uploading')) {
@@ -151,6 +156,13 @@
     // (사용자가 다시 선택해서 revoke하지 않고 넘어간 것은 끝까지 살아있다 — 세션 내 몇 개 정도는 무해)
     attachments.value = []
     resetTextarea()
+  }
+
+  // Enter로 전송 (Shift+Enter는 줄바꿈, 한글 조합 확정 Enter는 무시)
+  function handleKeydown(e: KeyboardEvent) {
+    if (props.disabled || e.key !== 'Enter' || e.shiftKey || e.isComposing) return
+    e.preventDefault() // 기본 동작(줄바꿈) 삽입을 막아야 하므로 동기적으로 먼저 호출
+    submitAnswer()
   }
 
   // 전송 후 입력창을 처음 상태(한 줄)로 되돌린다
