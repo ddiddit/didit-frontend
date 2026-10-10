@@ -56,6 +56,9 @@
 </template>
 
 <script setup lang="ts">
+import UiLoadError from '~/components/ui/UiLoadError.vue'
+import UiPopup from '~/components/ui/UiPopup.vue'
+
 definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
 

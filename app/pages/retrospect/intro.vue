@@ -103,6 +103,8 @@
     import RetroHeader from '~/components/layout/RetroHeader.vue'
 import UiPopup from '~/components/ui/UiPopup.vue'
 
+    definePageMeta({ middleware: ['auth', 'level-zero-only'], hideTabBar: true })
+
     const isBusy = ref(true) // 건너뛰기 버튼 활성화 / 비활성화 여부
     const isPopupOpen = ref(false) // 팝업 열림 여부
     const stepIntro = ref(0) // 인트로 스텝

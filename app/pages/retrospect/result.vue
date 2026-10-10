@@ -73,6 +73,9 @@
 </template>
 
 <script setup lang="ts">
+import UiButton from '~/components/ui/UiButton.vue'
+import RetrospectiveResult from '~/components/RetrospectiveResult.vue'
+
 import type { RetrospectiveResultStash, RetrospectiveResultV2, Tag } from '~/types/api'
 import { isAuthError, toErrorVariant } from '~/utils/api-error'
 

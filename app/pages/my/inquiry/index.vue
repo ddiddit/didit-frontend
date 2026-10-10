@@ -160,6 +160,9 @@
 </template>
 
 <script setup lang="ts">
+import UiLoadError from '~/components/ui/UiLoadError.vue'
+import UiCheckbox from '~/components/ui/UiCheckbox.vue'
+
 import type { ApiResponse } from '~/types/api'
 import { parseServerDate } from '~/utils/date'
 

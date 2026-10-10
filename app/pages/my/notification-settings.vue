@@ -153,6 +153,11 @@
 </template>
 
 <script setup lang="ts">
+import UiLoadError from '~/components/ui/UiLoadError.vue'
+import UiToggle from '~/components/ui/UiToggle.vue'
+import UiScrollPicker from '~/components/ui/UiScrollPicker.vue'
+import UiButton from '~/components/ui/UiButton.vue'
+
 import type { ApiResponse, NotificationSetting } from '~/types/api'
 
 definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
