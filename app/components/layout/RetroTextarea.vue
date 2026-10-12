@@ -51,7 +51,7 @@
             <input ref="fileInputRef" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.txt,.md" class="hidden" @change="handleFileChange" />
             <textarea @input="handleTextareaChange" @keydown="handleKeydown" ref="textRef" :value="textareaValue" :disabled="disabled" rows="1" class="resize-none outline-none bg-transparent flex-1 mx-[6px]" />
             <button v-if="hasText" class="shrink-0" :class="isWrapped ? 'mb-[2px]' : ''" :disabled="disabled" @click="submitAnswer">
-                <img src="/icons/stt-send.svg" alt="전송" />
+                <img src="/icons/keyboard.svg" alt="전송" class="w-[28px] h-[28px]" />
             </button>
             <button v-else class="shrink-0" :class="isWrapped ? 'mb-[2px]' : ''" :disabled="disabled" @click="emit('accessMic')">
                 <img src="/icons/voice.svg" alt="마이크접근" />

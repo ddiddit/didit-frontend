@@ -95,7 +95,7 @@ AI 기반 회고(retrospective) 앱의 프론트엔드.
 - **skippable / readyToComplete**: 답변 응답의 `readyToComplete`가 true면 해당 질문은 `skippable: true`로 표시됨. 단 이 로컬 신호는 마무리 시점에도 false로 남는 경우가 있어 **완료 판정 기준으로 쓰지 않는다**
   - "회고 마치기"를 눌렀을 때 `getConversation()`(대화 조회)로 **서버의 `readyToComplete`를 직접 확인** → true면 `finish()` 호출 후 기존 v1 결과 생성 화면(`/retrospect/result`, `retro.complete()`)으로 연결
   - false면 마치지 않고 안내 모달("아직 내용이 충분하지 않아요 / 결과 생성을 위해 내용을 더 작성해주세요 / 확인")만 표시
-- **뒤로가기**: 헤더 뒤로가기 → 확인 모달("아직 회고 결과 생성이 어려워요 / …지금 나가면 결과가 생성되지 않아요 / 계속하기 / 나가기"). "나가기"는 `finish()`(대화 종료 API)를 호출하고 `ACTIVE_RETROSPECTIVE_KEY`를 지운 뒤 `/home`으로 이동 — finish가 실패해도 이동은 막지 않음(`onBackConfirm`)
+- **뒤로가기**: 헤더 뒤로가기 → 확인 모달(답변 여부에 따라 문구만 다름). "나가기"는 **항상 저장하지 않고** `exit()`를 호출해 정리(PENDING이면 삭제)하고 `ACTIVE_RETROSPECTIVE_KEY`를 지운 뒤 `/home`으로 이동 — exit이 실패해도 이동은 막지 않음(`onBackConfirm`). 저장(결과 생성)은 "회고 마치기" 버튼(`finish()`)을 통해서만 이뤄지며, 뒤로가기 쪽에서는 답변이 있어도 `finish()`를 호출하지 않는다
 - **결과 화면(`retrospect/result.vue`)은 v2 `finish()` 기반**: `start.vue`가 회고 마치기 확인 후 `finish()`를 호출해 받은 `title`/`result`를 `resultStash`(`useState('retrospect:result')`)에 담고 `completingId`(`useState('retrospect:completing-id')`)와 함께 결과 화면으로 이동. `result.vue`는 stash가 있으면 그대로 쓰고, 없이 직접 진입한 경우(새로고침 등)엔 `finish()`를 다시 호출해 저장된 결과를 받는다 — v1 `complete()`와 달리 재호출이 멱등이라, 같은 회고로 결과 화면이 두 번 실행돼도 400이 나지 않는다(과거 `complete()` 재호출 400 이슈는 해소됨)
 
 ## 분석 (Amplitude)

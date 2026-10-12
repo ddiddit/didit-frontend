@@ -86,11 +86,20 @@
         @intro="introRetrospect"
       />
 
-      <!-- 최근 제안 받은 행동 (단일 카드 + 구분선) — Figma 새 홈 UI: 날짜·제목·프로젝트·태그 -->
-      <div v-if="recentList.length > 0" class="mt-8 px-5">
+      <!-- 최근 제안 받은 행동 (단일 카드 + 구분선) — Figma 새 홈 UI: 날짜·제목·프로젝트·태그
+           Lv.0(아직 회고 이력 없음)에서는 목록이 비어도 섹션 자체는 노출하고 안내문(빈 상태)을 보여준다 -->
+      <div v-if="recentList.length > 0 || isLevelZero" class="mt-8 px-5">
         <p class="text-[16px] font-semibold text-grey-10 leading-[1.5] tracking-[-0.02em]">최근 제안 받은 행동</p>
         <p class="text-[14px] font-medium text-grey-7 leading-[1.4] tracking-[-0.02em] mt-[3px]">제안 받은 피드백을 업무에 적용해보세요</p>
         <div class="mt-3.5 bg-white rounded-[18px] px-5 py-[22px] flex flex-col gap-[14px]">
+          <!-- Lv.0 빈 상태 -->
+          <div v-if="recentList.length === 0" class="flex flex-col items-center gap-[6px] py-2">
+            <img src="/icons/empty-home.svg" alt="" class="w-[56px] h-[56px] mb-[6px]" />
+            <p class="text-[15px] font-semibold text-grey-13">아직 제안 받은 행동이 없어요</p>
+            <p class="text-[13px] font-normal text-grey-9 text-center leading-[1.4]">
+              첫 회고를 작성하면<br />다음 행동을 제안해드려요
+            </p>
+          </div>
           <template v-for="(r, i) in recentList" :key="r.id">
             <button class="flex items-center gap-3 text-left w-full" @click="navigateTo(`/retrospects/${r.id}?from=home`)">
               <div class="shrink-0 w-[42px] h-[42px] rounded-[10px] bg-grey-4 flex items-center justify-center">
@@ -150,7 +159,7 @@
         class="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
         :class="isCompleted ? 'bg-grey-5 cursor-not-allowed' : 'bg-primary'"
         :disabled="isCompleted"
-        @click="startRetrospect"
+        @click="onFabClick"
       >
         <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path
@@ -233,6 +242,9 @@ function formatDate(dateStr: string): string {
 // 최근 회고 최대 3개 — 피드백 슬라이더(다음 행동 제안 있는 것)와 최근 회고 리스트에 사용
 const topFeedbacks = computed(() => recentRetrospectives.value.filter((r) => r.nextAction).slice(0, 3))
 const recentList = computed(() => recentRetrospectives.value.slice(0, 5))
+
+// Lv.0(아직 회고를 한 번도 완료하지 않음) — 이 경우에만 "최근 제안 받은 행동" 섹션을 빈 상태로라도 노출한다
+const isLevelZero = computed(() => (mission.value?.currentLevel ?? 0) === 0)
 
 // 피드백 캐러셀 (transform 방식 — 모든 카드 좌측 정렬 + 우측 peek, 마우스/터치 드래그)
 const STEP = 352 // 카드 w-340 + gap-3(12)
@@ -410,5 +422,11 @@ function startRetrospect() {
 function introRetrospect() {
   track('retrospect_started', { source: 'home' })
   navigateTo('/retrospect/intro')
+}
+
+// FAB도 미션 카드의 '회고 남기기'와 동일한 분기 — 첫 회고(Lv.0)는 방법 설명(intro)부터 보여준다
+function onFabClick() {
+  if (isLevelZero.value) introRetrospect()
+  else startRetrospect()
 }
 </script>

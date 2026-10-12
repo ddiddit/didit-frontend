@@ -199,13 +199,13 @@ async function initialApplication() {
   }
 }
 
-// 답변을 하나라도 했는지 — 뒤로가기 시 exit(삭제될 수 있음) vs finish(마무리됨) 중 뭘 호출할지,
-// 모달 문구를 뭘로 보여줄지 여기서 갈린다.
+// 답변을 하나라도 했는지 — 뒤로가기 모달 문구를 뭘로 보여줄지만 여기서 갈린다.
+// (저장 여부는 갈리지 않는다 — 나가기는 항상 exit()이고, 저장은 '회고 마치기'를 통해서만 이뤄진다)
 const hasAnswered = computed(() => messages.value.some((m) => m.role === 'user'))
-const backModalTitle = computed(() => (hasAnswered.value ? '나가면 회고가 마무리돼요' : '회고를 종료할까요?'))
+const backModalTitle = computed(() => (hasAnswered.value ? '나가면 작성한 내용이 사라져요' : '회고를 종료할까요?'))
 const backModalDescription = computed(() =>
   hasAnswered.value
-    ? '지금까지의 답변으로 회고가 완료돼요. 계속 작성하고 싶다면 계속하기를 눌러주세요.'
+    ? '지금까지 작성한 답변은 저장되지 않아요. 회고를 마치려면 "회고 마치기"를 이용해주세요.'
     : '작성한 내용이 없어 나가면 이 회고는 삭제돼요.',
 )
 
@@ -215,18 +215,15 @@ function onBack() {
   isBackModal.value = true
 }
 
-// 뒤로가기 확인('나가기') — 답변이 있으면 finish()로 정식 마무리, 없으면 exit()로 정리(PENDING이면 삭제).
+// 뒤로가기 확인('나가기') — 저장 없이 exit()로 정리한다(PENDING이면 삭제). 답변이 있어도 저장하지 않음 —
+// 저장(결과 생성)은 '회고 마치기' 버튼(onFinishConfirm/finish())을 통해서만 이뤄진다.
 // 실패해도 나가는 것 자체는 막지 않음 — ACTIVE_RETROSPECTIVE_KEY가 남아있으면 다음 진입 시 이어서 진행 가능
 async function onBackConfirm() {
   if (isBackLeaving.value) return
   isBackLeaving.value = true
   if (retrospectiveId.value) {
     try {
-      if (hasAnswered.value) {
-        await retro.finish(retrospectiveId.value)
-      } else {
-        await retro.exit(retrospectiveId.value)
-      }
+      await retro.exit(retrospectiveId.value)
       localStorage.removeItem(ACTIVE_RETROSPECTIVE_KEY)
     } catch (err) {
       console.log(err)
