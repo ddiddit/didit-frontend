@@ -10,7 +10,7 @@
                 <img src="/chatbot_anime.gif" alt="챗봇애니메이션" class="w-[72px] h-[72px] chc_ani" />
                 <p class="text-center leading-[1.7] font-bold mt-[10px] whitespace-pre-line text-[17px] text-grey-13" v-html="styledMessage" />
             </div>
-            <div class="button_wrapper absolute left-0 right-0 mx-auto bottom-[60px]">
+            <div class="button_wrapper absolute left-0 right-0 mx-auto" style="bottom: calc(24px + env(safe-area-inset-bottom, 0px))">
                 <button class="char_anime2 w-[350px] mx-auto block bg-green py-[18px] rounded-[12px] text-grey-13 font-bold disabled:opacity-50 enabled:hover:translate-y-[-10px] transition-all duration-300" :disabled="isBusy" @click="stepIntro++">회고하는 방법 살펴보기</button>
             </div>
         </template>
@@ -31,14 +31,14 @@
                         </p>
                     </SwiperSlide>
                     <SwiperSlide class="!flex flex-col items-center">
-                        <img src="/chatbot_anime_1.svg" alt="챗봇애니메이션1" class="w-50 h-50" />
+                        <img src="/chatbot_anime_2.svg" alt="챗봇애니메이션1" class="w-50 h-50" />
                         <p class="flex flex-col items-center">
                             <b class="text-grey-13">사소하고 작은 일도 좋아요.</b>
                             <span class="text-[15px] text-grey-11">작지만 의미 있는 회고가 될 수 있어요.</span>
                         </p>
                     </SwiperSlide>
                     <SwiperSlide class="!flex flex-col items-center">
-                        <img src="/chatbot_anime_1.svg" alt="챗봇애니메이션1" class="w-50 h-50" />
+                        <img src="/chatbot_anime_3.svg" alt="챗봇애니메이션1" class="w-50 h-50" />
                         <p class="flex flex-col items-center">
                             <b class="text-grey-13">텍스트,음성,파일 모두 가능해요.</b>
                             <span class="text-[15px] text-grey-11">원하는 방식으로 회고를 남겨주세요.</span>
@@ -102,6 +102,8 @@
     // 컴포넌트 임포트
     import RetroHeader from '~/components/layout/RetroHeader.vue'
 import UiPopup from '~/components/ui/UiPopup.vue'
+
+    definePageMeta({ middleware: ['auth', 'level-zero-only'], hideTabBar: true })
 
     const isBusy = ref(true) // 건너뛰기 버튼 활성화 / 비활성화 여부
     const isPopupOpen = ref(false) // 팝업 열림 여부

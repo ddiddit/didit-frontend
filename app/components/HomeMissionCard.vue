@@ -107,7 +107,7 @@
               </svg>
             </div>
             <div
-              v-else-if="missionLevel == 2"
+              v-else-if="missionLevel == 2 && n === m.target"
               class="absolute right-[90px] flex flex-col items-center whitespace-nowrap"
             >
               <span class="-ml-[3px] relative z-10 inline-flex items-center bg-grey-11 text-grey-1 text-[11px] font-medium px-[7px] py-[4px] rounded-md leading-[1.3] tracking-[-0.22px]">레벨업</span>
