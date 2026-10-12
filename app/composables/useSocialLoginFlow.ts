@@ -12,6 +12,11 @@ interface PendingSocialLogin {
   emailHint: string | null
 }
 
+interface SocialLoginOptions {
+  redirectUri?: string
+  nonce?: string
+}
+
 const PENDING_LOGIN_KEY = 'pendingSocialLogin'
 
 export function useSocialLoginFlow() {
@@ -23,13 +28,14 @@ export function useSocialLoginFlow() {
     provider: SocialProvider,
     credentialType: SocialCredentialType,
     credential: string,
-    redirectUri?: string
+    options?: SocialLoginOptions,
   ): Promise<void> {
     const { data } = await $api.post<ApiResponse<SocialLoginResponse>>('/api/v2/auth/social/login', {
       provider,
       credentialType,
       credential,
-      ...(redirectUri ? { redirectUri } : {}),
+      ...(options?.redirectUri ? { redirectUri: options.redirectUri } : {}),
+      ...(options?.nonce ? { nonce: options.nonce } : {}),
     })
     await handleResult(data.data, provider)
   }

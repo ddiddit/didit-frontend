@@ -135,7 +135,6 @@
 
 <script setup lang="ts">
 import UiLoadError from '~/components/ui/UiLoadError.vue'
-
 import type { BadgeView } from '~/composables/useBadges'
 import { parseServerDate } from '~/utils/date'
 

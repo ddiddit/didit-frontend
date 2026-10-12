@@ -30,7 +30,6 @@
 
 <script setup lang="ts">
 import UiLoadError from '~/components/ui/UiLoadError.vue'
-
 import type { ApiResponse, NoticeDetail } from '~/types/api'
 import { parseServerDate } from '~/utils/date'
 

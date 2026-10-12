@@ -93,6 +93,8 @@
 </template>
 
 <script setup lang="ts">
+import UiToast from '~/components/ui/UiToast.vue'
+import UiBadgeAcquiredPopup from '~/components/ui/UiBadgeAcquiredPopup.vue'
 const { width } = useWindowSize()
 // 600px 이상(태블릿·데스크탑)이면 앱 패널에 그림자를 줘 레터박스가 액자처럼 보이게 함
 const isTablet = computed(() => width.value >= 600)

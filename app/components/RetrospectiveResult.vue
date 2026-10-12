@@ -112,7 +112,6 @@
 
 <script setup lang="ts">
 import UiTag from '~/components/ui/UiTag.vue'
-
 import type { RetrospectiveContent, RetrospectiveResultV2, Tag } from '~/types/api'
 import { getTagColor } from '~/utils/tag-color'
 

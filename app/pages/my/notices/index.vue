@@ -35,7 +35,6 @@
 
 <script setup lang="ts">
 import UiLoadError from '~/components/ui/UiLoadError.vue'
-
 import type { ApiResponse, NoticeListItem } from '~/types/api'
 
 definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
