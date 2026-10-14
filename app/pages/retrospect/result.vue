@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-grey-1 flex flex-col">
+  <div class="h-full bg-retro-fade flex flex-col">
     <!-- 로딩 (MAKE_001 / figma 25712): AI 요약 생성 중 -->
     <div v-if="isLoading" class="flex-1 flex flex-col items-center justify-center px-8 text-center">
       <div class="flex gap-[7px] mb-8">
@@ -35,7 +35,7 @@
           :disabled="!canSave || isSaving"
           @click="onSave"
         >
-          저장
+          완료
         </button>
       </div>
 
@@ -77,7 +77,7 @@ import RetrospectTagEdit from '~/components/RetrospectTagEdit.vue'
 import RetrospectiveResult from '~/components/RetrospectiveResult.vue'
 import RetrospectProjectSelect from '~/components/RetrospectProjectSelect.vue'
 import UiButton from '~/components/ui/UiButton.vue'
-import type { RetrospectiveResultStash, RetrospectiveResultV2, Tag } from '~/types/api'
+import type { RetrospectiveResultV2, Tag } from '~/types/api'
 import { isAuthError, toErrorVariant } from '~/utils/api-error'
 
 definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
@@ -91,7 +91,6 @@ const { show: showBadge } = useBadgeAcquired()
 
 const completingId = useState<string>('retrospect:completing-id')
 // 채팅(start.vue)에서 회고 마치기로 이미 생성한 결과 — 있으면 재생성 없이 사용
-const resultStash = useState<RetrospectiveResultStash | null>('retrospect:result', () => null)
 
 const isLoading = ref(true)
 const errorVariant = ref<'network' | 'server' | 'generic' | null>(null)
@@ -105,6 +104,8 @@ const errorTitle = computed(() =>
 )
 const result = ref<RetrospectiveResultV2 | null>(null)
 const title = ref('')
+// finish()로 받은(=이미 저장된) 제목 — 완료 시 이 값과 다를 때만 제목 수정 API를 호출한다
+const savedTitle = ref('')
 
 // 프로젝트/태그 선택 (오버레이에서 API로 즉시 반영 후 화면 표시값 갱신)
 const showProjectSelect = ref(false)
@@ -122,33 +123,32 @@ function onTagsSaved(tags: Tag[]) {
 const nickname = computed(() => profile.value?.nickname ?? '')
 const canSave = computed(() => title.value.trim().length > 0)
 
+// 자동 저장 로딩 화면 최소 노출 시간
+const MIN_LOADING_MS = 1000
+
 // 완료 API 호출 → AI 요약 생성
 async function generate() {
   if (!completingId.value) {
     navigateTo('/home')
     return
   }
-  // 채팅에서 회고 마치기로 생성을 마치고 넘어온 경우: stash된 결과를 그대로 사용(중복 생성 방지)
-  if (resultStash.value) {
-    result.value = resultStash.value.result
-    title.value = resultStash.value.title
-    resultStash.value = null
-    isLoading.value = false
-    return
-  }
-  // 직접 진입/새로고침/재시도 등 stash가 없을 때만 호출 (폴백).
+  // 채팅의 '회고 마치기'로 넘어오면 여기서 대화 종료·결과 생성(finish)을 진행한다.
   // finish()는 이미 완료된 회고에 다시 요청해도 저장된 결과를 그대로 반환(멱등)하고,
-  // 생성 실패 상태였다면 재요청으로 생성 상태를 복구해 재시도한다 — v1 complete()처럼
-  // 두 번째 호출이 400으로 실패하는 문제가 없다.
+  // 생성 실패 상태였다면 재요청으로 생성 상태를 복구해 재시도한다 — 에러 화면의 '다시 시도'도 이 함수를 그대로 쓴다.
+  // 자동 저장 로딩 화면은 응답이 빨라도 최소 MIN_LOADING_MS 동안 보여줘 깜빡이듯 지나가지 않게 한다.
   isLoading.value = true
   errorVariant.value = null
   try {
-    const res = await retro.finish(completingId.value)
+    const [res] = await Promise.all([
+      retro.finish(completingId.value),
+      new Promise((resolve) => setTimeout(resolve, MIN_LOADING_MS)),
+    ])
     if (!res.result) throw new Error('회고 결과가 아직 생성되지 않았어요')
     result.value = res.result
     title.value = res.title ?? ''
+    savedTitle.value = title.value
     // 완료됐으니 start.vue가 재개용으로 들고 있던 id를 정리 — 다음 진입은 새 회고로 시작
-    localStorage.removeItem(ACTIVE_RETROSPECTIVE_KEY)
+    clearActiveRetrospective()
   } catch (e) {
     // 인증 만료는 인터셉터가 로그인으로 보냄 → 에러 화면 X
     if (!isAuthError(e)) errorVariant.value = toErrorVariant(e)
@@ -157,12 +157,17 @@ async function generate() {
   }
 }
 
-// 저장 (MAKE_003): 제목 확정 → 기록 탭 이동 + 토스트
+// 완료 (MAKE_003): 회고는 v2 finish()에서 결과 생성과 함께 이미 저장됐으므로 v1 save()는 호출하지 않는다
+// (호출하면 '이미 완료된 회고' 400). 사용자가 제목을 바꾼 경우에만 제목 수정 API로 반영 → 기록 탭 이동 + 토스트
 async function onSave() {
   if (!canSave.value || isSaving.value || !completingId.value) return
   isSaving.value = true
   try {
-    await retro.save(completingId.value, title.value.trim())
+    const trimmedTitle = title.value.trim()
+    if (trimmedTitle !== savedTitle.value) {
+      await retro.updateTitle(completingId.value, trimmedTitle)
+      savedTitle.value = trimmedTitle
+    }
     track('retrospect_saved', {
       has_project: !!selectedProject.value,
       tag_count: selectedTags.value.length,
@@ -189,7 +194,7 @@ async function onSave() {
     }
   } catch {
     track('retrospect_save_failed')
-    show('저장에 실패했어요. 잠시 후 다시 시도해주세요.')
+    show('제목을 수정하지 못했어요. 잠시 후 다시 시도해주세요.')
   } finally {
     isSaving.value = false
   }

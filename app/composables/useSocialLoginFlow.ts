@@ -1,3 +1,4 @@
+import { clearPersistedCaches } from '~/utils/persisted-cache'
 import type {
   ApiResponse,
   EmailVerificationStartResponse,
@@ -107,6 +108,7 @@ export function useSocialLoginFlow() {
       throw new Error('AUTH_TOKEN_RESPONSE_INVALID')
     }
 
+    clearPersistedCaches() // 다른 계정의 홈·프로필·알림 설정 캐시가 남아 있지 않도록 로그인 시 비운다
     localStorage.setItem('accessToken', result.accessToken)
     localStorage.setItem('refreshToken', result.refreshToken)
     localStorage.setItem('isOnboardingCompleted', String(result.isOnboardingCompleted))

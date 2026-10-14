@@ -91,7 +91,7 @@
                 <img v-if="number <= m.progress" src="/icons/check-on.svg" alt="check_on" class="p-[6px]" />
                 <img v-else src="/icons/check-off.svg" alt="check_off" class="p-[6px]" />
               </div>
-              <span class="text-[14px]" :class="number <= m.progress ? 'text-green' : 'text-grey-4'">{{ number }}회</span>
+              <span class="text-[14px]" :class="number <= m.progress ? 'text-green' : 'text-grey-6'">{{ number }}회</span>
 
               <!-- 레벨업 힌트: 목표 횟수 스탬프(=target) 바로 옆에 고정 — 컨테이너 기준 매직넘버 대신 해당 스탬프 자신에 앵커링해 레이아웃이 달라져도 항상 정확한 스탬프를 가리킴 -->
               <div

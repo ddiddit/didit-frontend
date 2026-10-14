@@ -1,4 +1,5 @@
 import type { ChatMessage } from '~/pages/retrospect/start.vue'
+import type { AnswerGuide } from '~/types/api'
 
 // AI 메시지(초기 질문 InitialMessage · 다음 질문 AssistantMessage · 대화 조회 ConversationMessage)를
 // 공통 'didit' 채팅 메시지로 변환. INTRO 타입은 title/body, CONVERSATION 타입은 content에 본문이 온다.
@@ -8,9 +9,12 @@ export function buildDiditMessage(
     title?: string | null
     body?: string | null
     content?: string | null
+    answerGuide?: AnswerGuide | null
   },
   skippable = false, // 답변 후 readyToComplete가 true면(=완료해도 될 만큼 내용이 쌓임) 이 질문은 건너뛸 수 있음
 ): Extract<ChatMessage, { role: 'didit' }> {
+  // 예시가 비어 있으면 answerGuide가 없는 것과 같게 취급(예시 UI 미표시)
+  const answerGuide = m.answerGuide?.examples?.length ? m.answerGuide : undefined
   return reactive({
     id: m.id,
     role: 'didit',
@@ -18,7 +22,10 @@ export function buildDiditMessage(
     sub: m.body ?? undefined,
     typedMain: '',
     showSub: false,
-    skippable
+    skippable,
+    answerGuide,
+    // INLINE은 질문과 함께 바로 펼치고, ON_DEMAND는 '답변 예시 보기'를 눌렀을 때 펼친다
+    showExamples: answerGuide?.mode === 'INLINE',
   })
 }
 

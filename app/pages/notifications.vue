@@ -67,6 +67,7 @@
 </template>
 
 <script setup lang="ts">
+import { CACHE_KEYS, removePersistedCache } from '~/utils/persisted-cache'
 import UiLoadError from '~/components/ui/UiLoadError.vue'
 import type { ApiResponse, NotificationHistory } from '~/types/api'
 import { parseServerDate } from '~/utils/date'
@@ -83,7 +84,10 @@ const hasUnread = computed(() => notifications.value.some(n => !n.isRead))
 
 // 홈 벨 아이콘과 공유하는 미읽음 상태 — 읽음 처리 시 즉시 홈에 반영
 const unreadFlag = useState<boolean>('notifications:hasUnread', () => false)
-watch(hasUnread, value => { unreadFlag.value = value })
+watch(hasUnread, (value) => {
+  unreadFlag.value = value
+  removePersistedCache(CACHE_KEYS.home) // 홈 캐시의 미읽음 표시가 새로고침 후 되살아나지 않도록
+})
 
 async function reload() {
   await run(async () => {

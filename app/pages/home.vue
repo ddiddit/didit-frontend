@@ -93,12 +93,9 @@
         <p class="text-[14px] font-medium text-grey-7 leading-[1.4] tracking-[-0.02em] mt-[3px]">제안 받은 피드백을 업무에 적용해보세요</p>
         <div class="mt-3.5 bg-white rounded-[18px] px-5 py-[22px] flex flex-col gap-[14px]">
           <!-- Lv.0 빈 상태 -->
-          <div v-if="recentList.length === 0" class="flex flex-col items-center gap-[6px] py-2">
-            <img src="/icons/empty-home.svg" alt="" class="w-[56px] h-[56px] mb-[6px]" />
-            <p class="text-[15px] font-semibold text-grey-13">아직 제안 받은 행동이 없어요</p>
-            <p class="text-[13px] font-normal text-grey-9 text-center leading-[1.4]">
-              첫 회고를 작성하면<br />다음 행동을 제안해드려요
-            </p>
+          <div v-if="recentList.length === 0" class="flex items-center gap-[6px] py-5.5 px-5">
+            <img src="/icons/empty-retrospects.svg" alt="empty-retrospect" class="w-[24px] h-[24px]" />
+            <p class="text-[14px] font-semibold text-grey-6">아직 작성한 회고가 없어요</p>
           </div>
           <template v-for="(r, i) in recentList" :key="r.id">
             <button class="flex items-center gap-3 text-left w-full" @click="navigateTo(`/retrospects/${r.id}?from=home`)">
@@ -179,9 +176,9 @@ import HomeMissionMaxCard from '~/components/HomeMissionMaxCard.vue'
 import HomeMissionPopup from '~/components/HomeMissionPopup.vue'
 import HomeMissionFailurePopup from '~/components/HomeMissionFailurePopup.vue'
 import UiErrorState from '~/components/ui/UiErrorState.vue'
-import { getTagColor } from '~/utils/tag-color'
 import { parseServerDate } from '~/utils/date'
 import { toErrorVariant, isAuthError } from '~/utils/api-error'
+import { CACHE_KEYS, isCacheFresh, readPersistedCache, removePersistedCache, writePersistedCache } from '~/utils/persisted-cache'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -224,6 +221,24 @@ const hasUnread = useState<boolean>('notifications:hasUnread', () => false)
 
 // 캐시된 데이터가 있으면 로딩 스켈레톤 생략
 const homeLoaded = useState<boolean>('home:loaded', () => false)
+
+// 홈 응답 영구 캐시 — 새로고침·재진입마다 /api/v2/home을 다시 부르지 않도록 localStorage에 보관한다.
+// TTL 안이면 요청 없이 그대로 쓰고, 지나면 캐시를 먼저 보여준 뒤 새로 받는다.
+// 홈 데이터가 바뀌는 작업(회고 완료·저장·삭제, 미션 확인, 알림 읽음)에서는 캐시를 지워 다음 진입 때 바로 갱신된다.
+const HOME_TTL = 1000 * 60 * 5 // 5분
+const homeCache = readPersistedCache<HomeResponse>(CACHE_KEYS.home)
+
+function applyHome(home: HomeResponse) {
+  nickname.value = home.nickname
+  recentRetrospectives.value = home.recentRetrospectives
+  todayRetrospectiveCount.value = home.todayRetrospectiveCount
+  hasUnread.value = home.hasUnreadNotification
+  mission.value = home.mission
+  homeLoaded.value = true
+}
+
+// 새로고침 직후(메모리 상태 없음)엔 저장된 응답으로 바로 그려 스켈레톤·빈 화면 깜빡임을 없앤다
+if (!homeLoaded.value && homeCache) applyHome(homeCache.data)
 const isLoading = ref(!homeLoaded.value)
 
 const maxDaily = 1000
@@ -301,14 +316,9 @@ async function loadHome() {
   try {
     // /api/v2/home 한 번이면 nickname·mission·알림까지 전부 받음
     const { data } = await $api.get<ApiResponse<HomeResponse>>('/api/v2/home')
-    const home = data.data
-    nickname.value = home.nickname
-    recentRetrospectives.value = home.recentRetrospectives
-    todayRetrospectiveCount.value = home.todayRetrospectiveCount
-    hasUnread.value = home.hasUnreadNotification
-    mission.value = home.mission
+    applyHome(data.data)
+    writePersistedCache(CACHE_KEYS.home, data.data)
     evaluateMissionPopup()
-    homeLoaded.value = true
   } catch (e) {
     // 인증 만료는 인터셉터가 로그인으로 보냄 → 에러 화면 X
     if (isAuthError(e)) return
@@ -374,6 +384,7 @@ async function confirmLevelUp() {
   popupConfirming.value = true
   try {
     await $api.post('/api/v1/missions/level-up/confirm')
+    removePersistedCache(CACHE_KEYS.home) // 확인한 팝업이 캐시로 다시 뜨지 않도록
     const { data } = await $api.get<ApiResponse<CurrentMissionResponse>>('/api/v1/missions/current')
     mission.value = data.data
   } catch { /* 실패해도 팝업은 닫아 사용자를 막지 않음 */ }
@@ -397,6 +408,7 @@ async function retryMission() {
   popupConfirming.value = true
   try {
     await $api.post('/api/v1/missions/retry')
+    removePersistedCache(CACHE_KEYS.home) // 확인한 팝업이 캐시로 다시 뜨지 않도록
     const { data } = await $api.get<ApiResponse<CurrentMissionResponse>>('/api/v1/missions/current')
     mission.value = data.data
   } catch { /* 실패해도 팝업은 닫음 */ }
@@ -407,6 +419,11 @@ async function retryMission() {
 
 onMounted(() => {
   track('home_viewed')
+  // 캐시가 유효하면 요청 없이 그대로 사용 (미션 팝업 판정만 다시)
+  if (isCacheFresh(readPersistedCache(CACHE_KEYS.home), HOME_TTL)) {
+    evaluateMissionPopup()
+    return
+  }
   loadHome()
 })
 

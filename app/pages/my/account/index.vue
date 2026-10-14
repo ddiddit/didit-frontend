@@ -62,12 +62,12 @@ definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
 
 const authStore = useAuthStore()
-const { profile, reload: reloadProfile } = useProfile()
+const { profile, ensure: ensureProfile } = useProfile()
 const { track } = useAmplitude()
 const { loadError, slowLoading, run } = useLoadState()
 
 async function reload() {
-  await run(() => reloadProfile().then(() => {}))
+  await run(() => ensureProfile().then(() => {})) // 캐시가 유효하면 재요청 없이 바로 표시
 }
 
 const showLogoutModal = ref(false)

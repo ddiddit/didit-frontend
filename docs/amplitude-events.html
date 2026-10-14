@@ -81,8 +81,8 @@
     <tr><td><code>deep_question_shown</code></td><td>심화질문(Q4_DEEP) 노출</td><td>—</td><td>retrospect/start.vue</td></tr>
     <tr><td><code>deep_question_skipped</code></td><td>심화질문 스킵</td><td>—</td><td>retrospect/start.vue</td></tr>
     <tr><td><code>retrospect_completed</code></td><td>회고 질문 종료 → 결과로 이동</td><td>answer_count, deep_question_answered, duration_sec</td><td>retrospect/start.vue</td></tr>
-    <tr><td><code>retrospect_saved</code></td><td>회고 제목 확정 저장</td><td>has_project, tag_count, title_length</td><td>retrospect/result.vue</td></tr>
-    <tr><td><code>retrospect_save_failed</code></td><td>저장 실패</td><td>—</td><td>retrospect/result.vue</td></tr>
+    <tr><td><code>retrospect_saved</code></td><td>결과 화면 완료 버튼 (회고는 finish 시 이미 저장됨, 제목 변경 시에만 수정 반영)</td><td>has_project, tag_count, title_length</td><td>retrospect/result.vue</td></tr>
+    <tr><td><code>retrospect_save_failed</code></td><td>완료 버튼 처리(제목 수정) 실패</td><td>—</td><td>retrospect/result.vue</td></tr>
     <tr><td><code>retrospect_viewed</code></td><td>회고 상세 진입</td><td>retrospect_id</td><td>retrospects/[id].vue</td></tr>
     <tr><td><code>retrospect_list_viewed</code></td><td>회고 목록 진입</td><td>—</td><td>retrospects/index.vue</td></tr>
     <tr><td><code>retrospect_search_viewed</code></td><td>검색 화면 진입</td><td>—</td><td>retrospects/search.vue</td></tr>

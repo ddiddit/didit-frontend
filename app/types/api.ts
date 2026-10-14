@@ -217,6 +217,15 @@ export interface Retrospective {
 // 회고 질문 타입 (기본 질문 Q1~Q4, 이후 AI 심화질문)
 export type QuestionType = string
 
+// 답변 예시 안내 — 예시를 제공할 때만 내려오고, 없으면 null
+// INLINE: 질문과 함께 예시를 바로 표시 / ON_DEMAND: '답변 예시 보기'를 눌렀을 때 펼침
+export type AnswerGuideMode = 'INLINE' | 'ON_DEMAND'
+
+export type AnswerGuide = {
+  mode: AnswerGuideMode
+  examples: string[] // 현재 회고 맥락에 맞는 답변 예시 2~3개
+}
+
 // 초기 메시지 타입
 export type InitialMessage = {
   id: string;
@@ -226,6 +235,7 @@ export type InitialMessage = {
   body: string;
   content: string | null;
   createdAt: string;
+  answerGuide?: AnswerGuide | null;
 }
 
 // 어시스턴트 메시지 타입
@@ -238,6 +248,7 @@ export type AssistantMessage = {
   content: string | null
   createdAt: string | null
   attachments: unknown[] // 첨부파일 기능 미구현 — 정확한 형태는 아직 정의되지 않음
+  answerGuide?: AnswerGuide | null
 }
 
 // 회고 시작 → 첫 질문 반환
@@ -248,12 +259,18 @@ export interface StartRetrospectiveResponse {
   readyToComplete: boolean
 }
 
+// 답변 제출 후 AI 응답의 후속 동작
+// ASK: 질문 표시 후 입력 유지 / REFLECT: 질문 없는 반응 표시 후 입력 유지
+// OFFER_COMPLETION: 계속하기·마치기 선택 UI 표시 / CONFIRM_COMPLETION: 종료 여부 확인 UI 표시
+export type AssistantAction = 'ASK' | 'REFLECT' | 'OFFER_COMPLETION' | 'CONFIRM_COMPLETION'
+
 // 답변 제출 - 텍스트
 export interface SubmitAnswerResponse {
   turnId: string
   userMessageId: string
   assistantMessage: AssistantMessage | null // AI 응답 생성이 아직 끝나지 않은 경우 null로 옴
   readyToComplete: boolean
+  action: AssistantAction | null // assistantMessage가 null이면 함께 null로 올 수 있음
 }
 
 // 음성 → 텍스트 변환 전용 (전송 전 미리보기용)
@@ -307,12 +324,6 @@ export interface RetrospectiveResultV2 {
   learnings: string[]
   insight: RetrospectiveInsight
   nextActions: RetrospectiveInsight[]
-}
-
-// start.vue에서 finish() 완료 후 result.vue로 결과를 넘길 때 쓰는 stash 값
-export interface RetrospectiveResultStash {
-  title: string
-  result: RetrospectiveResultV2
 }
 
 // AI 심화질문 조회 (생성 대기 중이면 isReady=false 로 폴링)

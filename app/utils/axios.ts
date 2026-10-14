@@ -1,4 +1,17 @@
 import axios from 'axios'
+import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios'
+
+// 중복 요청 방지에서 제외할 요청 — 같은 내용이어도 매번 실제로 보내야 하는 것들.
+// - /messages: 답변 제출. 요청마다 clientMessageId가 달라 매번 새 메시지로 처리돼야 함
+// - /attachments: 첨부 업로드 URL 발급·완료 확인. 같은 파일을 두 번 골라도 각각 별개 업로드
+// - FormData: 음성 업로드 등 파일 본문 — 직렬화해 비교할 수도 없음
+function dedupeKey(config: InternalAxiosRequestConfig): string | null {
+  const url = config.url ?? ''
+  if (/\/messages(\?|$)/.test(url) || url.includes('/attachments') || config.data instanceof FormData) return null
+  // adapter 단계라 data는 이미 transformRequest로 문자열화돼 있다. 토큰이 바뀌면(갱신 후 재시도) 다른 요청으로 본다
+  const data = typeof config.data === 'string' ? config.data : JSON.stringify(config.data ?? null)
+  return [config.method, config.baseURL, url, JSON.stringify(config.params ?? null), data, config.headers?.Authorization ?? ''].join(' ')
+}
 
 export const createApiClient = (baseURL: string) => {
   const client = axios.create({
@@ -6,6 +19,31 @@ export const createApiClient = (baseURL: string) => {
     timeout: 10000,
     headers: { 'Content-Type': 'application/json' },
   })
+
+  // 동일 요청 중복 방지 — 같은 메서드·URL·파라미터·본문의 요청이 아직 응답 전이면 네트워크로 다시 보내지 않고
+  // 진행 중인 요청의 결과를 함께 받는다(더블 탭·중복 마운트 등). 응답이 오면 바로 풀려서 이후 요청은 정상 전송된다.
+  const inflight = new Map<string, Promise<AxiosResponse>>()
+  const baseAdapter = axios.getAdapter(client.defaults.adapter)
+  client.defaults.adapter = (config) => {
+    const key = dedupeKey(config)
+    if (!key) return baseAdapter(config)
+
+    const existing = inflight.get(key)
+    if (existing) {
+      // 결과는 공유하되 config는 이 요청 것으로 바꿔 돌려준다 — 같은 config 객체를 공유하면
+      // 아래 토큰 갱신 인터셉터의 _retry 표시가 두 요청에 같이 찍혀 뒤 요청이 재시도 없이 실패한다
+      return existing.then(
+        (res) => ({ ...res, config }),
+        (err: unknown) => Promise.reject(
+          axios.isAxiosError(err) ? Object.assign(Object.create(Object.getPrototypeOf(err)), err, { config }) : err,
+        ),
+      )
+    }
+
+    const request = baseAdapter(config).finally(() => inflight.delete(key))
+    inflight.set(key, request)
+    return request
+  }
 
   let isRefreshing = false
   let pendingQueue: Array<{
