@@ -1,3 +1,4 @@
+import { clearPersistedCaches } from '~/utils/persisted-cache'
 import { defineStore } from 'pinia'
 import type { UserProfile } from '~/types/api'
 
@@ -18,6 +19,7 @@ export const useAuthStore = defineStore('auth', () => {
     clearNuxtState()
     localStorage.removeItem('accessToken')
     localStorage.removeItem('refreshToken')
+    clearPersistedCaches() // 홈·프로필·알림 설정 캐시도 계정 단위라 함께 비운다
   }
 
   return { user, isLoggedIn, setUser, logout }

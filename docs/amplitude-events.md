@@ -33,7 +33,7 @@
 | `home_viewed` | 홈 진입 | — | `home.vue` |
 | `retrospect_started` | 회고 시작 버튼 | — | `home.vue` |
 | `retrospect_completed` | 회고 질문 종료 → 결과로 이동 | — | `retrospect/start.vue` |
-| `retrospect_saved` | 회고 제목 확정 저장 | — | `retrospect/result.vue` |
+| `retrospect_saved` | 결과 화면 완료 버튼 (회고는 finish 시 이미 저장됨, 제목 변경 시에만 수정 반영) | — | `retrospect/result.vue` |
 | `retrospect_list_viewed` | 회고 목록 진입 | — | `retrospects/index.vue` |
 | `retrospect_search_viewed` | 검색 화면 진입 | — | `retrospects/search.vue` |
 | `retrospect_searched` | 검색 실행 | `keyword` | `retrospects/search.vue` |
@@ -78,7 +78,7 @@
 | `answer_submitted` | 답변 1건 제출 성공 | `question_no`, `is_deep`(bool) | `retrospect/start.vue` |
 | `deep_question_shown` | 심화질문(Q4_DEEP) 노출 | — | `retrospect/start.vue` |
 | `deep_question_skipped` | 심화질문 스킵 | — | `retrospect/start.vue` |
-| `retrospect_save_failed` | 저장 실패 | — | `retrospect/result.vue` |
+| `retrospect_save_failed` | 완료 버튼 처리(제목 수정) 실패 | — | `retrospect/result.vue` |
 | `retrospect_viewed` | 회고 상세 진입 | `retrospect_id` | `retrospects/[id].vue` |
 | `user_logged_out` | 로그아웃 | — | `my/account/index.vue` |
 

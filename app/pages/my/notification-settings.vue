@@ -157,7 +157,7 @@ import UiScrollPicker from '~/components/ui/UiScrollPicker.vue'
 import UiLoadError from '~/components/ui/UiLoadError.vue'
 import UiButton from '~/components/ui/UiButton.vue'
 import UiToggle from '~/components/ui/UiToggle.vue'
-import type { ApiResponse, NotificationSetting } from '~/types/api'
+import type { NotificationSetting } from '~/types/api'
 
 definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
@@ -290,19 +290,26 @@ async function saveTime() {
       enabled: enabled.value,
       reminderTime: newTime,
     })
+    notificationSettings.update({ reminderTime: newTime })
     track('notification_setting_changed', { type: 'reminder_time', value: newTime })
   } catch {
     // 오류 처리
   }
 }
 
+// 알림 설정 — 캐시가 있으면 요청 없이 바로 표시하고, 없거나 오래됐을 때만 서버에서 받는다
+const notificationSettings = useNotificationSettings()
+
+function applySettings(s: NotificationSetting) {
+  marketingAgreed.value = s.marketingAgreed
+  nightPushConsent.value = s.nightPushConsent
+  enabled.value = s.enabled
+  reminderTime.value = s.reminderTime
+}
+
 async function reload() {
   await run(async () => {
-    const res = await $api.get<ApiResponse<NotificationSetting>>('/api/v1/notification-settings')
-    marketingAgreed.value = res.data.data.marketingAgreed
-    nightPushConsent.value = res.data.data.nightPushConsent
-    enabled.value = res.data.data.enabled
-    reminderTime.value = res.data.data.reminderTime
+    applySettings(await notificationSettings.load())
   })
 }
 
@@ -313,6 +320,7 @@ async function toggleMarketing(val: boolean) {
   marketingAgreed.value = val
   try {
     await $api.put('/api/v1/notification-settings/marketing-consent', { agreed: val })
+    notificationSettings.update({ marketingAgreed: val })
     track('marketing_consent_changed', { agreed: val })
   } catch { marketingAgreed.value = prev }
 }
@@ -337,6 +345,7 @@ async function toggleNightPush(val: boolean) {
   nightPushConsent.value = val
   try {
     await $api.put('/api/v1/notification-settings/night-push-consent', { consent: val })
+    notificationSettings.update({ nightPushConsent: val })
     track('night_push_consent_changed', { consent: val })
     // 야간 동의를 끄면, 야간으로 저장된 회고 알림 시간을 낮 시간으로 보정한다.
     // (받지 못하는 시간이 그대로 표시돼 오해를 주지 않도록)
@@ -347,6 +356,7 @@ async function toggleNightPush(val: boolean) {
         enabled: enabled.value,
         reminderTime: dayTime,
       })
+      notificationSettings.update({ reminderTime: dayTime })
     }
   } catch { nightPushConsent.value = prev }
 }
@@ -359,6 +369,7 @@ async function toggleEnabled(val: boolean) {
       enabled: val,
       reminderTime: reminderTime.value,
     })
+    notificationSettings.update({ enabled: val })
     track('notification_setting_changed', { type: 'enabled', value: val })
     // 켤 때: 브라우저 알림 권한 요청 + FCM 토큰 발급·등록 / 끌 때: 토큰 해제(베스트에포트)
     if (val) {

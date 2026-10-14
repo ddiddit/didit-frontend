@@ -1,10 +1,10 @@
 <template>
   <div
-    class="relative h-full bg-white flex flex-col overflow-hidden"
+    class="relative h-full flex flex-col overflow-clip bg-retro-fade"
     :style="keyboardOpen ? { height: `calc(100% - ${keyboardHeight}px)` } : undefined"
   >
     <!-- 헤더 영역 — 오른쪽 '회고 마치기'는 응답 대기 중·마치기 처리 중에만 잠기고, 그 외에는 언제나 누를 수 있다 -->
-    <RetroHeader :title="'회고 마치기'" :isBusy="isBusy" :finishDisabled="isBusy || isFinishing || isCheckingReady" :onBack="onBack" :onFinish="onFinishClick" />
+    <RetroHeader :title="'회고 마치기'" :isBusy="isBusy" :finishDisabled="isBusy || isFinishing" :onBack="onBack" :onFinish="onFinishClick" />
 
     <!-- 마이크 접근 모달 — 권한이 아직 없을 때만. 이미 허용된 경우 accessMic()에서 바로 레코더를 연다 -->
     <UiPopup :modelValue="isAccessMicModal" :title="'디딧(didit)이(가) 마이크에 접근하려고 합니다.'" :description="'회고를 음성으로 기록하기 위해 마이크 접근 권한이 필요해요.'" :confirmText="'허용'" :cancelText="'허용 안 함'" :loading="micRequesting" @cancel="isAccessMicModal = false" @confirm="confirmAccessMic" />
@@ -15,22 +15,12 @@
     <!-- 회고 마치기 확인 모달 — 실수로 대화를 끝내지 않도록 확인 후 결과를 생성한다 -->
     <UiPopup :modelValue="isFinishModal" :title="'회고를 마칠까요?'" :description="'지금까지의 답변으로 회고 결과를 만들어요.'" :confirmText="'마치기'" :cancelText="'계속하기'" :loading="isFinishing" @cancel="onFinishCancel" @confirm="onFinishConfirm" />
 
-    <!-- 내용 부족 모달 — 회고 마치기를 눌렀지만 서버가 아직 결과를 만들 만큼 충분하지 않다고 판단한 경우 -->
-    <UiPopup
-      v-model="isNotReadyModal"
-      title="아직 내용이 충분하지 않아요"
-      :description="'회고 결과 생성을 위해\n내용을 더 작성해주세요'"
-      :showCancel="false"
-      confirmText="확인"
-      variant="dark"
-      @confirm="isNotReadyModal = false"
-    />
-
     <!-- 음성 레코더 (녹음 중 파형·타이머, 엔터로 STT 변환) -->
     <RetrospectVoiceRecorder v-if="isRecorderOpen" :retrospectiveId="retrospectiveId" @done="onVoiceDone" @cancel="isRecorderOpen = false" @blocked="onVoiceBlocked" />
 
     <!-- 대화 영역 -->
-    <div ref="scrollEl" class="message_wrapper h-[calc(100%-112px)] overflow-y-auto">
+    <!-- 고정 높이(calc) 대신 flex-1 — 입력창이 여러 줄·첨부로 커져도 대화 영역이 줄어들 뿐, 헤더가 밀려나지 않는다 -->
+    <div ref="scrollEl" class="message_wrapper flex-1 min-h-0 overflow-y-auto">
       <div class="message_area px-[20px] pt-[20px] flex flex-col" v-for="(m, i) in messages" :key="m.id">
         <div class="didit_message_wrapper self-start" v-if="m.role === 'didit'">
           <div class="didit_profile flex flex-col mb-[20px]">
@@ -43,15 +33,53 @@
                 {{ m.sub }}
               </div>
             </Transition>
+            <!-- 답변 예시(answerGuide) — 아직 답하지 않은 마지막 질문에만 표시. 예시를 누르면 그 문구를
+                 일반 TEXT 메시지로 전송(onSend → 새 clientMessageId)하고, 질문이 마지막이 아니게 되며 사라진다 -->
+            <template v-if="m.answerGuide && i === messages.length - 1">
+              <UiButton
+                v-if="!m.showExamples"
+                variant="ghost"
+                size="sm"
+                class="self-start mt-[10px] px-0"
+                @click="m.showExamples = true"
+              >
+                답변 예시 보기
+              </UiButton>
+              <div v-else class="flex flex-col items-start gap-[8px] mt-[10px]">
+                <button
+                  v-for="example in m.answerGuide.examples"
+                  :key="example"
+                  class="max-w-[250px] px-[12px] py-[10px] rounded-[16px] border border-grey-5 bg-white text-[14px] text-grey-13 text-left disabled:opacity-50"
+                  :disabled="isBusy || isFinishing"
+                  @click="onSend(example)"
+                >
+                  {{ example }}
+                </button>
+              </div>
+            </template>
+            <!-- 마무리 선택 UI — 답변 후 AI 답장이 올 때마다 답장과 함께 노출(showCompletionOffer).
+                 마치기는 추가 확인 없이 바로 finish(). 계속하기를 누르거나 답변을 보내면 사라진다 -->
+            <div v-if="m.id === completionOffer?.messageId" class="flex gap-[8px] mt-[10px]">
+              <UiButton variant="chip" size="sm" :disabled="isFinishing" @click="onOfferContinue">
+                {{ completionOffer.insufficient ? '계속 작성하기' : '계속하기' }}
+              </UiButton>
+              <UiButton size="sm" :loading="isFinishing" @click="onFinishConfirm">
+                {{ completionOffer.insufficient ? '이대로 마치기' : '마치기' }}
+              </UiButton>
+            </div>
           </div>
         </div>
         <div class="didit_message_wrapper self-start" v-else-if="m.role === 'generating'">
           <div class="didit_profile flex flex-col">
             <img src="/icons/icon_chat_didit.png" alt="디딧" class="w-6 h-6" />
-            <div class="didit_message_box max-w-[350px] mt-[10px] px-[12px] py-[14px] bg-grey-3 inline-flex items-center gap-[6px] text-[14px] rounded-[24px] self-start text-grey-7">
-              <!-- 텍스트 없는 자리표시자(답변 후 다음 질문 대기 등)는 로티만, 텍스트가 있으면(결과 정리 등) 함께 노출 -->
-              <DotLottieVue v-if="!m.text" class="w-5 h-5 shrink-0" autoplay loop :src="GENERATING_LOTTIE" />
-              <span v-else>{{ m.text }}</span>
+            <!-- 텍스트 없는 자리표시자(답변 후 다음 질문 대기 등)는 로티만 담은 알약형 말풍선 -->
+            <!-- 로티 캔버스는 정사각형이고 점 3개가 가운데 띠에만 있어, 캔버스를 크게 두고 말풍선 밖으로 넘치는 여백은 잘라낸다 -->
+            <div v-if="!m.text" class="didit_message_box mt-[10px] w-[60px] h-[36px] bg-grey-3 flex items-center justify-center overflow-hidden rounded-full self-start">
+              <DotLottieVue class="w-[68px] h-[68px] shrink-0" autoplay loop :src="GENERATING_LOTTIE" />
+            </div>
+            <!-- 텍스트가 있는 자리표시자(결과 정리 등) -->
+            <div v-else class="didit_message_box max-w-[350px] mt-[10px] px-[12px] py-[14px] bg-grey-3 inline-flex items-center gap-[6px] text-[14px] rounded-[24px] self-start text-grey-7">
+              <span>{{ m.text }}</span>
             </div>
           </div>
         </div>
@@ -66,12 +94,13 @@
     </div>
 
     <!-- 입력 영역 -->
-    <RetroTextarea :disabled="isBusy" :retrospectiveId="retrospectiveId" @send="onSend" @accessMic="accessMic" />
+    <RetroTextarea ref="textareaRef" :disabled="isBusy" :retrospectiveId="retrospectiveId" @send="onSend" @accessMic="accessMic" />
   </div>
 </template>
 
 <script setup lang="ts">
-import type { PluginListenerHandle } from '@capacitor/core'
+import { Capacitor, type PluginListenerHandle } from '@capacitor/core'
+import { Keyboard } from '@capacitor/keyboard'
 import { App } from '@capacitor/app'
 import { NativeSettings, AndroidSettings, IOSSettings } from 'capacitor-native-settings'
 import { DotLottieVue } from '@lottiefiles/dotlottie-vue'
@@ -81,9 +110,11 @@ import RetroTextarea from '~/components/layout/RetroTextarea.vue'
 import RetroUserMessage from '~/components/layout/RetroUserMessage.vue'
 import RetrospectVoiceRecorder from '~/components/RetrospectVoiceRecorder.vue'
 import UiPopup from '~/components/ui/UiPopup.vue'
+import UiButton from '~/components/ui/UiButton.vue'
 import { isServerError } from '~/utils/api-error'
-import type { RetrospectiveResultStash } from '~/types/api'
+import type { AnswerGuide } from '~/types/api'
 import type { SentAttachment } from '~/utils/attachment'
+import type { ConversationCache } from '~/composables/useRetrospect'
 
 definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
@@ -99,6 +130,8 @@ export type ChatMessage =
       skippable?: boolean
       typedMain: string // 타이핑으로 점차 노출되는 본문
       showSub: boolean // 본문 타이핑 완료 후 가이드/스킵 노출
+      answerGuide?: AnswerGuide // 답변 예시 안내 (없으면 예시 UI 미표시)
+      showExamples: boolean // 답변 예시 펼침 여부 — INLINE은 처음부터 true, ON_DEMAND는 '답변 예시 보기' 클릭 시 true
     }
   | { id: string; role: 'generating'; text?: string }
   | { id: string; role: 'user'; text: string; attachments?: SentAttachment[] }
@@ -122,16 +155,15 @@ const isBackModal = ref(false) // 뒤로가기 확인 모달 여부
 const isBackLeaving = ref(false) // 뒤로가기 확인('나가기') 처리 중(finish 호출) — 버튼 잠금
 const isFinishModal = ref(false) // 회고 마치기 확인 모달 여부
 const isFinishing = ref(false) // finish() 처리 중 — 결과 화면으로 넘어가는 라우팅 전환까지는 풀지 않는다
-const isCheckingReady = ref(false) // 회고 마치기 클릭 시 readyToComplete 조회 중 — 버튼 잠금
-const isNotReadyModal = ref(false) // 내용 부족 안내 모달 여부
+// 계속하기/마치기 선택 UI를 붙일 didit 메시지 — insufficient면 내용 부족 상태라 '계속 작성하기 / 이대로 마치기'로 표시
+const completionOffer = ref<{ messageId: string; insufficient: boolean } | null>(null)
 const micRequesting = ref(false) // 권한 요청 진행 중 — '허용' 버튼 잠금
 const isRecorderOpen = ref(false) // 음성 레코더 표시 여부
 // 음성 레코더가 변환한 텍스트를 입력창(RetroTextarea)으로 넘기는 초안 채널
 const voiceTranscript = useState<string>('retrospect:voice-transcript', () => '')
 
-// 회고 마치기 성공 시 result.vue로 넘길 값 — completingId로 대상 회고를, resultStash로 finish() 결과를 전달한다
+// 회고 마치기 시 result.vue로 넘길 대상 회고 id — 결과 생성(finish)은 result.vue의 로딩 화면에서 진행한다
 const completingId = useState<string>('retrospect:completing-id')
-const resultStash = useState<RetrospectiveResultStash | null>('retrospect:result', () => null)
 
 
 // 대화 스크롤 영역 — 내용이 늘어날 때(새 메시지, 타이핑 애니메이션 등) 자동으로 바닥까지 따라 내려간다
@@ -149,13 +181,39 @@ const startedAt = ref(0)
 const { profile, load: loadProfile } = useProfile()
 const nickname = computed(() => profile.value?.nickname ?? '')
 
+// 입력창 — AI 응답 출력이 끝나거나 종료 선택 UI가 닫히면 바로 작성할 수 있게 포커스를 돌려준다
+const textareaRef = ref<InstanceType<typeof RetroTextarea> | null>(null)
+
+// 모달·레코더가 떠 있거나 회고를 마치는 중이면 포커스하지 않는다(모달 위로 키보드가 올라오는 것 방지)
+function focusInput() {
+  if (isFinishModal.value || isBackModal.value || isAccessMicModal.value || isRecorderOpen.value || isFinishing.value) return
+  nextTick(() => textareaRef.value?.focus())
+}
+
+// AI 메시지 타이핑(출력)이 끝났을 때 — 입력 잠금을 풀고 입력창에 자동 포커스
+function onDiditTyped() {
+  isBusy.value = false
+  focusInput()
+}
+
 // 타이핑 애니메이션 공용 로직 (buildDiditMessage: AI 메시지 → 채팅 말풍선 변환 / typeDiditMessage: 한 글자씩 타이핑)
 const { typeDiditMessage, clearTypingTimers } = useDiditTyping()
 
-// 진행 중이던 회고 이어가기 — 대화 조회(getConversation)로 상태를 복구해 이어서 진행할 수 있으면 true.
-// AI 메시지만 내려오고 사용자 답변 텍스트는 포함되지 않아, 전체 대화 재구성은 불가능하고
-// '가장 마지막 질문' 복구만 가능하다.
+// AI 메시지를 화면에 띄울 때 함께 호출 — 재진입 시 대화 조회 없이 바로 복구할 수 있게 마지막 AI 메시지를 캐시한다
+function cacheLastDiditMessage(message: ConversationCache['message'], readyToComplete: boolean, isReply: boolean) {
+  saveConversationCache({ retrospectiveId: retrospectiveId.value, message, readyToComplete, isReply })
+}
+
+// 진행 중이던 회고 이어가기 — 이어서 진행할 수 있으면 true.
+// 캐시된 마지막 AI 메시지가 있으면 대화 조회 요청 없이 바로 복구하고, 없을 때만(답변 후 응답을 못 받고 나간 경우 등)
+// 대화 조회(getConversation)로 복구한다. 조회는 AI 메시지만 내려오고 사용자 답변 텍스트는 포함되지 않아,
+// 전체 대화 재구성은 불가능하고 '가장 마지막 질문' 복구만 가능하다.
 async function resumeActiveRetrospective(id: string): Promise<boolean> {
+  const cached = readConversationCache(id)
+  if (cached) {
+    restoreDiditMessage(id, cached.message, cached.readyToComplete, cached.isReply)
+    return true
+  }
   try {
     const conversation = await retro.getConversation(id)
     if (conversation.conversationStatus !== 'ACTIVE') return false
@@ -163,17 +221,25 @@ async function resumeActiveRetrospective(id: string): Promise<boolean> {
     const lastMessage = conversation.messages.at(-1)
     if (!lastMessage) return false
 
-    retrospectiveId.value = id
-    const diditMessage = buildDiditMessage(lastMessage, conversation.readyToComplete)
-    // 이미 노출됐던 메시지 — 재진입 시에는 타이핑 애니메이션 없이 바로 전체 노출 (sub이 없으면 노출 안 함)
-    diditMessage.typedMain = diditMessage.main
-    diditMessage.showSub = !!diditMessage.sub
-    messages.value = [diditMessage]
+    // 첫 질문이 아니라 답변 후 받은 AI 답장이었다면 선택 UI도 함께 복구
+    restoreDiditMessage(id, lastMessage, conversation.readyToComplete, conversation.messages.length > 1)
+    cacheLastDiditMessage(lastMessage, conversation.readyToComplete, conversation.messages.length > 1)
     return true
   } catch (err) {
     console.log(err)
     return false
   }
+}
+
+// 이미 노출됐던 메시지 복구 — 재진입 시에는 타이핑 애니메이션 없이 바로 전체 노출 (sub이 없으면 노출 안 함)
+function restoreDiditMessage(id: string, message: ConversationCache['message'], readyToComplete: boolean, isReply: boolean) {
+  retrospectiveId.value = id
+  const diditMessage = buildDiditMessage(message, readyToComplete)
+  diditMessage.typedMain = diditMessage.main
+  diditMessage.showSub = !!diditMessage.sub
+  messages.value = [diditMessage]
+  if (isReply) showCompletionOffer(diditMessage.id, readyToComplete)
+  focusInput()
 }
 
 // 처음 start.vue 페이지에 접근 시 실행할 함수 — 저장된 진행 중 회고 id가 있으면 새로 만들지 않고 이어서 진행
@@ -182,7 +248,7 @@ async function initialApplication() {
     const savedId = localStorage.getItem(ACTIVE_RETROSPECTIVE_KEY)
     if (savedId) {
       if (await resumeActiveRetrospective(savedId)) return
-      localStorage.removeItem(ACTIVE_RETROSPECTIVE_KEY) // 유효하지 않은 id — 정리 후 새로 시작
+      clearActiveRetrospective() // 유효하지 않은 id — 정리 후 새로 시작
     }
 
     const first_response = await retro.start()
@@ -191,8 +257,9 @@ async function initialApplication() {
     localStorage.setItem(ACTIVE_RETROSPECTIVE_KEY, first_response.retrospectiveId)
     const diditMessage = buildDiditMessage(first_response.initialMessage)
     messages.value = [diditMessage]
+    cacheLastDiditMessage(first_response.initialMessage, first_response.readyToComplete, false)
     isBusy.value = true
-    typeDiditMessage(diditMessage, 50, () => { isBusy.value = false })
+    typeDiditMessage(diditMessage, 50, onDiditTyped)
   } catch(err) {
     console.log(err)
     if (isServerError(err)) show('알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
@@ -224,7 +291,7 @@ async function onBackConfirm() {
   if (retrospectiveId.value) {
     try {
       await retro.exit(retrospectiveId.value)
-      localStorage.removeItem(ACTIVE_RETROSPECTIVE_KEY)
+      clearActiveRetrospective()
     } catch (err) {
       console.log(err)
     }
@@ -237,60 +304,44 @@ async function onBackConfirm() {
 // 뒤로가기 취소 — 모달만 닫고 계속 진행
 function onBackCancel() {
   isBackModal.value = false
+  focusInput()
 }
 
-// 헤더 '회고 마치기' — 대화 조회로 서버의 readyToComplete를 먼저 확인한다.
-// (로컬 skippable 신호는 마무리 시점에도 false로 남는 경우가 있어 신뢰하지 않음)
-async function onFinishClick() {
-  if (isBusy.value || isFinishing.value || isCheckingReady.value || !retrospectiveId.value) return
-  isCheckingReady.value = true
-  try {
-    const conversation = await retro.getConversation(retrospectiveId.value)
-    if (!conversation.readyToComplete) {
-      isNotReadyModal.value = true
-      return
-    }
-    isFinishModal.value = true
-  } catch (err) {
-    console.log(err)
-    if (isServerError(err)) show('알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
-    else show('회고 상태를 확인하지 못했어요. 잠시 후 다시 시도해주세요.')
-  } finally {
-    isCheckingReady.value = false
-  }
+// 헤더 '회고 마치기' — readyToComplete와 관계없이 종료를 차단하지 않고 확인 모달을 띄운다.
+// (내용이 부족할 때의 '계속 작성하기 / 이대로 마치기' 선택은 AI 응답 아래에 자동으로 붙는다 — showCompletionOffer)
+function onFinishClick() {
+  if (isBusy.value || isFinishing.value || !retrospectiveId.value) return
+  isFinishModal.value = true
 }
 
-// 회고 마치기 확인 — 대화를 종료(finish)한다. v2는 종료와 동시에 확인된 대화 내용을 구조화해
-// 결과를 생성하므로, 응답의 title/result를 그대로 결과 화면(result.vue)에 넘긴다.
-async function onFinishConfirm() {
+// 회고 마치기 확인 — 바로 결과 화면(result.vue)으로 넘어가고, 대화 종료·결과 생성(finish)은 그 화면의
+// 자동 저장 로딩(최소 1초) 동안 진행한다. 생성이 끝나면 result.vue가 결과를 보여준다.
+// (생성에 실패하면 result.vue의 에러 화면에서 재시도 — 재개용 id는 생성 성공 시에만 지워 대화로 돌아와 이어갈 수도 있다)
+function onFinishConfirm() {
   if (isFinishing.value || !retrospectiveId.value) return
+  // 라우팅 전환 중 버튼이 다시 눌려 중복 이동하지 않도록 isFinishing은 풀지 않는다
   isFinishing.value = true
-  try {
-    const res = await retro.finish(retrospectiveId.value)
-    if (!res.result || !res.title) {
-      show('회고 결과를 생성하지 못했어요. 잠시 후 다시 시도해주세요.')
-      isFinishing.value = false
-      return
-    }
-    resultStash.value = { title: res.title, result: res.result }
-    completingId.value = retrospectiveId.value
-    localStorage.removeItem(ACTIVE_RETROSPECTIVE_KEY) // 대화가 끝났으니 재개 대상에서 제외
-    navigateTo('/retrospect/result')
-    // 결과 화면으로 넘어가는 라우팅 전환 중 확인 버튼이 다시 눌려 finish가 중복 호출되는 것을
-    // 막기 위해 성공 케이스에서는 isFinishing을 여기서 풀지 않는다.
-  } catch (err) {
-    isFinishing.value = false
-    console.log(err)
-    if (isServerError(err)) show('알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
-    else show('회고를 마치지 못했어요. 잠시 후 다시 시도해주세요.')
-  } finally {
-    isFinishModal.value = false
-  }
+  isFinishModal.value = false
+  completingId.value = retrospectiveId.value
+  navigateTo('/retrospect/result')
 }
 
 // 회고 마치기 취소 — 모달만 닫고 계속 진행
 function onFinishCancel() {
   isFinishModal.value = false
+  focusInput()
+}
+
+// 선택 UI의 '계속하기 / 계속 작성하기' — 선택 UI만 닫고 입력을 이어간다
+function onOfferContinue() {
+  completionOffer.value = null
+  focusInput()
+}
+
+// 답변 후 도착한 AI 답장 아래에 계속하기/마치기 선택 UI를 답장과 동시에 붙인다(action과 무관하게 모든 답장).
+// readyToComplete=false(내용 부족)면 '계속 작성하기 / 이대로 마치기'로 표시 — 부족해도 종료는 차단하지 않는다
+function showCompletionOffer(messageId: string, readyToComplete: boolean) {
+  completionOffer.value = { messageId, insufficient: !readyToComplete }
 }
 
 // 답변 제출 — 사용자 메시지를 먼저 반영하고, AI 응답을 기다리는 동안 generating 자리표시자를 보여준 뒤
@@ -298,6 +349,8 @@ function onFinishCancel() {
 async function onSend(content: string, attachments: SentAttachment[] = []) {
   if (!retrospectiveId.value || isBusy.value) return
   if (!content.trim() && attachments.length === 0) return // 텍스트도 첨부도 없으면 보낼 게 없음
+  clearConversationCache() // 답변을 보내면 서버 대화가 바뀌므로 캐시를 지운다 — 응답 전에 나가면 재진입 시 서버에서 조회
+  completionOffer.value = null // 선택 없이 답변을 이어 쓰면 '계속하기'로 간주해 선택 UI를 닫는다
 
   // reactive()로 감싸지 않으면 이후 onDeleteAttachment에서 attachments를 mutate해도 화면이 안 갱신된다
   const userMessage = reactive<ChatMessage>({ id: crypto.randomUUID(), role: 'user', text: content, attachments })
@@ -329,7 +382,9 @@ async function onSend(content: string, attachments: SentAttachment[] = []) {
 
     const diditMessage = buildDiditMessage(response.assistantMessage, response.readyToComplete)
     messages.value = messages.value.map((m) => (m.id === generatingId ? diditMessage : m))
-    typeDiditMessage(diditMessage, 50, () => { isBusy.value = false })
+    cacheLastDiditMessage(response.assistantMessage, response.readyToComplete, true)
+    showCompletionOffer(diditMessage.id, response.readyToComplete)
+    typeDiditMessage(diditMessage, 50, onDiditTyped)
   } catch (err) {
     messages.value = messages.value.filter((m) => m.id !== generatingId)
     isBusy.value = false
@@ -361,7 +416,9 @@ async function pollAnalysisTurn(turnId: string, generatingId: string, attempt = 
       }
       const diditMessage = buildDiditMessage(lastMessage, conversation.readyToComplete)
       messages.value = messages.value.map((m) => (m.id === generatingId ? diditMessage : m))
-      typeDiditMessage(diditMessage, 50, () => { isBusy.value = false })
+      cacheLastDiditMessage(lastMessage, conversation.readyToComplete, true)
+      showCompletionOffer(diditMessage.id, conversation.readyToComplete)
+      typeDiditMessage(diditMessage, 50, onDiditTyped)
       return
     }
 
@@ -497,6 +554,14 @@ onMounted(async () => {
     backButtonListener = await App.addListener('backButton', () => {
       onBack()
     })
+
+    // iOS는 리사이즈 모드 none이라 키보드 높이만큼 직접 화면을 줄여야 헤더·말풍선이 위로 밀려나지 않는다
+    if (Capacitor.getPlatform() === 'ios') {
+      kbShow = await Keyboard.addListener('keyboardWillShow', info => applyKeyboardHeight(info.keyboardHeight))
+      kbHide = await Keyboard.addListener('keyboardWillHide', () => { keyboardHeight.value = 0; keyboardOpen.value = false })
+    }
+    // 키보드가 다 올라온 뒤(레이아웃 축소 완료) 채팅을 맨 아래로 → 마지막 질문이 키보드에 가려지지 않음 (iOS·AOS 공통)
+    kbDidShow = await Keyboard.addListener('keyboardDidShow', () => scrollToBottom())
   }
 })
 
@@ -505,6 +570,9 @@ onUnmounted(() => {
   clearTimeout(pollTimer) // 첨부 분석 폴링 중 화면을 벗어나면 예약된 다음 조회를 멈춘다
   scrollObserver?.disconnect()
   backButtonListener?.remove()
+  kbShow?.remove()
+  kbDidShow?.remove()
+  kbHide?.remove()
 })
 
 </script>

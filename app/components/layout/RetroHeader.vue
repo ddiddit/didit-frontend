@@ -1,5 +1,5 @@
 ﻿<template>
-    <div class="retro_header px-[20px] flex justify-between items-center h-[50px]">
+    <div class="retro_header shrink-0 px-[20px] flex justify-between items-center h-[50px]">
         <button @click="onBack" :disabled="isBusy" :class="isBusy ? 'disabled:opacity-50' : ''">
             <img src="/icons/back.svg" alt="뒤로" class="w-5 h-5" />
         </button>

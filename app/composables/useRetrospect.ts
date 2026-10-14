@@ -9,11 +9,13 @@ import type {
   ConversationResponse,
   FinishRetrospectiveResponse,
   UploadURL,
+  AnswerGuide,
   UploadUrlRequest,
   AttachmentComplete,
   AttachmentDownloadUrl,
 } from '~/types/api'
 import { toUploadableAudio } from '~/utils/audio'
+import { CACHE_KEYS, removePersistedCache } from '~/utils/persisted-cache'
 
 // 회고 진행 플로우 API 레이어.
 // 대부분 mutation 성격이라 캐싱하지 않고, AI 생성(완료/심화질문/STT)은
@@ -27,8 +29,54 @@ const AI_TIMEOUT = 65_000
 // 만들지 않고, 이 id로 대화 조회부터 시도해 이어서 진행하기 위함.
 export const ACTIVE_RETROSPECTIVE_KEY = 'activeRetrospectiveId'
 
+// 진행 중 회고의 '마지막 AI 메시지' 캐시 — 재진입 때마다 대화 조회(/conversation)를 다시 요청하지 않고 바로 복구하기 위함.
+// 대화는 이 앱에서 보낸 답변으로만 바뀌므로, AI 메시지를 화면에 띄울 때 저장하고 답변을 보내는 순간 지운다.
+// (답변 후 응답을 못 받고 나간 경우엔 캐시가 없어 서버에서 새로 조회 → 놓친 AI 응답도 복구된다)
+const ACTIVE_CONVERSATION_CACHE_KEY = 'activeConversationCache'
+
+export interface ConversationCache {
+  retrospectiveId: string
+  message: { id: string; title?: string | null; body?: string | null; content?: string | null; answerGuide?: AnswerGuide | null }
+  readyToComplete: boolean
+  isReply: boolean // 첫 질문이 아니라 답변 후 받은 AI 답장인지 — 계속하기/마치기 선택 UI 복구 여부
+}
+
+export function saveConversationCache(cache: ConversationCache) {
+  try {
+    localStorage.setItem(ACTIVE_CONVERSATION_CACHE_KEY, JSON.stringify(cache))
+  } catch {
+    // 저장소 접근 불가 — 다음 진입 때 서버 조회로 복구
+  }
+}
+
+export function readConversationCache(retrospectiveId: string): ConversationCache | null {
+  try {
+    const raw = localStorage.getItem(ACTIVE_CONVERSATION_CACHE_KEY)
+    const cache = raw ? (JSON.parse(raw) as ConversationCache) : null
+    return cache?.retrospectiveId === retrospectiveId ? cache : null
+  } catch {
+    return null
+  }
+}
+
+export function clearConversationCache() {
+  localStorage.removeItem(ACTIVE_CONVERSATION_CACHE_KEY)
+}
+
+// 진행 중 회고 정리 — 재개용 id와 대화 캐시를 함께 지운다(대화 종료·나가기·유효하지 않은 id)
+export function clearActiveRetrospective() {
+  localStorage.removeItem(ACTIVE_RETROSPECTIVE_KEY)
+  clearConversationCache()
+}
+
 export function useRetrospect() {
   const { $api } = useNuxtApp()
+
+  // 홈(최근 회고·오늘 횟수·미션)·프로필(레벨·배지)에 영향을 주는 작업 뒤 호출 — 캐시를 지워 다음 진입 때 새로 받게 한다
+  function invalidateDerivedCaches({ profile = false } = {}) {
+    removePersistedCache(CACHE_KEYS.home)
+    if (profile) invalidateProfileCache()
+  }
 
   // 회고 시작 → 첫 질문 반환
   async function start(): Promise<StartRetrospectiveResponse> {
@@ -70,6 +118,7 @@ export function useRetrospect() {
     const res = await $api.post<ApiResponse<FinishRetrospectiveResponse>>(
       `/api/v2/retrospectives/${id}/finish`,
     )
+    invalidateDerivedCaches({ profile: true })
     return res.data.data
   }
 
@@ -128,6 +177,7 @@ export function useRetrospect() {
       undefined,
       { timeout: AI_TIMEOUT },
     )
+    invalidateDerivedCaches({ profile: true })
     return res.data.data
   }
 
@@ -143,33 +193,40 @@ export function useRetrospect() {
       `/api/v1/retrospectives/${id}/save`,
       { title },
     )
+    invalidateDerivedCaches({ profile: true })
     return res.data.data
   }
 
   // 회고 삭제 (soft delete)
   async function remove(id: string): Promise<void> {
     await $api.delete(`/api/v1/retrospectives/${id}`)
+    invalidateDerivedCaches({ profile: true })
   }
 
   // 회고 제목 수정 (저장된 회고, 최대 25자)
   async function updateTitle(id: string, title: string): Promise<void> {
     await $api.patch(`/api/v1/retrospectives/${id}/title`, { title })
+    invalidateDerivedCaches()
   }
 
   // 프로젝트 지정 / 해제
   async function registerProject(id: string, projectId: string): Promise<void> {
     await $api.patch(`/api/v1/retrospectives/register-project/${id}`, null, { params: { projectId } })
+    invalidateDerivedCaches()
   }
   async function detachProject(id: string): Promise<void> {
     await $api.delete(`/api/v1/retrospectives/${id}/project`)
+    invalidateDerivedCaches()
   }
 
   // 태그 연결 / 해제 (태그는 미리 생성된 tagId 필요)
   async function addTag(id: string, tagId: string): Promise<void> {
     await $api.post(`/api/v1/retrospectives/${id}/tags`, { tagId })
+    invalidateDerivedCaches()
   }
   async function removeTag(id: string, tagId: string): Promise<void> {
     await $api.delete(`/api/v1/retrospectives/${id}/tags/${tagId}`)
+    invalidateDerivedCaches()
   }
 
   // 첨부파일 업로드 URL 발급 — 파일 자체는 이 응답의 uploadUrl로 별도 PUT.

@@ -181,8 +181,9 @@ export function usePushNotifications() {
       if (typeof Notification === 'undefined' || Notification.permission === 'denied') return
     }
     try {
-      const res = await $api.get<{ data: { enabled: boolean } }>('/api/v1/notification-settings')
-      if (res.data.data.enabled) await register({ silent: true })
+      // 앱 시작·새로고침마다 재요청하지 않도록 캐시된 알림 설정을 우선 사용
+      const settings = await useNotificationSettings().load()
+      if (settings.enabled) await register({ silent: true })
     } catch {
       // 비로그인/조회 실패 시 무시
     }

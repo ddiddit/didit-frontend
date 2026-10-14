@@ -133,7 +133,7 @@ import { levelTheme } from '~/utils/levelTheme'
 
 definePageMeta({ middleware: 'auth', layout: 'default' })
 
-const { profile, reload: reloadProfile } = useProfile()
+const { profile, ensure: ensureProfile } = useProfile()
 const { track } = useAmplitude()
 const { version } = useAppVersion()
 const { loadError, slowLoading, run } = useLoadState()
@@ -161,7 +161,7 @@ const acquiredBadges = computed(() =>
 
 async function reload() {
   await run(async () => {
-    await reloadProfile()
+    await ensureProfile() // 캐시가 유효하면 재요청 없이 바로 표시
   })
 }
 

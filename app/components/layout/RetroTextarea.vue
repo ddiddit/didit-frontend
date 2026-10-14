@@ -1,5 +1,5 @@
 <template>
-    <div class="flex flex-col gap-[8px] mx-[16px]">
+    <div class="shrink-0 flex flex-col gap-[8px] mx-[16px]">
         <!-- 첨부파일 카드 — 이미지는 썸네일 자체, 그 외엔 형식 배지+파일명. 업로드 중엔 스피너 -->
         <div v-if="attachments.length" class="flex flex-wrap gap-[8px]">
             <div
@@ -44,16 +44,19 @@
             </div>
         </div>
 
-        <div class="retro__input p-[10px] box-border border border-grey-4 bg-grey-4 rounded-[24px] flex" :class="[isWrapped ? 'items-end' : 'items-center', disabled ? 'opacity-50' : '']">
-            <button class="w-[24px] h-[24px] flex justify-center items-center shrink-0" :class="isWrapped ? 'mb-[2px]' : ''" :disabled="disabled || !retrospectiveId || attachments.length >= MAX_ATTACHMENT_COUNT" @click="fileInputRef?.click()">
+        <div class="retro__input p-[10px] box-border border border-grey-4 bg-grey-4 rounded-[24px] flex" :class="isWrapped ? 'items-end' : 'items-center'">
+            <button class="w-[24px] h-[24px] flex justify-center items-center shrink-0 disabled:opacity-50" :class="isWrapped ? 'mb-[2px]' : ''" :disabled="disabled || !retrospectiveId || attachments.length >= MAX_ATTACHMENT_COUNT" @click="fileInputRef?.click()">
                 <img src="/icons/attach_file.png" alt="첨부파일" />
             </button>
             <input ref="fileInputRef" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.txt,.md" class="hidden" @change="handleFileChange" />
-            <textarea @input="handleTextareaChange" @keydown="handleKeydown" ref="textRef" :value="textareaValue" :disabled="disabled" rows="1" class="resize-none outline-none bg-transparent flex-1 mx-[6px]" />
-            <button v-if="hasText" class="shrink-0" :class="isWrapped ? 'mb-[2px]' : ''" :disabled="disabled" @click="submitAnswer">
+            <!-- textarea는 disabled로 잠그지 않는다 — 잠그면 포커스·모바일 키보드가 내려가 전송할 때마다 다시 눌러야 하므로,
+                 AI 응답 대기 중에도 미리 작성은 허용하고 전송·첨부·마이크만 막는다 -->
+            <textarea @input="handleTextareaChange" @keydown="handleKeydown" ref="textRef" :value="textareaValue" rows="1" class="resize-none outline-none bg-transparent flex-1 mx-[6px]" />
+            <!-- mousedown 기본 동작을 막아 버튼을 눌러도 포커스가 textarea에 남게 한다(모바일 키보드 유지) -->
+            <button v-if="hasText" class="shrink-0 disabled:opacity-50" :class="isWrapped ? 'mb-[2px]' : ''" :disabled="disabled" @mousedown.prevent @click="submitAnswer">
                 <img src="/icons/keyboard.svg" alt="전송" class="w-[28px] h-[28px]" />
             </button>
-            <button v-else class="shrink-0" :class="isWrapped ? 'mb-[2px]' : ''" :disabled="disabled" @click="emit('accessMic')">
+            <button v-else class="shrink-0 disabled:opacity-50" :class="isWrapped ? 'mb-[2px]' : ''" :disabled="disabled" @click="emit('accessMic')">
                 <img src="/icons/voice.svg" alt="마이크접근" />
             </button>
         </div>
@@ -110,7 +113,7 @@
   const retro = useRetrospect()
   const { show } = useToast()
 
-  // disabled: AI 메시지 타이핑 중 등 — 첨부·마이크·전송을 모두 잠근다
+  // disabled: AI 메시지 타이핑 중 등 — 첨부·마이크·전송을 잠근다 (입력 자체는 계속 가능)
   const props = defineProps<{ disabled?: boolean; retrospectiveId: string }>()
 
   // Textarea Value
@@ -156,14 +159,25 @@
     // (사용자가 다시 선택해서 revoke하지 않고 넘어간 것은 끝까지 살아있다 — 세션 내 몇 개 정도는 무해)
     attachments.value = []
     resetTextarea()
+    focus() // 전송 후 다시 누르지 않아도 바로 이어서 작성할 수 있게
   }
 
   // Enter로 전송 (Shift+Enter는 줄바꿈, 한글 조합 확정 Enter는 무시)
+  // 전송이 잠긴 동안(disabled)에도 Enter가 줄바꿈으로 들어가지 않도록 기본 동작은 막고, 전송만 건너뛴다
   function handleKeydown(e: KeyboardEvent) {
-    if (props.disabled || e.key !== 'Enter' || e.shiftKey || e.isComposing) return
+    if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return
     e.preventDefault() // 기본 동작(줄바꿈) 삽입을 막아야 하므로 동기적으로 먼저 호출
     submitAnswer()
   }
+
+  // 부모(start.vue)가 AI 응답 출력 완료·종료 선택 UI 닫힘 등에서 호출 — 커서를 입력 끝으로 두고 포커스
+  function focus() {
+    const el = textRef.value
+    if (!el) return
+    el.focus({ preventScroll: true })
+    el.setSelectionRange(el.value.length, el.value.length)
+  }
+  defineExpose({ focus })
 
   // 전송 후 입력창을 처음 상태(한 줄)로 되돌린다
   function resetTextarea() {

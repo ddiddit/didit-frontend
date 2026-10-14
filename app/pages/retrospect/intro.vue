@@ -1,4 +1,6 @@
 ﻿<template>
+  <!-- 회고 화면 공통 배경(bg-retro-fade)을 깔기 위한 단일 루트 -->
+  <div class="h-full bg-retro-fade">
 
     <!-- 뒤로가기 팝업 -->
     <UiPopup :modelValue="isPopupOpen" :title="'뒤로가기'" :description="'뒤로가기 하시겠습니까?'" :onConfirm="confirmBack" :onCancel="cancelBack" />
@@ -46,13 +48,14 @@
                     </SwiperSlide>
                 </Swiper>
             </div>
-            <div class="button_wrapper">
+            <div class="button_wrapper absolute left-0 right-0 mx-auto" style="bottom: calc(24px + env(safe-area-inset-bottom, 0px))">
                 <button v-if="stepSlider != 3" class="w-[350px] mx-auto block bg-green py-[18px] rounded-[12px] text-grey-13 font-bold disabled:opacity-50" :disabled="isBusy" @click="goNextSlide">다음</button>
                 <button v-else class="w-[350px] mx-auto block bg-green py-[18px] rounded-[12px] text-grey-13 font-bold disabled:opacity-50" :disabled="isBusy" @click="startRetrospect">첫 회고 시작하기</button>
             </div>
         </template>
 
     </div>
+  </div>
 </template>
 <style scoped>
     .swiper {

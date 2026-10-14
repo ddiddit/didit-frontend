@@ -72,6 +72,9 @@ AI 기반 회고(retrospective) 앱의 프론트엔드.
 - vue-query로 캐싱·로딩 상태 관리
 - 토큰 자동 갱신 인터셉터 포함 (401 → refresh → retry)
 - 인증 토큰은 localStorage (`accessToken`, `refreshToken`)
+- **조회 응답 영구 캐시** (`app/utils/persisted-cache.ts`, 키 접두사 `cache:`): 홈(`/api/v2/home`, 5분)·프로필(`useProfile`, 10분)·알림 설정(`useNotificationSettings`, 1시간)은 새로고침·재진입 때 TTL 안이면 요청하지 않는다
+  - 데이터를 바꾸는 작업 뒤엔 반드시 캐시 무효화 — 회고 완료·저장·삭제·제목/프로젝트/태그 변경은 `useRetrospect` 안에서 자동 처리, 그 외 새 변경 API를 추가하면 `removePersistedCache(CACHE_KEYS.*)`/`invalidateProfileCache()` 호출
+  - 로그인·로그아웃 시 `clearPersistedCaches()`로 전부 삭제(계정 간 데이터 혼입 방지)
 
 ### 인증
 
@@ -86,17 +89,19 @@ AI 기반 회고(retrospective) 앱의 프론트엔드.
   - `POST /api/v2/retrospectives/{id}/messages` — 답변 제출. `clientMessageId`는 **요청마다 고유해야 하는 멱등키**(`crypto.randomUUID()`) — 회고 id처럼 고정값을 재사용하면 두 번째 제출부터 409 Conflict
   - `GET /api/v2/retrospectives/{id}/conversation` — 대화 조회. **AI 메시지만** 내려주고 사용자가 입력한 답변 텍스트는 포함하지 않음 → 전체 대화 재구성은 불가능하고 "가장 마지막 질문" 복구만 가능
   - `POST /api/v2/retrospectives/{id}/finish` — 대화 종료. **종료와 동시에 결과도 생성**한다(V1 `complete()`와 달리 분리되어 있지 않음). 성공 시 응답의 `resultGenerationStatus`가 `GENERATED`이고 `title`/`result`(요약·강점·개선점·진행 과정·배운 점·인사이트·다음 행동 제안, 타입 `RetrospectiveResultV2`)가 함께 내려옴. 이미 완료된 회고에 다시 요청해도 저장된 결과를 그대로 반환(멱등)하고, 생성 실패 상태였다면 재요청으로 재시도됨
-- **진행 중 회고 재개**: `useRetrospect.ts`의 `ACTIVE_RETROSPECTIVE_KEY`(localStorage)에 회고 id를 보관 — 답변 도중 화면을 나갔다 들어와도 `start()`로 새 회고를 만들지 않고 `getConversation()`으로 이어서 진행. 대화 종료(`finish()`)·완료(`complete()`) 시 이 키를 제거
+- **진행 중 회고 재개**: `useRetrospect.ts`의 `ACTIVE_RETROSPECTIVE_KEY`(localStorage)에 회고 id를 보관 — 답변 도중 화면을 나갔다 들어와도 `start()`로 새 회고를 만들지 않고 `getConversation()`으로 이어서 진행. 대화 종료(`finish()`)·완료(`complete()`) 시 이 키를 제거(`clearActiveRetrospective()`)
+  - 마지막 AI 메시지는 `saveConversationCache()`로 localStorage에 캐시 → 재진입 시 캐시가 있으면 **대화 조회 요청 없이** 바로 복구. 답변 전송 순간 캐시를 지우므로, 응답을 못 받고 나간 경우에만 `getConversation()`으로 조회
   - 앱 백그라운드→포그라운드 복귀 시에도(`@capacitor/app`의 `appStateChange`) 대화 상태를 동기화해, 놓친 AI 응답을 복구
   - 단, WebView 자체가 완전히 종료된 뒤 재실행되면 `no-direct-entry` 미들웨어가 먼저 `/home`으로 돌려보내 재개 불가 (정상 네비게이션·백그라운드 유지 상태에서만 재개됨)
 - **타이핑 애니메이션 공용 로직**: `app/composables/useDiditTyping.ts`의 `buildDiditMessage()`(AI 메시지 → 채팅 말풍선 변환) / `typeDiditMessage()`(한 글자씩 타이핑)를 첫 질문·다음 질문·재개 복구 등 여러 곳에서 재사용. 새 위치에서 AI 메시지를 화면에 추가할 땐 이 두 함수를 그대로 쓸 것 — push한 메시지 객체를 직접 `reactive()`로 감싸지 않으면(평범한 객체만 push) 이후 `typedMain` 등을 mutate해도 화면이 갱신되지 않는 반응성 함정이 있음
 - **회고 마치기 버튼**: 헤더 오른쪽 "회고 마치기"(`RetroHeader`의 `onFinish`)는 **항상 노출**되며, AI 응답 대기 중(=`generating` 자리표시자가 떠 있음)·초기 로딩·`finish()` 처리 중일 때만 잠긴다(`isFinishBlocked`)
   - 마치기가 성공해 결과 화면으로 넘어가는 경우엔 `isFinishing`을 풀지 않는다 — 라우팅 전환 중에 버튼이 다시 눌려 `finish`/`complete`가 중복 호출되는 것을 막기 위함. 조회 결과가 not-ready거나 실패했을 때만 잠금 해제
 - **skippable / readyToComplete**: 답변 응답의 `readyToComplete`가 true면 해당 질문은 `skippable: true`로 표시됨. 단 이 로컬 신호는 마무리 시점에도 false로 남는 경우가 있어 **완료 판정 기준으로 쓰지 않는다**
-  - "회고 마치기"를 눌렀을 때 `getConversation()`(대화 조회)로 **서버의 `readyToComplete`를 직접 확인** → true면 `finish()` 호출 후 기존 v1 결과 생성 화면(`/retrospect/result`, `retro.complete()`)으로 연결
-  - false면 마치지 않고 안내 모달("아직 내용이 충분하지 않아요 / 결과 생성을 위해 내용을 더 작성해주세요 / 확인")만 표시
+  - `readyToComplete=false`여도 **종료를 차단하지 않는다** — 헤더 "회고 마치기"는 항상 확인 모달 → `finish()`
+- **AI 답장 아래 선택 버튼** (`showCompletionOffer`): 답변 후 AI 답장이 올 때마다(`action`과 무관, 첨부 분석 폴링·재개 복구 포함) 답장과 **동시에** 말풍선 아래 버튼 2개(`completionOffer`)를 붙인다 — `readyToComplete`가 false면 "계속 작성하기 / 이대로 마치기", true면 "계속하기 / 마치기". 마치기는 추가 확인 없이 바로 `finish()`, 계속하기나 새 답변 전송 시 버튼 제거. 첫 질문(시작 메시지)에는 붙이지 않음
+- **입력창 포커스**: `RetroTextarea`의 textarea는 응답 대기 중(`isBusy`)에도 **`disabled`로 잠그지 않는다** — 잠그면 포커스·모바일 키보드가 내려가 전송할 때마다 다시 눌러야 함. 대신 전송·첨부·마이크 버튼만 잠근다. AI 응답 출력 완료(`onDiditTyped`)·종료 선택 UI/모달 닫힘 시 `focusInput()`으로 자동 포커스(모달·레코더가 떠 있으면 생략)
 - **뒤로가기**: 헤더 뒤로가기 → 확인 모달(답변 여부에 따라 문구만 다름). "나가기"는 **항상 저장하지 않고** `exit()`를 호출해 정리(PENDING이면 삭제)하고 `ACTIVE_RETROSPECTIVE_KEY`를 지운 뒤 `/home`으로 이동 — exit이 실패해도 이동은 막지 않음(`onBackConfirm`). 저장(결과 생성)은 "회고 마치기" 버튼(`finish()`)을 통해서만 이뤄지며, 뒤로가기 쪽에서는 답변이 있어도 `finish()`를 호출하지 않는다
-- **결과 화면(`retrospect/result.vue`)은 v2 `finish()` 기반**: `start.vue`가 회고 마치기 확인 후 `finish()`를 호출해 받은 `title`/`result`를 `resultStash`(`useState('retrospect:result')`)에 담고 `completingId`(`useState('retrospect:completing-id')`)와 함께 결과 화면으로 이동. `result.vue`는 stash가 있으면 그대로 쓰고, 없이 직접 진입한 경우(새로고침 등)엔 `finish()`를 다시 호출해 저장된 결과를 받는다 — v1 `complete()`와 달리 재호출이 멱등이라, 같은 회고로 결과 화면이 두 번 실행돼도 400이 나지 않는다(과거 `complete()` 재호출 400 이슈는 해소됨)
+- **결과 화면(`retrospect/result.vue`)은 v2 `finish()` 기반**: `start.vue`는 회고 마치기 확인 시 `finish()`를 부르지 않고 `completingId`(`useState('retrospect:completing-id')`)만 넘겨 **바로** 결과 화면으로 이동. `result.vue`가 자동 저장 로딩 화면(**최소 1초**, `MIN_LOADING_MS`)을 띄운 채 `finish()`를 호출하고, 생성이 끝나면 결과를 보여준다. 실패 시 에러 화면의 '다시 시도'로 재호출 — `finish()`는 멱등이라 재호출해도 400이 나지 않는다. 재개용 id(`clearActiveRetrospective()`)는 생성 성공 시에만 지운다
 
 ## 분석 (Amplitude)
 

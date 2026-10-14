@@ -1,7 +1,7 @@
 // 레벨별 색상 — Figma 직접 추출 (accent=Tag 컬러/뱃지, fill=완료 스탬프[횟수형]·진행바 채움[연속주형])
 // 미션 카드·마이페이지 등 공용. Lv.10 fill만 28343 확정 필요.
 export const LEVEL_THEME: Record<number, { accent: string; fill: string }> = {
-  1: { accent: '#5A8DEE', fill: '#C5D7F9' },
+  1: { accent: '#37C57A', fill: '#37C58A' },
   2: { accent: '#8C7CF0', fill: '#B4ABF0' },
   3: { accent: '#8C7CF0', fill: '#B4ABF0' },
   4: { accent: '#DEAD3A', fill: '#EBCE89' },
