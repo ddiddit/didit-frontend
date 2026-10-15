@@ -241,7 +241,7 @@ function applyHome(home: HomeResponse) {
 if (!homeLoaded.value && homeCache) applyHome(homeCache.data)
 const isLoading = ref(!homeLoaded.value)
 
-const maxDaily = 1000
+const maxDaily = 3
 const remaining = computed(() => Math.max(0, maxDaily - todayRetrospectiveCount.value))
 const isCompleted = computed(() => remaining.value === 0)
 
