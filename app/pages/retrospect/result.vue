@@ -104,7 +104,7 @@ const errorTitle = computed(() =>
 )
 const result = ref<RetrospectiveResultV2 | null>(null)
 const title = ref('')
-// finish()로 받은(=이미 저장된) 제목 — 완료 시 이 값과 다를 때만 제목 수정 API를 호출한다
+// getResult()로 받은(=이미 저장된) 제목 — 완료 시 이 값과 다를 때만 제목 수정 API를 호출한다
 const savedTitle = ref('')
 
 // 프로젝트/태그 선택 (오버레이에서 API로 즉시 반영 후 화면 표시값 갱신)
@@ -132,21 +132,24 @@ async function generate() {
     navigateTo('/home')
     return
   }
-  // 채팅의 '회고 마치기'로 넘어오면 여기서 대화 종료·결과 생성(finish)을 진행한다.
-  // finish()는 이미 완료된 회고에 다시 요청해도 저장된 결과를 그대로 반환(멱등)하고,
+  // 채팅의 '회고 마치기'로 넘어오면 여기서 대화 종료·결과 생성(finish) 후 결과를 조회(getResult)한다.
+  // finish()는 이미 완료된 회고에 다시 요청해도 멱등하게 처리되고,
   // 생성 실패 상태였다면 재요청으로 생성 상태를 복구해 재시도한다 — 에러 화면의 '다시 시도'도 이 함수를 그대로 쓴다.
   // 자동 저장 로딩 화면은 응답이 빨라도 최소 MIN_LOADING_MS 동안 보여줘 깜빡이듯 지나가지 않게 한다.
   isLoading.value = true
   errorVariant.value = null
   try {
+    const id = completingId.value
     const [res] = await Promise.all([
-      retro.finish(completingId.value),
+      retro.finish(id).then(() => retro.getResult(id)),
       new Promise((resolve) => setTimeout(resolve, MIN_LOADING_MS)),
     ])
-    if (!res.result) throw new Error('회고 결과가 아직 생성되지 않았어요')
-    result.value = res.result
+    if (!res.content) throw new Error('회고 결과가 아직 생성되지 않았어요')
+    result.value = res.content
     title.value = res.title ?? ''
     savedTitle.value = title.value
+    selectedProject.value = res.project
+    selectedTags.value = res.tags ?? []
     // 완료됐으니 start.vue가 재개용으로 들고 있던 id를 정리 — 다음 진입은 새 회고로 시작
     clearActiveRetrospective()
   } catch (e) {

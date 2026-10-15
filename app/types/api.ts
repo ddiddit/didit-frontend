@@ -303,15 +303,25 @@ export interface ConversationResponse {
 }
 
 // 대화 종료 — v2는 종료와 동시에 확인된 대화 내용을 구조화해 결과를 생성한다.
-// 이미 완료된 회고에 다시 요청하면 저장된 결과를 그대로 반환하고(멱등),
-// 생성 실패 상태였다면 재요청으로 생성 상태를 복구해 재시도할 수 있다.
-// 성공(resultGenerationStatus === 'GENERATED') 시에만 title/result가 채워진다.
+// 이미 완료된 회고에 다시 요청해도 멱등하게 처리되고, 생성 실패 상태였다면 재요청으로 재시도할 수 있다.
+// 결과 본문은 GET /result(RetrospectiveResultResponse)로 조회한다.
 export interface FinishRetrospectiveResponse {
   retrospectiveId: string
   conversationStatus: string
   resultGenerationStatus: string
   title?: string
   result?: RetrospectiveResultV2
+}
+
+// v2 회고 결과 조회 — GET /api/v2/retrospectives/{id}/result
+export interface RetrospectiveResultResponse {
+  id: string
+  flowVersion: string
+  title: string
+  completedAt: string | null
+  content: RetrospectiveResultV2
+  project: { id: string; name: string } | null
+  tags: Tag[]
 }
 
 // v2 회고 결과 — finish()로 생성됨. v1 CompleteRetrospectiveResponse.content(RetrospectiveContent)와 필드명이 다르다

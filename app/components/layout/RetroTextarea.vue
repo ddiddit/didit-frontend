@@ -51,7 +51,7 @@
             <input ref="fileInputRef" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.txt,.md" class="hidden" @change="handleFileChange" />
             <!-- textarea는 disabled로 잠그지 않는다 — 잠그면 포커스·모바일 키보드가 내려가 전송할 때마다 다시 눌러야 하므로,
                  AI 응답 대기 중에도 미리 작성은 허용하고 전송·첨부·마이크만 막는다 -->
-            <textarea @input="handleTextareaChange" @keydown="handleKeydown" ref="textRef" :value="textareaValue" rows="1" class="resize-none outline-none bg-transparent flex-1 mx-[6px]" />
+            <textarea @input="handleTextareaChange" @keydown="handleKeydown" ref="textRef" :value="textareaValue" rows="1" class="resize-none outline-none bg-transparent flex-1 mx-[6px] max-h-[280px] overflow-y-auto" />
             <!-- mousedown 기본 동작을 막아 버튼을 눌러도 포커스가 textarea에 남게 한다(모바일 키보드 유지) -->
             <button v-if="hasText" class="shrink-0 disabled:opacity-50" :class="isWrapped ? 'mb-[2px]' : ''" :disabled="disabled" @mousedown.prevent @click="submitAnswer">
                 <img src="/icons/keyboard.svg" alt="전송" class="w-[28px] h-[28px]" />
@@ -186,6 +186,9 @@
     if (el) el.style.height = '24px'
   }
 
+  // 입력창 최대 높이(px) — 클래스 max-h-[280px]와 같은 값
+  const TEXTAREA_MAX_HEIGHT = 280
+
   const handleTextareaChange = (e: Event) => {
     textareaValue.value = (e.target as HTMLTextAreaElement).value
     syncHeight()
@@ -195,12 +198,13 @@
   // (풀지 않고 재면 이전에 고정해둔 높이가 그대로 나와서, 두 줄→한 줄로 줄어들 때 반영이 안 됨)
   // textarea가 flex 흐름 안에 그대로 있어서(position 안 바뀜), 이 높이가 늘어나면
   // 부모 .retro__input도 자동으로 같이 늘어난다 — 컨테이너 높이를 따로 계산해서 맞출 필요가 없다
+  // 최대 TEXTAREA_MAX_HEIGHT까지만 늘어나고, 넘치면 textarea 안에서 스크롤된다
   function syncHeight() {
     const el = textRef.value
     if (!el) return
     el.style.height = 'auto'
     const naturalHeight = el.scrollHeight
-    el.style.height = `${naturalHeight}px`
+    el.style.height = `${Math.min(naturalHeight, TEXTAREA_MAX_HEIGHT)}px`
     isWrapped.value = naturalHeight > 24
   }
 
