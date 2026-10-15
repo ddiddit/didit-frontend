@@ -88,7 +88,8 @@ AI 기반 회고(retrospective) 앱의 프론트엔드.
   - `POST /api/v2/retrospectives` — 시작
   - `POST /api/v2/retrospectives/{id}/messages` — 답변 제출. `clientMessageId`는 **요청마다 고유해야 하는 멱등키**(`crypto.randomUUID()`) — 회고 id처럼 고정값을 재사용하면 두 번째 제출부터 409 Conflict
   - `GET /api/v2/retrospectives/{id}/conversation` — 대화 조회. **AI 메시지만** 내려주고 사용자가 입력한 답변 텍스트는 포함하지 않음 → 전체 대화 재구성은 불가능하고 "가장 마지막 질문" 복구만 가능
-  - `POST /api/v2/retrospectives/{id}/finish` — 대화 종료. **종료와 동시에 결과도 생성**한다(V1 `complete()`와 달리 분리되어 있지 않음). 성공 시 응답의 `resultGenerationStatus`가 `GENERATED`이고 `title`/`result`(요약·강점·개선점·진행 과정·배운 점·인사이트·다음 행동 제안, 타입 `RetrospectiveResultV2`)가 함께 내려옴. 이미 완료된 회고에 다시 요청해도 저장된 결과를 그대로 반환(멱등)하고, 생성 실패 상태였다면 재요청으로 재시도됨
+  - `POST /api/v2/retrospectives/{id}/finish` — 대화 종료. **종료와 동시에 결과도 생성**한다(V1 `complete()`와 달리 분리되어 있지 않음). 이미 완료된 회고에 다시 요청해도 멱등하고, 생성 실패 상태였다면 재요청으로 재시도됨
+  - `GET /api/v2/retrospectives/{id}/result` — 결과 조회(`getResult()`). 응답은 `id`/`flowVersion`/`title`/`completedAt`/`project`/`tags`와 결과 본문 `content`(요약·강점·개선점·진행 과정·배운 점·인사이트·다음 행동 제안, 타입 `RetrospectiveResultV2`)
 - **진행 중 회고 재개**: `useRetrospect.ts`의 `ACTIVE_RETROSPECTIVE_KEY`(localStorage)에 회고 id를 보관 — 답변 도중 화면을 나갔다 들어와도 `start()`로 새 회고를 만들지 않고 `getConversation()`으로 이어서 진행. 대화 종료(`finish()`)·완료(`complete()`) 시 이 키를 제거(`clearActiveRetrospective()`)
   - 마지막 AI 메시지는 `saveConversationCache()`로 localStorage에 캐시 → 재진입 시 캐시가 있으면 **대화 조회 요청 없이** 바로 복구. 답변 전송 순간 캐시를 지우므로, 응답을 못 받고 나간 경우에만 `getConversation()`으로 조회
   - 앱 백그라운드→포그라운드 복귀 시에도(`@capacitor/app`의 `appStateChange`) 대화 상태를 동기화해, 놓친 AI 응답을 복구
@@ -101,7 +102,7 @@ AI 기반 회고(retrospective) 앱의 프론트엔드.
 - **AI 답장 아래 선택 버튼** (`showCompletionOffer`): 답변 후 AI 답장이 올 때마다(`action`과 무관, 첨부 분석 폴링·재개 복구 포함) 답장과 **동시에** 말풍선 아래 버튼 2개(`completionOffer`)를 붙인다 — `readyToComplete`가 false면 "계속 작성하기 / 이대로 마치기", true면 "계속하기 / 마치기". 마치기는 추가 확인 없이 바로 `finish()`, 계속하기나 새 답변 전송 시 버튼 제거. 첫 질문(시작 메시지)에는 붙이지 않음
 - **입력창 포커스**: `RetroTextarea`의 textarea는 응답 대기 중(`isBusy`)에도 **`disabled`로 잠그지 않는다** — 잠그면 포커스·모바일 키보드가 내려가 전송할 때마다 다시 눌러야 함. 대신 전송·첨부·마이크 버튼만 잠근다. AI 응답 출력 완료(`onDiditTyped`)·종료 선택 UI/모달 닫힘 시 `focusInput()`으로 자동 포커스(모달·레코더가 떠 있으면 생략)
 - **뒤로가기**: 헤더 뒤로가기 → 확인 모달(답변 여부에 따라 문구만 다름). "나가기"는 **항상 저장하지 않고** `exit()`를 호출해 정리(PENDING이면 삭제)하고 `ACTIVE_RETROSPECTIVE_KEY`를 지운 뒤 `/home`으로 이동 — exit이 실패해도 이동은 막지 않음(`onBackConfirm`). 저장(결과 생성)은 "회고 마치기" 버튼(`finish()`)을 통해서만 이뤄지며, 뒤로가기 쪽에서는 답변이 있어도 `finish()`를 호출하지 않는다
-- **결과 화면(`retrospect/result.vue`)은 v2 `finish()` 기반**: `start.vue`는 회고 마치기 확인 시 `finish()`를 부르지 않고 `completingId`(`useState('retrospect:completing-id')`)만 넘겨 **바로** 결과 화면으로 이동. `result.vue`가 자동 저장 로딩 화면(**최소 1초**, `MIN_LOADING_MS`)을 띄운 채 `finish()`를 호출하고, 생성이 끝나면 결과를 보여준다. 실패 시 에러 화면의 '다시 시도'로 재호출 — `finish()`는 멱등이라 재호출해도 400이 나지 않는다. 재개용 id(`clearActiveRetrospective()`)는 생성 성공 시에만 지운다
+- **결과 화면(`retrospect/result.vue`)은 v2 `finish()` 기반**: `start.vue`는 회고 마치기 확인 시 `finish()`를 부르지 않고 `completingId`(`useState('retrospect:completing-id')`)만 넘겨 **바로** 결과 화면으로 이동. `result.vue`가 자동 저장 로딩 화면(**최소 1초**, `MIN_LOADING_MS`)을 띄운 채 `finish()` → `getResult()`를 호출해 결과를 보여준다. 실패 시 에러 화면의 '다시 시도'로 재호출 — `finish()`는 멱등이라 재호출해도 400이 나지 않는다. 재개용 id(`clearActiveRetrospective()`)는 생성 성공 시에만 지운다
 
 ## 분석 (Amplitude)
 

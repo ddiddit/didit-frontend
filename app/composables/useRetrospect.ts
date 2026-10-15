@@ -8,6 +8,7 @@ import type {
   RetrospectiveDetail,
   ConversationResponse,
   FinishRetrospectiveResponse,
+  RetrospectiveResultResponse,
   UploadURL,
   AnswerGuide,
   UploadUrlRequest,
@@ -111,7 +112,8 @@ export function useRetrospect() {
   }
 
   // 대화 종료 — 종료와 동시에 확인된 대화 내용을 구조화해 결과(title/result)를 생성한다.
-  // 이미 완료된 회고에 다시 요청하면 저장된 결과를 그대로 반환하고(멱등),
+  // 생성된 결과는 getResult()로 조회한다.
+  // 이미 완료된 회고에 다시 요청해도 멱등하게 처리되고,
   // 생성 실패 상태였다면 재요청으로 생성 상태를 복구해 재시도할 수 있다.
   // readyToComplete(=skippable)인 질문에서 "회고 마치기"를 눌렀을 때 사용.
   async function finish(id: string): Promise<FinishRetrospectiveResponse> {
@@ -119,6 +121,14 @@ export function useRetrospect() {
       `/api/v2/retrospectives/${id}/finish`,
     )
     invalidateDerivedCaches({ profile: true })
+    return res.data.data
+  }
+
+  // v2 회고 결과 조회 — finish()로 생성된 제목·결과(요약·강점·개선점 등)를 받아온다
+  async function getResult(id: string): Promise<RetrospectiveResultResponse> {
+    const res = await $api.get<ApiResponse<RetrospectiveResultResponse>>(
+      `/api/v2/retrospectives/${id}/result`,
+    )
     return res.data.data
   }
 
@@ -266,6 +276,7 @@ export function useRetrospect() {
     answer,
     getConversation,
     finish,
+    getResult,
     answerByVoice,
     transcribe,
     getDeepQuestion,

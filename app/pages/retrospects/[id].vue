@@ -129,7 +129,7 @@ import RetrospectProjectSelect from '~/components/RetrospectProjectSelect.vue'
 import UiBottomSheet from '~/components/ui/UiBottomSheet.vue'
 import UiErrorState from '~/components/ui/UiErrorState.vue'
 import UiPopup from '~/components/ui/UiPopup.vue'
-import type { RetrospectiveDetail, Tag } from '~/types/api'
+import type { RetrospectiveDetail, RetrospectiveResultResponse, Tag } from '~/types/api'
 import { isAuthError } from '~/utils/api-error'
 import { parseServerDate } from '~/utils/date'
 
@@ -146,7 +146,8 @@ const id = computed(() => String(route.params.id))
 function goBack() {
   navigateTo(route.query.from === 'home' ? '/home' : '/retrospects')
 }
-const detail = ref<RetrospectiveDetail | null>(null)
+// v2 회고는 결과 조회(/result) 응답, v1 회고는 상세 조회 응답 — 화면에서 쓰는 필드(title/content/project/tags/completedAt)는 같다
+const detail = ref<RetrospectiveResultResponse | RetrospectiveDetail | null>(null)
 const isLoading = ref(true)
 const authFailed = ref(false) // 인증 만료 시 에러 화면 대신 로그인 리다이렉트(인터셉터)
 const menuOpen = ref(false)
@@ -176,11 +177,21 @@ const editTitle = ref('')
 const isSavingTitle = ref(false)
 const canSaveTitle = computed(() => editTitle.value.trim().length > 0)
 
+// v2 회고 결과는 GET /result로 조회한다. /result가 실패하면(v1 회고 등) 기존 상세 조회로 대체
+async function loadRetrospective(): Promise<RetrospectiveResultResponse | RetrospectiveDetail> {
+  try {
+    return await retro.getResult(id.value)
+  } catch (e) {
+    if (isAuthError(e)) throw e
+    return await retro.getDetail(id.value)
+  }
+}
+
 async function loadDetail() {
   isLoading.value = true
   authFailed.value = false
   try {
-    detail.value = await retro.getDetail(id.value)
+    detail.value = await loadRetrospective()
     track('retrospect_viewed', { retrospect_id: id.value })
   } catch (e) {
     // 인증 만료는 인터셉터가 로그인으로 보냄 → 에러 화면 X
