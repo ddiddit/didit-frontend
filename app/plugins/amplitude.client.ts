@@ -1,4 +1,5 @@
 import * as amplitude from '@amplitude/analytics-browser'
+import type { UserProfile } from '~/types/api'
 
 export default defineNuxtPlugin(() => {
   if (import.meta.dev) return
@@ -25,4 +26,14 @@ export default defineNuxtPlugin(() => {
       // JWT 파싱 실패 시 익명 세션 유지
     }
   }
+
+  const profile = useState<UserProfile | null>('user:profile', () => null)
+  watch(profile, (value) => {
+    if (!value) return
+    const identify = new amplitude.Identify()
+      .set('provider', value.provider.toLowerCase())
+      .set('account_type', value.accountType ?? 'UNKNOWN')
+    if (value.createdAt) identify.set('account_created_at', value.createdAt)
+    amplitude.identify(identify)
+  }, { immediate: true })
 })

@@ -145,9 +145,12 @@ import UiPopup from '~/components/ui/UiPopup.vue'
         swiperInstance.value?.slideNext()
     }
 
+    const { trackEvent } = useAmplitude()
+
     // 첫 회고 시작하기
     function startRetrospect() {
-        navigateTo('/retrospect/start')
+        trackEvent('retrospect_start_clicked', { source: 'intro' })
+        navigateTo({ path: '/retrospect/start', query: { source: 'intro' } })
     }
 
     // 사용자 정보 전역 상태

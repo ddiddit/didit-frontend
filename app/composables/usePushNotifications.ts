@@ -18,6 +18,8 @@ export function usePushNotifications() {
   const { $api } = useNuxtApp()
   const { show } = useToast()
   const router = useRouter()
+  const attribution = useAttribution()
+  const { trackEvent } = useAmplitude()
 
   // 현재 플랫폼에 맞는 deviceType (백엔드 /api/v1/device-tokens 식별자)
   function deviceType(): 'ANDROID' | 'IOS' | 'WEB' {
@@ -54,9 +56,19 @@ export function usePushNotifications() {
     // 알림 탭 시 백엔드가 data.link로 내려준 화면으로 이동.
     // 콜드 스타트(아직 스플래시 '/')면 pendingDeepLink에 담아 index.vue가 인증 확인 후 이동하고,
     // 앱 실행 중(웜)이면 현재 라우터로 바로 이동한다.
-    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+    PushNotifications.addListener('pushNotificationActionPerformed', async (action) => {
       const link = action.notification.data?.link
       if (typeof link !== 'string' || !link.startsWith('/')) return
+      const campaign = attribution.capture(link)
+      if (campaign) {
+        await useProfile().load(true)
+        trackEvent('campaign_opened', {
+          ...attribution.properties(),
+          entry_channel: campaign.entry_channel,
+          campaign_id: campaign.campaign_id,
+          link_target: new URL(link, 'https://didit.io.kr').pathname,
+        })
+      }
       if (router.currentRoute.value.path === '/') {
         pendingDeepLink = link
       } else {

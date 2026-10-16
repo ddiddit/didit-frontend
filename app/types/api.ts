@@ -127,6 +127,8 @@ export interface UserProfile {
   age: AgeType | null
   experience: ExperienceType | null
   provider: 'KAKAO' | 'GOOGLE' | 'APPLE'
+  accountType?: 'CUSTOMER' | 'TEAM' | 'TEST'
+  createdAt?: string
   currentLevel: number
   recentBadges: ProfileRecentBadge[]
 }
@@ -267,6 +269,7 @@ export type AssistantAction = 'ASK' | 'REFLECT' | 'OFFER_COMPLETION' | 'CONFIRM_
 // 답변 제출 - 텍스트
 export interface SubmitAnswerResponse {
   turnId: string
+  turnNumber: number
   userMessageId: string
   assistantMessage: AssistantMessage | null // AI 응답 생성이 아직 끝나지 않은 경우 null로 옴
   readyToComplete: boolean

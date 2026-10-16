@@ -157,7 +157,9 @@ async function handleWithdraw() {
         reasonDetail: selectedReason.value === 'OTHER' ? reasonDetail.value.trim() : null,
       },
     })
-    track('user_withdrew', { reason: selectedReason.value })
+    await track('user_withdrew', { reason: selectedReason.value }).promise.catch(() => undefined)
+    useAttribution().clear()
+    clearCompletingRetrospective()
     reset()
     authStore.logout()
     await navigateTo('/login')
