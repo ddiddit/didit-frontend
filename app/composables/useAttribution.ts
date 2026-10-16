@@ -1,4 +1,9 @@
-import { parseCampaignAttribution, restoreCampaignAttribution } from '~/analytics/attribution'
+import {
+  isSameCampaignAttribution,
+  parseCampaignAttribution,
+  resolveCampaignAttribution,
+  restoreCampaignAttribution,
+} from '~/analytics/attribution'
 
 const STORAGE_KEY = 'campaignAttribution'
 
@@ -13,9 +18,19 @@ export function useAttribution() {
     }
   })
 
-  function capture(url: string) {
+  if (import.meta.client) {
+    try {
+      current.value = resolveCampaignAttribution(current.value, localStorage.getItem(STORAGE_KEY))
+    }
+    catch {
+      // 저장소 접근 실패 시 현재 메모리 상태를 유지한다.
+    }
+  }
+
+  function capture(url: string, options: { ignoreDuplicate?: boolean } = {}) {
     const next = parseCampaignAttribution(url)
     if (!next) return null
+    if (options.ignoreDuplicate && isSameCampaignAttribution(current.value, next)) return null
     current.value = next
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next))

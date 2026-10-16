@@ -43,3 +43,24 @@ export function restoreCampaignAttribution(serialized: string | null, nowMs = Da
     return null
   }
 }
+
+export function resolveCampaignAttribution(
+  current: CampaignAttribution | null,
+  serialized: string | null,
+  nowMs = Date.now(),
+): CampaignAttribution | null {
+  return restoreCampaignAttribution(current ? JSON.stringify(current) : serialized, nowMs)
+}
+
+export function isSameCampaignAttribution(
+  current: CampaignAttribution | null,
+  next: CampaignAttribution | null,
+): boolean {
+  return current !== null
+    && next !== null
+    && current.entry_channel === next.entry_channel
+    && current.campaign_id === next.campaign_id
+    && current.utm_source === next.utm_source
+    && current.utm_medium === next.utm_medium
+    && current.utm_campaign === next.utm_campaign
+}

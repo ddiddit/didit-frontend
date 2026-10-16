@@ -1,6 +1,6 @@
 export default defineNuxtPlugin(async () => {
   const attribution = useAttribution()
-  const value = attribution.capture(window.location.href)
+  const value = attribution.capture(window.location.href, { ignoreDuplicate: true })
   if (!value) return
 
   await useProfile().load(true)
