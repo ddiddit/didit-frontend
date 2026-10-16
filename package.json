@@ -16,7 +16,8 @@
     "cap:sync": "nuxt generate && cap sync",
     "cap:sync:prod": "nuxt generate --dotenv .env.production && cap sync",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test": "node --test tests/analytics/*.test.ts"
   },
   "dependencies": {
     "@amplitude/analytics-browser": "^2.44.1",

@@ -63,7 +63,8 @@ definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 
 const authStore = useAuthStore()
 const { profile, ensure: ensureProfile } = useProfile()
-const { track } = useAmplitude()
+const { track, reset } = useAmplitude()
+const attribution = useAttribution()
 const { loadError, slowLoading, run } = useLoadState()
 
 async function reload() {
@@ -84,7 +85,10 @@ onMounted(reload)
 
 async function handleLogout() {
   showLogoutModal.value = false
-  track('user_logged_out')
+  await track('user_logged_out').promise.catch(() => undefined)
+  attribution.clear()
+  clearCompletingRetrospective()
+  reset()
   authStore.logout()
   await navigateTo('/login')
 }

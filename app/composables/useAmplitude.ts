@@ -1,8 +1,39 @@
 import * as amplitude from '@amplitude/analytics-browser'
+import { Capacitor } from '@capacitor/core'
+import type {
+  AnalyticsCommonProperties,
+  AnalyticsEventName,
+  AnalyticsEventProperties,
+  AppSurface,
+} from '~/analytics/events'
 
 export function useAmplitude() {
+  const config = useRuntimeConfig()
+  const { profile } = useProfile()
+
+  function commonProperties(): AnalyticsCommonProperties {
+    return {
+      environment: import.meta.dev ? 'development' : 'production',
+      app_surface: Capacitor.getPlatform() as AppSurface,
+      app_version: String(config.public.appVersion),
+      account_type: profile.value?.accountType ?? 'UNKNOWN',
+    }
+  }
+
   function track(eventName: string, properties?: Record<string, unknown>) {
-    amplitude.track(eventName, properties)
+    return amplitude.track(eventName, { ...commonProperties(), ...properties })
+  }
+
+  function trackEvent<Name extends AnalyticsEventName>(
+    eventName: Name,
+    properties: AnalyticsEventProperties[Name],
+    insertId?: string,
+  ) {
+    return amplitude.track(
+      eventName,
+      { ...commonProperties(), ...properties },
+      insertId ? { insert_id: insertId } : undefined,
+    )
   }
 
   function identify(accessToken: string, extraProps?: Record<string, unknown>) {
@@ -26,5 +57,5 @@ export function useAmplitude() {
     amplitude.reset()
   }
 
-  return { track, identify, reset }
+  return { track, trackEvent, identify, reset }
 }

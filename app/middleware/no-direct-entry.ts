@@ -7,6 +7,7 @@
 export default defineNuxtRouteMiddleware((to, from) => {
   if (import.meta.server) return
   if (from.matched.length === 0) {
+    if (to.path === '/retrospect/result' && readCompletingRetrospective()) return
     return navigateTo('/home', { replace: true })
   }
 })

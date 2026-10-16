@@ -116,6 +116,7 @@ export function useSocialLoginFlow() {
     push.syncIfConsented()
 
     identify(result.accessToken, { provider: provider.toLowerCase() })
+    await useProfile().load(true)
     if (result.isNewUser) track('user_signed_up', { provider: provider.toLowerCase() })
     else track('user_logged_in', { provider: provider.toLowerCase() })
 
