@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { FirebaseCrashlytics } from '@capacitor-firebase/crashlytics'
+import { isFirebaseNativePlatformEnabled } from '~/utils/firebaseNativePlatform'
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.stack ?? error.message
@@ -8,7 +9,7 @@ function errorMessage(error: unknown): string {
 }
 
 export default defineNuxtPlugin((nuxtApp) => {
-  if (!Capacitor.isNativePlatform()) return
+  if (!isFirebaseNativePlatformEnabled(Capacitor.getPlatform())) return
 
   function record(error: unknown): void {
     FirebaseCrashlytics.recordException({ message: errorMessage(error) }).catch(() => {})

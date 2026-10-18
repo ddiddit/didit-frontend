@@ -39,9 +39,14 @@ func application(_ application: UIApplication, didReceiveRemoteNotification user
 
 1. Xcode Build Settings의 `Debug Information Format`을 배포 구성에서 `DWARF with dSYM File`로 설정한다.
 2. Build Phases에 Run Script를 추가한다: `"${PODS_ROOT}/FirebaseCrashlytics/run"`
-3. Input Files에 다음 두 경로를 추가한다.
+3. Xcode 15 이상에서 User Script Sandboxing을 사용해도 dSYM 업로드가 동작하도록 Input Files에 다음 경로를 모두 추가한다.
+   - `${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}`
    - `${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}`
-   - `$(SRCROOT)/$(BUILT_PRODUCTS_DIR)/$(INFOPLIST_PATH)`
+   - `${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist`
+   - `$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist`
+   - `$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)`
+4. `ENABLE_DEBUG_DYLIB=YES`인 빌드라면 다음 경로도 Input Files에 추가한다.
+   - `${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${PRODUCT_NAME}.debug.dylib`
 
 ## 제출 전 확인
 

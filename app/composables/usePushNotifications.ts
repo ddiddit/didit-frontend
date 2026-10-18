@@ -6,9 +6,11 @@ import {
   buildFirebaseMessagingServiceWorkerUrl,
   hasRequiredFirebaseMessagingConfig,
 } from '~/utils/firebaseMessagingConfig'
+import { isFirebaseNativePlatformEnabled } from '~/utils/firebaseNativePlatform'
 
 // FCM 푸시: 권한 요청 → 토큰 발급 → 백엔드 등록 → 포그라운드 수신.
-// 웹은 Firebase JS SDK, 네이티브(Android/iOS)는 Firebase Messaging 플러그인을 사용한다.
+// 웹은 Firebase JS SDK, 현재 배포 대상인 iOS는 Firebase Messaging 플러그인을 사용한다.
+// Android는 새 Firebase 앱과 google-services.json을 준비한 뒤 별도로 활성화한다.
 
 // 리스너 중복 바인딩 방지 — 컴포저블이 여러 곳(app.vue·알림 설정)에서 호출돼도 앱 전체에서 1회만
 let nativeListenersBound = false
@@ -61,7 +63,7 @@ export function usePushNotifications() {
   // 포그라운드 수신/탭 리스너는 앱 생명주기 동안 한 번만 바인딩한다.
   // 종료 상태에서 알림을 탭해 실행되는 경우도 잡을 수 있게 앱 시작 시(app.vue) 항상 호출된다.
   function bindNativeListeners() {
-    if (!Capacitor.isNativePlatform() || nativeListenersBound) return
+    if (!isFirebaseNativePlatformEnabled(Capacitor.getPlatform()) || nativeListenersBound) return
     nativeListenersBound = true
     // 앱이 포그라운드일 때 수신 → 토스트
     FirebaseMessaging.addListener('notificationReceived', ({ notification }) => {
@@ -169,7 +171,13 @@ export function usePushNotifications() {
   // silent=true: 앱 시작 시 자동 동기화용 — 실패/거부 토스트를 띄우지 않는다.
   async function register({ silent = false }: { silent?: boolean } = {}): Promise<string | null> {
     if (!import.meta.client) return null
-    return Capacitor.isNativePlatform() ? registerNative({ silent }) : registerWeb({ silent })
+    const platform = Capacitor.getPlatform()
+    if (isFirebaseNativePlatformEnabled(platform)) return registerNative({ silent })
+    if (platform === 'android') {
+      console.warn('[FCM] Android Firebase 앱이 아직 등록되지 않아 푸시 등록을 건너뜁니다.')
+      return null
+    }
+    return registerWeb({ silent })
   }
 
   // 웹: 앱이 포그라운드(탭 활성)일 때 수신 → 토스트
@@ -194,7 +202,7 @@ export function usePushNotifications() {
     if (!import.meta.client) return
     // 웹: 권한이 명시적으로 거부된 상태면 매 로드마다 권한 요청을 반복하지 않는다.
     // (네이티브는 플러그인이 권한 상태를 직접 관리하므로 이 가드를 건너뛴다)
-    if (!Capacitor.isNativePlatform()) {
+    if (!isFirebaseNativePlatformEnabled(Capacitor.getPlatform())) {
       if (typeof Notification === 'undefined' || Notification.permission === 'denied') return
     }
     try {
