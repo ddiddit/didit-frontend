@@ -23,6 +23,12 @@ logs
 .env.*
 !.env.example
 
+# Firebase / Apple credentials and native app configuration
+GoogleService-Info.plist
+google-services.json
+firebase-service-account*.json
+AuthKey_*.p8
+
 # Claude Code 로컬 설정
 .claude/settings.local.json
 
