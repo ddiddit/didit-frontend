@@ -179,6 +179,7 @@ const circleRows = computed(() => {
 // 카드에는 '진행 중인 미션'의 레벨을 표시 — 백엔드 currentLevel은 달성한 레벨이라 +1 (레벨 0 없음, 모든 유저 Lv.1부터)
 const missionLevel = computed(() => props.data.currentLevel + 1)
 
+
 // 완료 구간 연결선 비율: 해당 줄에서 완료된 스탬프 수 기준 (첫 스탬프 중심 → 마지막 완료 스탬프 중심)
 function rowFillFrac(row: number[]): number {
   const p = m.value?.progress ?? 0

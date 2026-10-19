@@ -1,32 +1,21 @@
 <template>
   <Teleport to="#app-container">
-    <Transition name="badge-popup">
+    <!-- 배지 획득 토스트 배너 — 상단에 노출되고 BANNER_DURATION_MS 뒤 자동으로 사라진다(탭하면 즉시 닫힘).
+         저장 완료 토스트(UiToast)가 하단에 함께 뜨므로 겹치지 않게 상단에 둔다 -->
+    <Transition name="badge-banner">
       <div
         v-if="badge"
-        class="absolute inset-0 z-50 flex items-center justify-center bg-black/40"
-        style="padding-bottom: env(safe-area-inset-bottom, 0px)"
-        @click="hide"
+        :key="badge.code"
+        class="absolute left-0 right-0 z-50 flex justify-center top-[calc(16px+env(safe-area-inset-top,0px))]"
       >
         <div
-          class="w-[300px] bg-white rounded-2xl overflow-hidden flex flex-col items-center"
-          style="padding: 30px 20px 36px; will-change: transform;"
-          @click.stop
+          class="bg-grey-10 rounded-xl px-[14px] py-[10px] flex items-center gap-[10px] max-w-[calc(100%-40px)] cursor-pointer"
+          @click="hide"
         >
-          <!-- 배지 이미지 -->
-          <img
-            :src="badge.image"
-            :alt="badge.name"
-            class="w-[164px] h-[120px] object-contain"
-          />
-
-          <!-- 텍스트 영역 -->
-          <div class="flex flex-col items-center gap-2 mt-[14px] w-full">
-            <p class="text-[17px] font-semibold leading-[140%] tracking-[-0.02em] text-grey-13 text-center">
-              {{ badge.congratsTitle }}
-            </p>
-            <p
-              class="text-[14px] font-normal leading-[160%] tracking-[-0.02em] text-grey-8 text-center whitespace-pre-line"
-            >{{ badge.congratsText }}</p>
+          <img :src="badge.image" :alt="badge.name" class="w-[36px] h-[36px] object-contain shrink-0" />
+          <div class="flex flex-col min-w-0">
+            <p class="text-[14px] font-semibold leading-[1.5] tracking-[-0.28px] text-grey-1">{{ badge.congratsTitle }}</p>
+            <p class="text-[12px] font-normal leading-[1.5] tracking-[-0.24px] text-grey-5 truncate">{{ badge.name }} 배지를 획득했어요</p>
           </div>
         </div>
       </div>
@@ -36,11 +25,24 @@
 
 <script setup lang="ts">
 const { badge, hide } = useBadgeAcquired()
+
+// 배너 자동 닫힘 시간
+const BANNER_DURATION_MS = 1500
+let timer: ReturnType<typeof setTimeout> | undefined
+
+// 노출할 배지가 바뀔 때마다(새 배너·큐의 다음 배너·보류 해제) 타이머를 새로 건다.
+// 보류(hold) 중이면 badge가 null이라 타이머가 정리되고, 해제되면 다시 1.5초부터 센다
+watch(badge, (b) => {
+  clearTimeout(timer)
+  if (b) timer = setTimeout(hide, BANNER_DURATION_MS)
+}, { immediate: true })
+
+onUnmounted(() => clearTimeout(timer))
 </script>
 
 <style scoped>
-.badge-popup-enter-active { transition: opacity 0.25s ease, transform 0.25s ease; }
-.badge-popup-leave-active { transition: opacity 0.2s ease, transform 0.15s ease; }
-.badge-popup-enter-from  { opacity: 0; transform: scale(0.92); }
-.badge-popup-leave-to    { opacity: 0; transform: scale(0.92); }
+.badge-banner-enter-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.badge-banner-leave-active { transition: opacity 0.2s ease, transform 0.15s ease; }
+.badge-banner-enter-from  { opacity: 0; transform: translateY(-8px); }
+.badge-banner-leave-to    { opacity: 0; transform: translateY(-8px); }
 </style>

@@ -57,22 +57,19 @@
                 </button>
               </div>
             </template>
-            <!-- 마무리 선택 UI — 답변 응답의 action에 따라 답장과 함께 노출(showCompletionOffer).
-                 OFFER_COMPLETION: 계속하기 / 마치기(마무리 의사를 답변으로 전송 → 서버가 CONFIRM_COMPLETION으로 응답)
-                 CONFIRM_COMPLETION: 마무리하기(바로 결과 화면으로). 계속하기를 누르거나 답변을 보내면 사라진다 -->
-            <div v-if="m.id === completionOffer?.messageId" class="flex gap-[8px] mt-[10px]">
-              <template v-if="completionOffer.action === 'OFFER_COMPLETION'">
+            <!-- 마무리 선택 UI — 답변 응답의 action이 OFFER_COMPLETION/CONFIRM_COMPLETION이면 답장 타이핑이 끝난 뒤 노출(showCompletionOffer).
+                 이대로 마치기: OFFER_COMPLETION이면 마무리 의사를 답변으로 전송(→ 서버가 CONFIRM_COMPLETION으로 응답),
+                 CONFIRM_COMPLETION이면 바로 결과 화면으로. 계속 작성하기를 누르거나 답변을 보내면 사라진다 -->
+            <Transition name="sub-bubble">
+              <div v-if="m.id === completionOffer?.messageId && m.typedMain === m.main" class="flex gap-[8px] mt-[10px]">
                 <UiButton variant="chip" size="sm" :disabled="isBusy || isFinishing" @click="onOfferContinue">
-                  계속하기
+                  계속 작성하기
                 </UiButton>
-                <UiButton size="sm" :disabled="isBusy || isFinishing" @click="onOfferFinish">
-                  마치기
+                <UiButton size="sm" :loading="isFinishing" :disabled="isBusy" @click="onOfferFinish">
+                  이대로 마치기
                 </UiButton>
-              </template>
-              <UiButton v-else size="sm" :loading="isFinishing" :disabled="isBusy" @click="onFinishConfirm">
-                마무리하기
-              </UiButton>
-            </div>
+              </div>
+            </Transition>
           </div>
         </div>
         <div class="didit_message_wrapper self-start" v-else-if="m.role === 'generating'">
@@ -344,20 +341,22 @@ function onFinishCancel() {
   focusInput()
 }
 
-// 선택 UI의 '계속하기' — 선택 UI만 닫고 입력을 이어간다
+// 선택 UI의 '계속 작성하기' — 선택 UI만 닫고 입력을 이어간다
 function onOfferContinue() {
   completionOffer.value = null
   focusInput()
 }
 
-// 선택 UI의 '마치기' — 바로 종료하지 않고 마무리 의사를 답변으로 보낸다.
-// 서버가 CONFIRM_COMPLETION으로 응답하면 '마무리하기' 버튼이 붙고, 그걸 눌러야 결과 화면으로 넘어간다
+// 선택 UI의 '이대로 마치기'
+// - OFFER_COMPLETION: 바로 종료하지 않고 마무리 의사를 답변으로 보낸다 → 서버가 CONFIRM_COMPLETION으로 응답하면 다시 선택 UI가 붙는다
+// - CONFIRM_COMPLETION: 결과 화면으로 넘어가 대화 종료·결과 생성(finish)
 function onOfferFinish() {
-  onSend(FINISH_INTENT_MESSAGE)
+  if (completionOffer.value?.action === 'CONFIRM_COMPLETION') onFinishConfirm()
+  else onSend(FINISH_INTENT_MESSAGE)
 }
 
-// 답변 응답의 action에 따라 AI 답장 아래에 선택 UI를 답장과 동시에 붙인다.
-// OFFER_COMPLETION → '계속하기 / 마치기', CONFIRM_COMPLETION → '마무리하기', 그 외(ASK/REFLECT/null) → 붙이지 않음
+// 답변 응답의 action에 따라 AI 답장 아래에 '계속 작성하기 / 이대로 마치기'를 붙인다(화면엔 타이핑이 끝난 뒤 노출).
+// OFFER_COMPLETION·CONFIRM_COMPLETION만 붙이고, 그 외(ASK/REFLECT/null)는 붙이지 않음
 function showCompletionOffer(messageId: string, action: AssistantAction | null) {
   completionOffer.value =
     action === 'OFFER_COMPLETION' || action === 'CONFIRM_COMPLETION' ? { messageId, action } : null
