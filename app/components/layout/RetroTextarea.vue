@@ -44,7 +44,7 @@
             </div>
         </div>
 
-        <div class="retro__input p-[10px] box-border border border-grey-4 bg-grey-4 rounded-[24px] flex" :class="isWrapped ? 'items-end' : 'items-center'">
+        <div class="retro__input p-[10px] box-border border border-grey-4 bg-retro-fade-x rounded-[24px] flex" :class="isWrapped ? 'items-end' : 'items-center'">
             <button class="w-[24px] h-[24px] flex justify-center items-center shrink-0 disabled:opacity-50" :class="isWrapped ? 'mb-[2px]' : ''" :disabled="disabled || !retrospectiveId || attachments.length >= MAX_ATTACHMENT_COUNT" @click="fileInputRef?.click()">
                 <img src="/icons/attach_file.png" alt="첨부파일" />
             </button>

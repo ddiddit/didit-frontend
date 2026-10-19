@@ -53,6 +53,10 @@
   .bg-retro-fade {
     background-image: linear-gradient(theme('colors.surface'), theme('colors.background') 60%);
   }
+  /* 같은 색 조합을 왼쪽 → 오른쪽으로 — 채팅 입력창 등 가로로 긴 요소용 */
+  .bg-retro-fade-x {
+    background-image: linear-gradient(to right, theme('colors.surface'), theme('colors.background') 60%);
+  }
 
   /* 타이포그래피 스케일 — 굵기는 font-bold / font-semibold / font-medium / font-normal 조합 */
   /* Title */
