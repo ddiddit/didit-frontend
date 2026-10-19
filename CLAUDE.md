@@ -99,7 +99,11 @@ AI 기반 회고(retrospective) 앱의 프론트엔드.
   - 마치기가 성공해 결과 화면으로 넘어가는 경우엔 `isFinishing`을 풀지 않는다 — 라우팅 전환 중에 버튼이 다시 눌려 `finish`/`complete`가 중복 호출되는 것을 막기 위함. 조회 결과가 not-ready거나 실패했을 때만 잠금 해제
 - **skippable / readyToComplete**: 답변 응답의 `readyToComplete`가 true면 해당 질문은 `skippable: true`로 표시됨. 단 이 로컬 신호는 마무리 시점에도 false로 남는 경우가 있어 **완료 판정 기준으로 쓰지 않는다**
   - `readyToComplete=false`여도 **종료를 차단하지 않는다** — 헤더 "회고 마치기"는 항상 확인 모달 → `finish()`
-- **AI 답장 아래 선택 버튼** (`showCompletionOffer`): 답변 후 AI 답장이 올 때마다(`action`과 무관, 첨부 분석 폴링·재개 복구 포함) 답장과 **동시에** 말풍선 아래 버튼 2개(`completionOffer`)를 붙인다 — `readyToComplete`가 false면 "계속 작성하기 / 이대로 마치기", true면 "계속하기 / 마치기". 마치기는 추가 확인 없이 바로 `finish()`, 계속하기나 새 답변 전송 시 버튼 제거. 첫 질문(시작 메시지)에는 붙이지 않음
+- **AI 답장 아래 선택 버튼** (`showCompletionOffer`): 답변 응답의 `action`에 따라 답장과 **동시에** 말풍선 아래 버튼(`completionOffer`)을 붙인다
+  - `OFFER_COMPLETION` → "계속하기 / 마치기". 마치기는 바로 종료하지 않고 마무리 의사(`FINISH_INTENT_MESSAGE`)를 일반 답변으로 전송
+  - `CONFIRM_COMPLETION` → "마무리하기" 하나. 누르면 `onFinishConfirm()`으로 결과 화면 이동
+  - `ASK`/`REFLECT`/null → 버튼 없음. 계속하기나 새 답변 전송 시 버튼 제거
+  - 대화 조회(`getConversation`) 응답엔 `action`이 없어 첨부 분석 폴링·서버 조회 복구 시에는 버튼을 붙이지 않음 (대화 캐시에 저장된 `action`으로 복구할 때만 복원)
 - **입력창 포커스**: `RetroTextarea`의 textarea는 응답 대기 중(`isBusy`)에도 **`disabled`로 잠그지 않는다** — 잠그면 포커스·모바일 키보드가 내려가 전송할 때마다 다시 눌러야 함. 대신 전송·첨부·마이크 버튼만 잠근다. AI 응답 출력 완료(`onDiditTyped`)·종료 선택 UI/모달 닫힘 시 `focusInput()`으로 자동 포커스(모달·레코더가 떠 있으면 생략)
 - **뒤로가기**: 헤더 뒤로가기 → 확인 모달(답변 여부에 따라 문구만 다름). "나가기"는 **항상 저장하지 않고** `exit()`를 호출해 정리(PENDING이면 삭제)하고 `ACTIVE_RETROSPECTIVE_KEY`를 지운 뒤 `/home`으로 이동 — exit이 실패해도 이동은 막지 않음(`onBackConfirm`). 저장(결과 생성)은 "회고 마치기" 버튼(`finish()`)을 통해서만 이뤄지며, 뒤로가기 쪽에서는 답변이 있어도 `finish()`를 호출하지 않는다
 - **결과 화면(`retrospect/result.vue`)은 v2 `finish()` 기반**: `start.vue`는 회고 마치기 확인 시 `finish()`를 부르지 않고 `completingId`(`useState('retrospect:completing-id')`)만 넘겨 **바로** 결과 화면으로 이동. `result.vue`가 자동 저장 로딩 화면(**최소 1초**, `MIN_LOADING_MS`)을 띄운 채 `finish()` → `getResult()`를 호출해 결과를 보여준다. 실패 시 에러 화면의 '다시 시도'로 재호출 — `finish()`는 멱등이라 재호출해도 400이 나지 않는다. 재개용 id(`clearActiveRetrospective()`)는 생성 성공 시에만 지운다

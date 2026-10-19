@@ -11,6 +11,7 @@ import type {
   RetrospectiveResultResponse,
   UploadURL,
   AnswerGuide,
+  AssistantAction,
   UploadUrlRequest,
   AttachmentComplete,
   AttachmentDownloadUrl,
@@ -39,7 +40,7 @@ export interface ConversationCache {
   retrospectiveId: string
   message: { id: string; title?: string | null; body?: string | null; content?: string | null; answerGuide?: AnswerGuide | null }
   readyToComplete: boolean
-  isReply: boolean // 첫 질문이 아니라 답변 후 받은 AI 답장인지 — 계속하기/마치기 선택 UI 복구 여부
+  action?: AssistantAction | null // 답변 응답의 action — OFFER_COMPLETION/CONFIRM_COMPLETION이면 선택 UI도 복구
 }
 
 export function saveConversationCache(cache: ConversationCache) {

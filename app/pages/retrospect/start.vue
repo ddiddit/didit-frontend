@@ -57,14 +57,20 @@
                 </button>
               </div>
             </template>
-            <!-- 마무리 선택 UI — 답변 후 AI 답장이 올 때마다 답장과 함께 노출(showCompletionOffer).
-                 마치기는 추가 확인 없이 바로 finish(). 계속하기를 누르거나 답변을 보내면 사라진다 -->
+            <!-- 마무리 선택 UI — 답변 응답의 action에 따라 답장과 함께 노출(showCompletionOffer).
+                 OFFER_COMPLETION: 계속하기 / 마치기(마무리 의사를 답변으로 전송 → 서버가 CONFIRM_COMPLETION으로 응답)
+                 CONFIRM_COMPLETION: 마무리하기(바로 결과 화면으로). 계속하기를 누르거나 답변을 보내면 사라진다 -->
             <div v-if="m.id === completionOffer?.messageId" class="flex gap-[8px] mt-[10px]">
-              <UiButton variant="chip" size="sm" :disabled="isFinishing" @click="onOfferContinue">
-                {{ completionOffer.insufficient ? '계속 작성하기' : '계속하기' }}
-              </UiButton>
-              <UiButton size="sm" :loading="isFinishing" @click="onFinishConfirm">
-                {{ completionOffer.insufficient ? '이대로 마치기' : '마치기' }}
+              <template v-if="completionOffer.action === 'OFFER_COMPLETION'">
+                <UiButton variant="chip" size="sm" :disabled="isBusy || isFinishing" @click="onOfferContinue">
+                  계속하기
+                </UiButton>
+                <UiButton size="sm" :disabled="isBusy || isFinishing" @click="onOfferFinish">
+                  마치기
+                </UiButton>
+              </template>
+              <UiButton v-else size="sm" :loading="isFinishing" :disabled="isBusy" @click="onFinishConfirm">
+                마무리하기
               </UiButton>
             </div>
           </div>
@@ -112,7 +118,7 @@ import RetrospectVoiceRecorder from '~/components/RetrospectVoiceRecorder.vue'
 import UiPopup from '~/components/ui/UiPopup.vue'
 import UiButton from '~/components/ui/UiButton.vue'
 import { isServerError } from '~/utils/api-error'
-import type { AnswerGuide } from '~/types/api'
+import type { AnswerGuide, AssistantAction } from '~/types/api'
 import type { SentAttachment } from '~/utils/attachment'
 import type { ConversationCache } from '~/composables/useRetrospect'
 
@@ -120,6 +126,12 @@ definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
 // generating 자리표시자(다음 질문 대기 중)에서 재생할 로티 — public/icons/loading.lottie
 const GENERATING_LOTTIE = '/icons/loading.lottie'
+
+// 선택 UI '마치기' — 마무리 의사를 일반 답변으로 보내면 서버가 CONFIRM_COMPLETION(마무리 확인)으로 응답한다
+const FINISH_INTENT_MESSAGE = '더 이상 없어요. 이제 마무리할게요'
+
+// 선택 UI를 붙이는 action — 그 외(ASK/REFLECT)에는 붙이지 않는다
+type CompletionAction = Extract<AssistantAction, 'OFFER_COMPLETION' | 'CONFIRM_COMPLETION'>
 
 export type ChatMessage =
   | {
@@ -155,8 +167,8 @@ const isBackModal = ref(false) // 뒤로가기 확인 모달 여부
 const isBackLeaving = ref(false) // 뒤로가기 확인('나가기') 처리 중(finish 호출) — 버튼 잠금
 const isFinishModal = ref(false) // 회고 마치기 확인 모달 여부
 const isFinishing = ref(false) // finish() 처리 중 — 결과 화면으로 넘어가는 라우팅 전환까지는 풀지 않는다
-// 계속하기/마치기 선택 UI를 붙일 didit 메시지 — insufficient면 내용 부족 상태라 '계속 작성하기 / 이대로 마치기'로 표시
-const completionOffer = ref<{ messageId: string; insufficient: boolean } | null>(null)
+// 마무리 선택 UI를 붙일 didit 메시지 — OFFER_COMPLETION이면 '계속하기 / 마치기', CONFIRM_COMPLETION이면 '마무리하기'
+const completionOffer = ref<{ messageId: string; action: CompletionAction } | null>(null)
 const micRequesting = ref(false) // 권한 요청 진행 중 — '허용' 버튼 잠금
 const isRecorderOpen = ref(false) // 음성 레코더 표시 여부
 // 음성 레코더가 변환한 텍스트를 입력창(RetroTextarea)으로 넘기는 초안 채널
@@ -200,8 +212,8 @@ function onDiditTyped() {
 const { typeDiditMessage, clearTypingTimers } = useDiditTyping()
 
 // AI 메시지를 화면에 띄울 때 함께 호출 — 재진입 시 대화 조회 없이 바로 복구할 수 있게 마지막 AI 메시지를 캐시한다
-function cacheLastDiditMessage(message: ConversationCache['message'], readyToComplete: boolean, isReply: boolean) {
-  saveConversationCache({ retrospectiveId: retrospectiveId.value, message, readyToComplete, isReply })
+function cacheLastDiditMessage(message: ConversationCache['message'], readyToComplete: boolean, action: AssistantAction | null = null) {
+  saveConversationCache({ retrospectiveId: retrospectiveId.value, message, readyToComplete, action })
 }
 
 // 진행 중이던 회고 이어가기 — 이어서 진행할 수 있으면 true.
@@ -211,7 +223,7 @@ function cacheLastDiditMessage(message: ConversationCache['message'], readyToCom
 async function resumeActiveRetrospective(id: string): Promise<boolean> {
   const cached = readConversationCache(id)
   if (cached) {
-    restoreDiditMessage(id, cached.message, cached.readyToComplete, cached.isReply)
+    restoreDiditMessage(id, cached.message, cached.readyToComplete, cached.action ?? null)
     return true
   }
   try {
@@ -221,9 +233,9 @@ async function resumeActiveRetrospective(id: string): Promise<boolean> {
     const lastMessage = conversation.messages.at(-1)
     if (!lastMessage) return false
 
-    // 첫 질문이 아니라 답변 후 받은 AI 답장이었다면 선택 UI도 함께 복구
-    restoreDiditMessage(id, lastMessage, conversation.readyToComplete, conversation.messages.length > 1)
-    cacheLastDiditMessage(lastMessage, conversation.readyToComplete, conversation.messages.length > 1)
+    // 대화 조회 응답엔 action이 없어 선택 UI는 복구하지 않는다(헤더 '회고 마치기'로 종료 가능)
+    restoreDiditMessage(id, lastMessage, conversation.readyToComplete, null)
+    cacheLastDiditMessage(lastMessage, conversation.readyToComplete)
     return true
   } catch (err) {
     console.log(err)
@@ -232,13 +244,13 @@ async function resumeActiveRetrospective(id: string): Promise<boolean> {
 }
 
 // 이미 노출됐던 메시지 복구 — 재진입 시에는 타이핑 애니메이션 없이 바로 전체 노출 (sub이 없으면 노출 안 함)
-function restoreDiditMessage(id: string, message: ConversationCache['message'], readyToComplete: boolean, isReply: boolean) {
+function restoreDiditMessage(id: string, message: ConversationCache['message'], readyToComplete: boolean, action: AssistantAction | null) {
   retrospectiveId.value = id
   const diditMessage = buildDiditMessage(message, readyToComplete)
   diditMessage.typedMain = diditMessage.main
   diditMessage.showSub = !!diditMessage.sub
   messages.value = [diditMessage]
-  if (isReply) showCompletionOffer(diditMessage.id, readyToComplete)
+  showCompletionOffer(diditMessage.id, action)
   focusInput()
 }
 
@@ -257,7 +269,7 @@ async function initialApplication() {
     localStorage.setItem(ACTIVE_RETROSPECTIVE_KEY, first_response.retrospectiveId)
     const diditMessage = buildDiditMessage(first_response.initialMessage)
     messages.value = [diditMessage]
-    cacheLastDiditMessage(first_response.initialMessage, first_response.readyToComplete, false)
+    cacheLastDiditMessage(first_response.initialMessage, first_response.readyToComplete)
     isBusy.value = true
     typeDiditMessage(diditMessage, 50, onDiditTyped)
   } catch(err) {
@@ -307,8 +319,8 @@ function onBackCancel() {
   focusInput()
 }
 
-// 헤더 '회고 마치기' — readyToComplete와 관계없이 종료를 차단하지 않고 확인 모달을 띄운다.
-// (내용이 부족할 때의 '계속 작성하기 / 이대로 마치기' 선택은 AI 응답 아래에 자동으로 붙는다 — showCompletionOffer)
+// 헤더 '회고 마치기' — readyToComplete·action과 관계없이 종료를 차단하지 않고 확인 모달을 띄운다.
+// (AI가 마무리를 제안할 때의 '계속하기 / 마치기' 선택은 AI 응답 아래에 붙는다 — showCompletionOffer)
 function onFinishClick() {
   if (isBusy.value || isFinishing.value || !retrospectiveId.value) return
   isFinishModal.value = true
@@ -332,16 +344,23 @@ function onFinishCancel() {
   focusInput()
 }
 
-// 선택 UI의 '계속하기 / 계속 작성하기' — 선택 UI만 닫고 입력을 이어간다
+// 선택 UI의 '계속하기' — 선택 UI만 닫고 입력을 이어간다
 function onOfferContinue() {
   completionOffer.value = null
   focusInput()
 }
 
-// 답변 후 도착한 AI 답장 아래에 계속하기/마치기 선택 UI를 답장과 동시에 붙인다(action과 무관하게 모든 답장).
-// readyToComplete=false(내용 부족)면 '계속 작성하기 / 이대로 마치기'로 표시 — 부족해도 종료는 차단하지 않는다
-function showCompletionOffer(messageId: string, readyToComplete: boolean) {
-  completionOffer.value = { messageId, insufficient: !readyToComplete }
+// 선택 UI의 '마치기' — 바로 종료하지 않고 마무리 의사를 답변으로 보낸다.
+// 서버가 CONFIRM_COMPLETION으로 응답하면 '마무리하기' 버튼이 붙고, 그걸 눌러야 결과 화면으로 넘어간다
+function onOfferFinish() {
+  onSend(FINISH_INTENT_MESSAGE)
+}
+
+// 답변 응답의 action에 따라 AI 답장 아래에 선택 UI를 답장과 동시에 붙인다.
+// OFFER_COMPLETION → '계속하기 / 마치기', CONFIRM_COMPLETION → '마무리하기', 그 외(ASK/REFLECT/null) → 붙이지 않음
+function showCompletionOffer(messageId: string, action: AssistantAction | null) {
+  completionOffer.value =
+    action === 'OFFER_COMPLETION' || action === 'CONFIRM_COMPLETION' ? { messageId, action } : null
 }
 
 // 답변 제출 — 사용자 메시지를 먼저 반영하고, AI 응답을 기다리는 동안 generating 자리표시자를 보여준 뒤
@@ -382,8 +401,8 @@ async function onSend(content: string, attachments: SentAttachment[] = []) {
 
     const diditMessage = buildDiditMessage(response.assistantMessage, response.readyToComplete)
     messages.value = messages.value.map((m) => (m.id === generatingId ? diditMessage : m))
-    cacheLastDiditMessage(response.assistantMessage, response.readyToComplete, true)
-    showCompletionOffer(diditMessage.id, response.readyToComplete)
+    cacheLastDiditMessage(response.assistantMessage, response.readyToComplete, response.action)
+    showCompletionOffer(diditMessage.id, response.action)
     typeDiditMessage(diditMessage, 50, onDiditTyped)
   } catch (err) {
     messages.value = messages.value.filter((m) => m.id !== generatingId)
@@ -416,8 +435,8 @@ async function pollAnalysisTurn(turnId: string, generatingId: string, attempt = 
       }
       const diditMessage = buildDiditMessage(lastMessage, conversation.readyToComplete)
       messages.value = messages.value.map((m) => (m.id === generatingId ? diditMessage : m))
-      cacheLastDiditMessage(lastMessage, conversation.readyToComplete, true)
-      showCompletionOffer(diditMessage.id, conversation.readyToComplete)
+      // 대화 조회 응답엔 action이 없어 첨부 분석 후 답장에는 선택 UI를 붙이지 않는다
+      cacheLastDiditMessage(lastMessage, conversation.readyToComplete)
       typeDiditMessage(diditMessage, 50, onDiditTyped)
       return
     }
