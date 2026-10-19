@@ -205,7 +205,9 @@
                   <p class="text-body2 font-semibold text-grey-13">{{ item.title }}</p>
                 </div>
                 <!-- 요약 -->
-                <p v-if="item.summary" class="text-label1-reading font-normal text-grey-10 line-clamp-2">{{ item.summary }}</p>
+                <p v-if="item.summary?.trim()" class="text-label1-reading font-normal text-grey-10 line-clamp-2">{{ item.summary }}</p>
+                <!-- 요약이 없을 때 안내 -->
+                <p v-else class="text-label1-reading font-normal text-grey-7">회고 요약이 없습니다</p>
               </div>
               <!-- 태그 (UiTag로 통일 — 태그 id 해시 기반 색상, 화면 간 동일) -->
               <div v-if="item.tags && item.tags.length > 0" class="flex flex-wrap gap-[6px]">
@@ -319,7 +321,9 @@
                       <p class="text-body2 font-semibold text-grey-13">{{ r.title }}</p>
                     </div>
                     <!-- 요약 -->
-                    <p v-if="r.summary" class="text-label1-reading font-normal text-grey-10 line-clamp-2">{{ r.summary }}</p>
+                    <p v-if="r.summary?.trim()" class="text-label1-reading font-normal text-grey-10 line-clamp-2">{{ r.summary }}</p>
+                    <!-- 요약이 없을 때 안내 -->
+                    <p v-else class="text-label1-reading font-normal text-grey-7">회고 요약이 없습니다</p>
                   </div>
                   <!-- 태그 -->
                   <div v-if="r.tags && r.tags.length > 0" class="flex flex-wrap gap-[6px]">

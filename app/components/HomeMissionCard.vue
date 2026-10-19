@@ -98,7 +98,7 @@
                 v-if="number === m.target"
                 class="absolute left-full top-0 ml-[8px] flex flex-col items-center whitespace-nowrap"
               >
-                <span class="-ml-[3px] relative z-10 inline-flex items-center bg-grey-11 text-grey-1 text-[11px] font-medium px-[7px] py-[4px] rounded-md leading-[1.3] tracking-[-0.22px]">레벨업</span>
+                <span class="-ml-[3px] relative z-10 inline-flex items-center bg-grey-11 text-grey-6 text-[11px] font-medium px-[7px] py-[4px] rounded-md leading-[1.3] tracking-[-0.22px]">레벨업</span>
                 <svg width="9" height="10" viewBox="0 0 9 10" fill="none" class="absolute right-[calc(100%-2px)] top-0 bottom-0 my-auto">
                   <path d="M0.848617 6.47691C-0.282874 5.78018 -0.282872 4.21982 0.848619 3.52309L6.09755 0.291C7.34494 -0.477095 9 0.365085 9 1.76791L9 8.23209C9 9.63492 7.34493 10.4771 6.09754 9.709L0.848617 6.47691Z" fill="#353535"/>
                 </svg>
@@ -178,6 +178,7 @@ const circleRows = computed(() => {
 
 // 카드에는 '진행 중인 미션'의 레벨을 표시 — 백엔드 currentLevel은 달성한 레벨이라 +1 (레벨 0 없음, 모든 유저 Lv.1부터)
 const missionLevel = computed(() => props.data.currentLevel + 1)
+
 
 // 완료 구간 연결선 비율: 해당 줄에서 완료된 스탬프 수 기준 (첫 스탬프 중심 → 마지막 완료 스탬프 중심)
 function rowFillFrac(row: number[]): number {

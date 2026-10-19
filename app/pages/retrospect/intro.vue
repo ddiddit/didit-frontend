@@ -191,7 +191,7 @@ import UiPopup from '~/components/ui/UiPopup.vue'
 
     onMounted(async () => {
         await load() // 사용자 정보 로드
-        const message = `${profile.value?.nickname}님, 안녕하세요!\n저는 회고 파트너 디딧이에요.\n앞으로 회고를 도와드릴게요.`
+        const message = `${profile.value?.nickname}님, 안녕하세요!\n저는 회고 파트너 디딧이예요.\n앞으로 회고를 도와드릴게요.`
         typeMessage(message)
     })
 

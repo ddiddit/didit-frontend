@@ -2,15 +2,15 @@
 // 미션 카드·마이페이지 등 공용. Lv.10 fill만 28343 확정 필요.
 export const LEVEL_THEME: Record<number, { accent: string; fill: string }> = {
   1: { accent: '#37C57A', fill: '#37C58A' },
-  2: { accent: '#8C7CF0', fill: '#B4ABF0' },
-  3: { accent: '#8C7CF0', fill: '#B4ABF0' },
-  4: { accent: '#DEAD3A', fill: '#EBCE89' },
-  5: { accent: '#F08A5D', fill: '#F7BFA6' },
-  6: { accent: '#F06C6C', fill: '#F6A7A7' },
-  7: { accent: '#C78B5C', fill: '#E0BFA5' },
-  8: { accent: '#77C767', fill: '#ADDDA4' },
-  9: { accent: '#65ABE0', fill: '#AAD1EE' },
-  10: { accent: '#37C58A', fill: '#A9E6CB' },
+  2: { accent: '#5A8DEE', fill: '#5A8DEE' },
+  3: { accent: '#8C7CF0', fill: '#8C7CF0' },
+  4: { accent: '#E079E0', fill: '#E079E0' },
+  5: { accent: '#DEAD3A', fill: '#DEAD3A' },
+  6: { accent: '#F08A5D', fill: '#F08A5D' },
+  7: { accent: '#F06C6C', fill: '#F06C6C' },
+  8: { accent: '#C78B5C', fill: '#C78B5C' },
+  9: { accent: '#77C767', fill: '#77C767' },
+  10: { accent: '#65ABE0', fill: '#65ABE0' },
 }
 
 export function levelTheme(level: number): { accent: string; fill: string; light: string } {
