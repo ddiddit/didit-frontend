@@ -107,6 +107,14 @@ AI 기반 회고(retrospective) 앱의 프론트엔드.
 - **뒤로가기**: 헤더 뒤로가기 → 확인 모달(답변 여부에 따라 문구만 다름). "나가기"는 **항상 저장하지 않고** `exit()`를 호출해 정리(PENDING이면 삭제)하고 `ACTIVE_RETROSPECTIVE_KEY`를 지운 뒤 `/home`으로 이동 — exit이 실패해도 이동은 막지 않음(`onBackConfirm`). 저장(결과 생성)은 "회고 마치기" 버튼(`finish()`)을 통해서만 이뤄지며, 뒤로가기 쪽에서는 답변이 있어도 `finish()`를 호출하지 않는다
 - **결과 화면(`retrospect/result.vue`)은 v2 `finish()` 기반**: `start.vue`는 회고 마치기 확인 시 `finish()`를 부르지 않고 `completingId`(`useState('retrospect:completing-id')`)만 넘겨 **바로** 결과 화면으로 이동. `result.vue`가 자동 저장 로딩 화면(**최소 1초**, `MIN_LOADING_MS`)을 띄운 채 `finish()` → `getResult()`를 호출해 결과를 보여준다. 실패 시 에러 화면의 '다시 시도'로 재호출 — `finish()`는 멱등이라 재호출해도 400이 나지 않는다. 재개용 id(`clearActiveRetrospective()`)는 생성 성공 시에만 지운다
 
+- **답변 예시 (`answerGuide`)**: AI 메시지의 `answerGuide`가 있으면 아직 답하지 않은 마지막 질문 아래 예시를 노출 — `INLINE`은 바로 펼침, `ON_DEMAND`는 "답변 예시 보기" 버튼을 눌러 펼침, null·빈 배열은 미표시. 예시를 누르면 `onSend(example)`로 일반 TEXT 답변 전송(요청마다 새 `clientMessageId`)
+
+## 화면별 UI 규칙
+
+- **배경**: 회고 진행 화면(intro/start)은 `bg-retro-fade`(위→아래 그라데이션), 채팅 입력창(`RetroTextarea`)은 `bg-retro-fade-x`(왼→오른쪽). **결과 화면(`retrospect/result.vue`)은 그라데이션 금지** — 단색 `bg-background`
+- **배지 획득 배너** (`UiBadgeAcquiredPopup` + `useBadgeAcquired`): 회고 저장 후 새 배지가 있으면 화면 **상단** 토스트 배너로 노출하고 **1.5초 뒤 자동으로 닫힘**(탭하면 즉시). 하단의 저장 완료 토스트와 겹치지 않게 상단에 둔다. 여러 개면 큐로 순차 노출, 홈의 미션 팝업이 떠 있는 동안은 보류(`setHold`) 후 해제 시점부터 다시 1.5초
+- **회고 목록 요약** (`retrospects/index.vue`): 제목 아래 `summary`를 2줄까지(`line-clamp-2`) 표시. 비어 있으면 "회고 요약이 없습니다"를 연한 색(`text-grey-7`)으로 표시 — 전체 목록·캘린더 날짜별 목록 공통
+
 ## 분석 (Amplitude)
 
 - 이벤트 추적은 `app/composables/useAmplitude.ts`의 `track()` / `identify()` / `reset()` 사용
