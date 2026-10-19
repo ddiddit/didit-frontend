@@ -118,6 +118,7 @@ import { isServerError } from '~/utils/api-error'
 import type { AnswerGuide, AssistantAction } from '~/types/api'
 import type { SentAttachment } from '~/utils/attachment'
 import type { ConversationCache } from '~/composables/useRetrospect'
+import { createAnalyticsInsertId } from '~/analytics/events'
 
 definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
@@ -148,6 +149,14 @@ export type ChatMessage =
 const retro = useRetrospect()
 const { show } = useToast()
 const { isNative } = useIsNative()
+const { trackEvent } = useAmplitude()
+const retrospectiveAnalytics = useRetrospectiveAnalytics()
+const attribution = useAttribution()
+const route = useRoute()
+const startSource = computed(() => {
+  const source = route.query.source
+  return source === 'home' || source === 'intro' ? source : 'direct'
+})
 // 마이크 권한 요청·상태 판정은 음성 레코더 컴포저블과 동일 로직을 재사용
 const {
   requestPermission: requestMicPermission,
@@ -220,7 +229,8 @@ function cacheLastDiditMessage(message: ConversationCache['message'], readyToCom
 async function resumeActiveRetrospective(id: string): Promise<boolean> {
   const cached = readConversationCache(id)
   if (cached) {
-    restoreDiditMessage(id, cached.message, cached.readyToComplete, cached.action ?? null)
+    restoreDiditMessage(id, cached.message, cached.readyToComplete, cached.isReply)
+    retrospectiveAnalytics.restore(id)
     return true
   }
   try {
@@ -230,9 +240,10 @@ async function resumeActiveRetrospective(id: string): Promise<boolean> {
     const lastMessage = conversation.messages.at(-1)
     if (!lastMessage) return false
 
-    // 대화 조회 응답엔 action이 없어 선택 UI는 복구하지 않는다(헤더 '회고 마치기'로 종료 가능)
-    restoreDiditMessage(id, lastMessage, conversation.readyToComplete, null)
-    cacheLastDiditMessage(lastMessage, conversation.readyToComplete)
+    // 첫 질문이 아니라 답변 후 받은 AI 답장이었다면 선택 UI도 함께 복구
+    restoreDiditMessage(id, lastMessage, conversation.readyToComplete, conversation.messages.length > 1)
+    cacheLastDiditMessage(lastMessage, conversation.readyToComplete, conversation.messages.length > 1)
+    retrospectiveAnalytics.restore(id)
     return true
   } catch (err) {
     console.log(err)
@@ -261,16 +272,34 @@ async function initialApplication() {
     }
 
     const first_response = await retro.start()
-    if (first_response.conversationStatus !== 'ACTIVE') return;
+    if (first_response.conversationStatus !== 'ACTIVE') {
+      trackEvent('retrospect_start_failed', { reason: 'invalid_status', source: startSource.value })
+      return
+    }
     retrospectiveId.value = first_response.retrospectiveId
     localStorage.setItem(ACTIVE_RETROSPECTIVE_KEY, first_response.retrospectiveId)
+    retrospectiveAnalytics.begin(first_response.retrospectiveId)
+    trackEvent(
+      'retrospect_started',
+      {
+        ...attribution.properties(),
+        retrospective_id: first_response.retrospectiveId,
+        flow_version: 'V2',
+        source: startSource.value,
+      },
+      createAnalyticsInsertId('retrospect_started', first_response.retrospectiveId),
+    )
     const diditMessage = buildDiditMessage(first_response.initialMessage)
     messages.value = [diditMessage]
     cacheLastDiditMessage(first_response.initialMessage, first_response.readyToComplete)
     isBusy.value = true
     typeDiditMessage(diditMessage, 50, onDiditTyped)
-  } catch(err) {
+  } catch (err) {
     console.log(err)
+    trackEvent('retrospect_start_failed', {
+      reason: isServerError(err) ? 'server' : 'network_or_client',
+      source: startSource.value,
+    })
     if (isServerError(err)) show('알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
   }
 }
@@ -298,9 +327,21 @@ async function onBackConfirm() {
   if (isBackLeaving.value) return
   isBackLeaving.value = true
   if (retrospectiveId.value) {
+    const id = retrospectiveId.value
+    const lastCompletedTurn = retrospectiveAnalytics.context.value?.answerCount ?? 0
+    trackEvent(
+      'retrospect_exited',
+      {
+        retrospective_id: id,
+        last_completed_turn: lastCompletedTurn,
+        exit_reason: 'user_confirmed',
+      },
+      createAnalyticsInsertId('retrospect_exited', id),
+    )
     try {
-      await retro.exit(retrospectiveId.value)
+      await retro.exit(id)
       clearActiveRetrospective()
+      retrospectiveAnalytics.clear(id)
     } catch (err) {
       console.log(err)
     }
@@ -332,6 +373,7 @@ function onFinishConfirm() {
   isFinishing.value = true
   isFinishModal.value = false
   completingId.value = retrospectiveId.value
+  saveCompletingRetrospective(retrospectiveId.value)
   navigateTo('/retrospect/result')
 }
 
@@ -385,6 +427,20 @@ async function onSend(content: string, attachments: SentAttachment[] = []) {
   try {
     const attachmentIds = attachments.map((a) => a.attachmentId)
     const response = await retro.answer(retrospectiveId.value, content, attachmentIds)
+    const analyticsContext = retrospectiveAnalytics.recordAnswer(response.turnId)
+    if (analyticsContext) {
+      trackEvent(
+        'retrospect_answer_submitted',
+        {
+          retrospective_id: retrospectiveId.value,
+          turn_id: response.turnId,
+          turn_number: response.turnNumber,
+          input_type: attachments.length === 0 ? 'text' : content.trim() ? 'mixed' : 'attachment',
+          ready_to_complete: response.readyToComplete,
+        },
+        createAnalyticsInsertId('retrospect_answer_submitted', retrospectiveId.value, response.turnId),
+      )
+    }
 
     if (!response.assistantMessage) {
       if (attachments.length > 0) {
@@ -557,7 +613,8 @@ async function openMicSettings() {
 }
 
 onMounted(async () => {
-  initialApplication()
+  await loadProfile(true)
+  await initialApplication()
 
   // 대화 영역 안 내용(새 메시지 추가, 타이핑 애니메이션의 글자 변화 등)이 바뀔 때마다 바닥으로 스크롤
   if (scrollEl.value) {

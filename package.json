@@ -16,7 +16,8 @@
     "cap:sync": "nuxt generate && cap sync",
     "cap:sync:prod": "nuxt generate --dotenv .env.production && cap sync",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test": "node --test tests/**/*.test.ts"
   },
   "dependencies": {
     "@amplitude/analytics-browser": "^2.44.1",
@@ -25,9 +26,10 @@
     "@capacitor/core": "^7.6.7",
     "@capacitor/ios": "^7.6.7",
     "@capacitor/keyboard": "^7.0.6",
-    "@capacitor/push-notifications": "^7.0.6",
     "@capacitor/status-bar": "^7.0.6",
     "@capacitor/text-zoom": "^7.0.4",
+    "@capacitor-firebase/crashlytics": "^7.5.0",
+    "@capacitor-firebase/messaging": "^7.5.0",
     "@capgo/capacitor-social-login": "^7.20.0",
     "@lottiefiles/dotlottie-vue": "^0.11.27",
     "@pinia/nuxt": "^0.11.1",
@@ -40,7 +42,7 @@
     "axios": "^1.9.0",
     "canvas-confetti": "^1.9.4",
     "capacitor-native-settings": "^7.0.2",
-    "firebase": "^12.15.0",
+    "firebase": "^11.10.0",
     "nuxt": "^4.4.7",
     "pinia": "^3.0.2",
     "sortablejs": "^1.15.7",

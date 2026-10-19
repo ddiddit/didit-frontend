@@ -264,9 +264,8 @@ async function doDelete() {
   if (!pendingDelete.value?.id || isDeleting.value) return
   isDeleting.value = true
   try {
-    const deletedName = pendingDelete.value.name
     await $api.delete(`/api/v1/projects/${pendingDelete.value.id}`)
-    track('project_deleted', { project_name: deletedName })
+    track('project_deleted')
     const deletedId = pendingDelete.value.id
     localProjects.value = localProjects.value.filter(p => p.id !== deletedId)
     projects.value = projects.value.filter(p => p.id !== deletedId)

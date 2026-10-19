@@ -1,15 +1,17 @@
 /* 웹 FCM 백그라운드 수신 서비스 워커.
-   서비스 워커는 빌드/환경변수에 접근 못 하므로 config를 직접 기입한다(웹 apiKey는 공개되어도 무방). */
-importScripts('https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js')
-importScripts('https://www.gstatic.com/firebasejs/12.15.0/firebase-messaging-compat.js')
+   빌드 환경변수를 직접 읽을 수 없으므로 등록 URL의 공개 설정을 사용한다. */
+importScripts('https://www.gstatic.com/firebasejs/11.10.0/firebase-app-compat.js')
+importScripts('https://www.gstatic.com/firebasejs/11.10.0/firebase-messaging-compat.js')
+
+const params = new URL(self.location.href).searchParams
 
 firebase.initializeApp({
-  apiKey: 'AIzaSyASjnqAWkt2CSYxJ4V0SklyhqBsoCCCF-4',
-  authDomain: 'didit-bd2f1.firebaseapp.com',
-  projectId: 'didit-bd2f1',
-  storageBucket: 'didit-bd2f1.firebasestorage.app',
-  messagingSenderId: '370858550739',
-  appId: '1:370858550739:web:d89f5c9a7cc098147abb26',
+  apiKey: params.get('apiKey'),
+  authDomain: params.get('authDomain'),
+  projectId: params.get('projectId'),
+  storageBucket: params.get('storageBucket'),
+  messagingSenderId: params.get('messagingSenderId'),
+  appId: params.get('appId'),
 })
 
 const messaging = firebase.messaging()

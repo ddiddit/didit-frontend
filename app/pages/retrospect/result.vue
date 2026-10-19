@@ -79,17 +79,20 @@ import RetrospectProjectSelect from '~/components/RetrospectProjectSelect.vue'
 import UiButton from '~/components/ui/UiButton.vue'
 import type { RetrospectiveResultV2, Tag } from '~/types/api'
 import { isAuthError, toErrorVariant } from '~/utils/api-error'
+import { createAnalyticsInsertId } from '~/analytics/events'
 
 definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
 const retro = useRetrospect()
 const { show } = useToast()
-const { track } = useAmplitude()
+const { track, trackEvent } = useAmplitude()
+const retrospectiveAnalytics = useRetrospectiveAnalytics()
+const attribution = useAttribution()
 const { profile, load: loadProfile } = useProfile()
 const { fetchUnnotified } = useBadges()
 const { show: showBadge } = useBadgeAcquired()
 
-const completingId = useState<string>('retrospect:completing-id')
+const completingId = useState<string>('retrospect:completing-id', () => readCompletingRetrospective() ?? '')
 // 채팅(start.vue)에서 회고 마치기로 이미 생성한 결과 — 있으면 재생성 없이 사용
 
 const isLoading = ref(true)
@@ -140,6 +143,7 @@ async function generate() {
   errorVariant.value = null
   try {
     const id = completingId.value
+    retrospectiveAnalytics.restore(id)
     const [res] = await Promise.all([
       retro.finish(id).then(() => retro.getResult(id)),
       new Promise((resolve) => setTimeout(resolve, MIN_LOADING_MS)),
@@ -150,9 +154,38 @@ async function generate() {
     savedTitle.value = title.value
     selectedProject.value = res.project
     selectedTags.value = res.tags ?? []
+    const completion = retrospectiveAnalytics.completion()
+    const answerCount = completion?.context.answerCount ?? 0
+    trackEvent(
+      'retrospect_result_generated',
+      { retrospective_id: id, answer_count: answerCount },
+      createAnalyticsInsertId('retrospect_result_generated', id),
+    )
+    trackEvent(
+      'retrospect_completed',
+      {
+        ...attribution.properties(),
+        retrospective_id: id,
+        answer_count: answerCount,
+        turn_count: answerCount,
+        elapsed_duration_sec: completion?.elapsedDurationSec ?? 0,
+        active_duration_sec: completion?.activeDurationSec ?? 0,
+      },
+      createAnalyticsInsertId('retrospect_completed', id),
+    )
+    retrospectiveAnalytics.clear(id)
+    clearCompletingRetrospective()
     // 완료됐으니 start.vue가 재개용으로 들고 있던 id를 정리 — 다음 진입은 새 회고로 시작
     clearActiveRetrospective()
   } catch (e) {
+    const id = completingId.value
+    if (id) {
+      trackEvent('retrospect_complete_failed', {
+        retrospective_id: id,
+        reason: toErrorVariant(e),
+        last_completed_turn: retrospectiveAnalytics.context.value?.answerCount ?? 0,
+      })
+    }
     // 인증 만료는 인터셉터가 로그인으로 보냄 → 에러 화면 X
     if (!isAuthError(e)) errorVariant.value = toErrorVariant(e)
   } finally {
@@ -203,9 +236,10 @@ async function onSave() {
   }
 }
 
-onMounted(() => {
-  loadProfile()
-  generate()
+onMounted(async () => {
+  if (!completingId.value) completingId.value = readCompletingRetrospective() ?? ''
+  await loadProfile(true)
+  await generate()
 })
 </script>
 

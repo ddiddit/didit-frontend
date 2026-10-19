@@ -183,7 +183,7 @@ import { CACHE_KEYS, isCacheFresh, readPersistedCache, removePersistedCache, wri
 definePageMeta({ middleware: 'auth' })
 
 const { $api } = useNuxtApp()
-const { track } = useAmplitude()
+const { track, trackEvent } = useAmplitude()
 
 // 닉네임은 홈 응답(/api/v2/home)에서 사용 — 백엔드가 홈 1콜로 nickname·mission까지 반환
 const nickname = useState<string>('home:nickname', () => '')
@@ -432,12 +432,11 @@ function goToNotifications() {
 }
 
 function startRetrospect() {
-  track('retrospect_started', { source: 'home' })
-  navigateTo('/retrospect/start')
+  trackEvent('retrospect_start_clicked', { source: 'home' })
+  navigateTo({ path: '/retrospect/start', query: { source: 'home' } })
 }
 
 function introRetrospect() {
-  track('retrospect_started', { source: 'home' })
   navigateTo('/retrospect/intro')
 }
 

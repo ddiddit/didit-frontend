@@ -17,6 +17,7 @@ const push = usePushNotifications()
 
 // 인증·온보딩 완료 사용자의 최종 목적지 — 알림 탭 딥링크가 있으면 그쪽 우선, 없으면 홈
 function authedDestination(): string {
+  if (readCompletingRetrospective()) return '/retrospect/result'
   return push.consumePendingDeepLink() ?? '/home'
 }
 

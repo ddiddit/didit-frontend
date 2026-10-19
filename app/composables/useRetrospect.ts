@@ -18,6 +18,7 @@ import type {
 } from '~/types/api'
 import { toUploadableAudio } from '~/utils/audio'
 import { CACHE_KEYS, removePersistedCache } from '~/utils/persisted-cache'
+import { createAnalyticsInsertId } from '~/analytics/events'
 
 // 회고 진행 플로우 API 레이어.
 // 대부분 mutation 성격이라 캐싱하지 않고, AI 생성(완료/심화질문/STT)은
@@ -30,6 +31,34 @@ const AI_TIMEOUT = 65_000
 // 답변 도중 화면을 나갔다 들어와도(뒤로가기·앱 재시작 등) start()를 다시 호출해 새 회고를
 // 만들지 않고, 이 id로 대화 조회부터 시도해 이어서 진행하기 위함.
 export const ACTIVE_RETROSPECTIVE_KEY = 'activeRetrospectiveId'
+export const COMPLETING_RETROSPECTIVE_KEY = 'completingRetrospectiveId'
+
+export function saveCompletingRetrospective(id: string) {
+  try {
+    localStorage.setItem(COMPLETING_RETROSPECTIVE_KEY, id)
+  }
+  catch {
+    // 메모리 상태로 현재 흐름은 계속 진행한다.
+  }
+}
+
+export function readCompletingRetrospective(): string | null {
+  try {
+    return localStorage.getItem(COMPLETING_RETROSPECTIVE_KEY)
+  }
+  catch {
+    return null
+  }
+}
+
+export function clearCompletingRetrospective() {
+  try {
+    localStorage.removeItem(COMPLETING_RETROSPECTIVE_KEY)
+  }
+  catch {
+    // 분석 복구용 상태 정리 실패는 사용자 흐름과 분리한다.
+  }
+}
 
 // 진행 중 회고의 '마지막 AI 메시지' 캐시 — 재진입 때마다 대화 조회(/conversation)를 다시 요청하지 않고 바로 복구하기 위함.
 // 대화는 이 앱에서 보낸 답변으로만 바뀌므로, AI 메시지를 화면에 띄울 때 저장하고 답변을 보내는 순간 지운다.
@@ -73,6 +102,7 @@ export function clearActiveRetrospective() {
 
 export function useRetrospect() {
   const { $api } = useNuxtApp()
+  const { trackEvent } = useAmplitude()
 
   // 홈(최근 회고·오늘 횟수·미션)·프로필(레벨·배지)에 영향을 주는 작업 뒤 호출 — 캐시를 지워 다음 진입 때 새로 받게 한다
   function invalidateDerivedCaches({ profile = false } = {}) {
@@ -170,10 +200,27 @@ export function useRetrospect() {
 
   // 다시 시작 → 기존 회고 삭제 후 새 회고 시작 (첫 질문 반환). 하루 횟수 정책 적용됨.
   async function restart(id: string): Promise<StartRetrospectiveResponse> {
-    const res = await $api.post<ApiResponse<StartRetrospectiveResponse>>(
-      `/api/v1/retrospectives/${id}/restart`,
-    )
-    return res.data.data
+    try {
+      const res = await $api.post<ApiResponse<StartRetrospectiveResponse>>(
+        `/api/v1/retrospectives/${id}/restart`,
+      )
+      trackEvent(
+        'retrospect_restarted',
+        {
+          previous_retrospective_id: id,
+          retrospective_id: res.data.data.retrospectiveId,
+        },
+        createAnalyticsInsertId('retrospect_restarted', id, res.data.data.retrospectiveId),
+      )
+      return res.data.data
+    }
+    catch (error) {
+      trackEvent('retrospect_restart_failed', {
+        previous_retrospective_id: id,
+        reason: 'request_failed',
+      })
+      throw error
+    }
   }
 
   // 진행 중 회고 나가기 (PENDING이면 삭제, 그 외 유지). 베스트에포트.

@@ -477,7 +477,7 @@ async function fetchRetrospects() {
     retrospects.value = list
     // 검색어로 진입한 경우에만 검색 이벤트 발생 (결과 개수 포함)
     if (keyword.value) {
-      track('retrospect_searched', { keyword: keyword.value, result_count: list.length })
+      track('retrospect_searched', { result_count: list.length })
     }
   } catch (e) {
     // 인증 만료는 인터셉터가 로그인으로 보냄 → 배너 X

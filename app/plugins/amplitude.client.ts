@@ -1,12 +1,8 @@
 import * as amplitude from '@amplitude/analytics-browser'
-
-// 임시 스위치 — 실제 Amplitude API 키가 준비되기 전까지 init 자체를 막아둔다.
-// (지금 .env의 NUXT_PUBLIC_AMPLITUDE_API_KEY는 자리표시자라 프로덕션 빌드에서 SDK가
-// "Invalid API key" 에러를 찍음) 키가 준비되면 이 줄을 지운다.
-const AMPLITUDE_INIT_DISABLED = true
+import type { UserProfile } from '~/types/api'
 
 export default defineNuxtPlugin(() => {
-  if (import.meta.dev || AMPLITUDE_INIT_DISABLED) return
+  if (import.meta.dev) return
 
   const config = useRuntimeConfig()
   const apiKey = config.public.amplitudeApiKey as string
@@ -30,4 +26,14 @@ export default defineNuxtPlugin(() => {
       // JWT 파싱 실패 시 익명 세션 유지
     }
   }
+
+  const profile = useState<UserProfile | null>('user:profile', () => null)
+  watch(profile, (value) => {
+    if (!value) return
+    const identify = new amplitude.Identify()
+      .set('provider', value.provider.toLowerCase())
+      .set('account_type', value.accountType ?? 'UNKNOWN')
+    if (value.createdAt) identify.set('account_created_at', value.createdAt)
+    amplitude.identify(identify)
+  }, { immediate: true })
 })
