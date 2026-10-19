@@ -91,7 +91,7 @@
       <div v-if="recentList.length > 0 || isLevelZero" class="mt-8 px-5">
         <p class="text-[16px] font-semibold text-grey-10 leading-[1.5] tracking-[-0.02em]">최근 제안 받은 행동</p>
         <p class="text-[14px] font-medium text-grey-7 leading-[1.4] tracking-[-0.02em] mt-[3px]">제안 받은 피드백을 업무에 적용해보세요</p>
-        <div class="mt-3.5 bg-white rounded-[18px] px-5 py-[22px] flex flex-col gap-[14px]">
+        <div class="mt-3.5 bg-grey-4 rounded-[18px] px-5 py-[22px] flex flex-col gap-[14px]">
           <!-- Lv.0 빈 상태 -->
           <div v-if="recentList.length === 0" class="flex items-center gap-[6px] py-5.5 px-5">
             <img src="/icons/empty-retrospects.svg" alt="empty-retrospect" class="w-[24px] h-[24px]" />
