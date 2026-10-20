@@ -1,6 +1,44 @@
 import axios from 'axios'
 import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    // false면 GET 응답 캐시를 건너뛰고 항상 네트워크로 요청(강제 새로고침용). 받은 응답은 캐시에 다시 채운다
+    cache?: boolean
+  }
+}
+
+// GET 응답 메모리 캐시 — 화면을 다시 들어올 때마다 같은 조회 API를 반복 호출하지 않도록 TTL 동안 재사용한다.
+// 데이터를 바꾸는 요청(POST/PUT/PATCH/DELETE)이 성공하면 무엇이 바뀌었는지와 무관하게 전부 비워
+// 다음 조회에서 최신 데이터를 받는다. 앱을 새로 띄우면(메모리 초기화) 자연히 비워진다.
+const GET_CACHE_TTL = 1000 * 60 * 5 // 5분
+const responseCache = new Map<string, { response: AxiosResponse; expiresAt: number }>()
+
+// 로그인·로그아웃, 서버에서 데이터가 바뀌었을 수 있는 시점(푸시 수신 등)에 호출
+export function clearApiCache() {
+  responseCache.clear()
+}
+
+// 데이터를 바꾸는 요청이 성공하면 GET 캐시 전체를 비운다
+function clearCacheOnWrite(config: InternalAxiosRequestConfig) {
+  return (res: AxiosResponse) => {
+    if (config.method !== 'get') clearApiCache()
+    return res
+  }
+}
+
+// GET 캐시에서 제외할 조회 — 서버 쪽에서 계속 바뀌어 매번 새로 받아야 하는 것들
+// - /conversation: 첨부 분석·AI 응답 폴링
+// - /attachments: 다운로드 URL은 만료 시간이 있음
+// - /badges/popup: 조회 시점의 '아직 알리지 않은 배지' — 회고 저장 직후 1회성 조회
+// - /notification-histories: 서버가 보내는 알림 목록
+function isCacheableGet(config: InternalAxiosRequestConfig): boolean {
+  const url = config.url ?? ''
+  return config.method === 'get'
+    && config.cache !== false
+    && !/\/conversation(\?|$)|\/attachments|\/badges\/popup|\/notification-histories/.test(url)
+}
+
 // 중복 요청 방지에서 제외할 요청 — 같은 내용이어도 매번 실제로 보내야 하는 것들.
 // - /messages: 답변 제출. 요청마다 clientMessageId가 달라 매번 새 메시지로 처리돼야 함
 // - /attachments: 첨부 업로드 URL 발급·완료 확인. 같은 파일을 두 번 골라도 각각 별개 업로드
@@ -24,9 +62,18 @@ export const createApiClient = (baseURL: string) => {
   // 진행 중인 요청의 결과를 함께 받는다(더블 탭·중복 마운트 등). 응답이 오면 바로 풀려서 이후 요청은 정상 전송된다.
   const inflight = new Map<string, Promise<AxiosResponse>>()
   const baseAdapter = axios.getAdapter(client.defaults.adapter)
-  client.defaults.adapter = (config) => {
+  client.defaults.adapter = async (config) => {
     const key = dedupeKey(config)
-    if (!key) return baseAdapter(config)
+    // 중복 방지 제외 요청(답변 제출·첨부·음성 업로드)도 데이터를 바꾸는 요청이라 성공 시 GET 캐시를 비운다
+    if (!key) return baseAdapter(config).then(clearCacheOnWrite(config))
+
+    // 캐시된 GET 응답이 있으면 네트워크 없이 반환. 저장된 data는 파싱 전 원본(문자열)이라
+    // 이후 transformResponse가 매번 새 객체로 파싱한다 — 화면에서 응답 객체를 고쳐도 캐시는 오염되지 않는다
+    if (isCacheableGet(config)) {
+      const cached = responseCache.get(key)
+      if (cached && cached.expiresAt > Date.now()) return { ...cached.response, config }
+      responseCache.delete(key)
+    }
 
     const existing = inflight.get(key)
     if (existing) {
@@ -40,7 +87,17 @@ export const createApiClient = (baseURL: string) => {
       )
     }
 
-    const request = baseAdapter(config).finally(() => inflight.delete(key))
+    const request = baseAdapter(config)
+      .then((res) => {
+        // cache:false(강제 새로고침)로 받은 응답도 채워 둬, 이후 일반 조회는 최신 값을 재사용한다.
+        // axios가 이 객체의 data를 파싱 결과로 덮어쓰므로, 파싱 전 원본을 담은 사본을 저장한다
+        if (isCacheableGet({ ...config, cache: true })) {
+          responseCache.set(key, { response: { ...res }, expiresAt: Date.now() + GET_CACHE_TTL })
+        }
+        return res
+      })
+      .then(clearCacheOnWrite(config))
+      .finally(() => inflight.delete(key))
     inflight.set(key, request)
     return request
   }
