@@ -15,6 +15,7 @@ import type {
   UploadUrlRequest,
   AttachmentComplete,
   AttachmentDownloadUrl,
+  RetrospectiveMemo,
 } from '~/types/api'
 import { toUploadableAudio } from '~/utils/audio'
 import { CACHE_KEYS, removePersistedCache } from '~/utils/persisted-cache'
@@ -319,6 +320,23 @@ export function useRetrospect() {
     return res.data.data
   }
 
+  // 회고 메모 — 회고 결과와 분리 저장되며, 회고를 삭제하면 함께 삭제된다
+  async function getMemos(id: string): Promise<RetrospectiveMemo[]> {
+    const res = await $api.get<ApiResponse<RetrospectiveMemo[]>>(`/api/v2/retrospectives/${id}/memos`)
+    return res.data.data
+  }
+  async function createMemo(id: string, content: string): Promise<RetrospectiveMemo> {
+    const res = await $api.post<ApiResponse<RetrospectiveMemo>>(`/api/v2/retrospectives/${id}/memos`, { content })
+    return res.data.data
+  }
+  async function updateMemo(id: string, memoId: string, content: string): Promise<RetrospectiveMemo> {
+    const res = await $api.patch<ApiResponse<RetrospectiveMemo>>(`/api/v2/retrospectives/${id}/memos/${memoId}`, { content })
+    return res.data.data
+  }
+  async function deleteMemo(id: string, memoId: string): Promise<void> {
+    await $api.delete(`/api/v2/retrospectives/${id}/memos/${memoId}`)
+  }
+
   return {
     start,
     answer,
@@ -343,5 +361,9 @@ export function useRetrospect() {
     generateURL,
     completeUpload,
     deleteAttachment,
+    getMemos,
+    createMemo,
+    updateMemo,
+    deleteMemo,
   }
 }

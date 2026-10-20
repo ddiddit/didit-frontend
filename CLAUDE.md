@@ -75,6 +75,8 @@ AI 기반 회고(retrospective) 앱의 프론트엔드.
 - **조회 응답 영구 캐시** (`app/utils/persisted-cache.ts`, 키 접두사 `cache:`): 홈(`/api/v2/home`, 5분)·프로필(`useProfile`, 10분)·알림 설정(`useNotificationSettings`, 1시간)은 새로고침·재진입 때 TTL 안이면 요청하지 않는다
   - 데이터를 바꾸는 작업 뒤엔 반드시 캐시 무효화 — 회고 완료·저장·삭제·제목/프로젝트/태그 변경은 `useRetrospect` 안에서 자동 처리, 그 외 새 변경 API를 추가하면 `removePersistedCache(CACHE_KEYS.*)`/`invalidateProfileCache()` 호출
   - 로그인·로그아웃 시 `clearPersistedCaches()`로 전부 삭제(계정 간 데이터 혼입 방지)
+- **GET 응답 메모리 캐시** (`app/utils/axios.ts`): 모든 GET은 5분간 메모리에 캐시돼 화면 재진입 시 다시 요청하지 않는다. POST/PUT/PATCH/DELETE가 성공하면 전체 캐시를 비움
+  - 항상 새로 받아야 하는 조회는 `isCacheableGet()` 제외 목록에 추가하거나, 요청에 `{ cache: false }` 전달(강제 새로고침)
 
 ### 인증
 

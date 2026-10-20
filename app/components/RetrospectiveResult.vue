@@ -1,9 +1,9 @@
 <template>
   <div class="flex flex-col gap-[30px] w-full">
     <!-- 제목 + 메타(프로젝트/태그) -->
-    <div class="flex flex-col" :class="variant === 'result' ? 'gap-[14px]' : ''">
+    <div v-if="part !== 'body'" class="flex flex-col" :class="variant === 'result' ? 'gap-[14px]' : ''">
       <!-- 작성 날짜 (상세 화면 전용) -->
-      <p v-if="variant === 'detail' && date" class="text-label1 font-medium text-grey-8">{{ date }}</p>
+      <p v-if="variant === 'detail' && date" class="text-label1 font-medium text-grey-7">{{ date }}</p>
       <!-- 상세 화면은 제목 하단 라인 미노출 -->
       <div
         class="flex items-center gap-[10px] pt-3 pb-[14px]"
@@ -41,15 +41,15 @@
           class="flex h-6 items-center justify-between"
           @click="editableMeta && $emit('edit-project')"
         >
-          <span class="flex gap-3 items-center text-label2 font-medium">
-            <span class="text-grey-7 w-[50px] text-left">프로젝트</span>
+          <span class="flex items-center gap-3 items-center text-label2 font-medium">
             <!-- 상세 화면: 프로젝트가 있으면 해당 프로젝트 회고 목록으로 이동하는 링크 -->
+            <img src="/icons/folder.png" alt="folder" />
             <button
               v-if="variant === 'detail' && projectName"
-              class="text-grey-12 underline"
+              class="text-grey-10 text-label1 underline mt-[2px]"
               @click="$emit('open-project')"
             >{{ projectName }}</button>
-            <span v-else class="text-grey-8">{{ projectName || '자유 회고' }}</span>
+            <span v-else class="text-grey-10 text-label1 mt-[2px]">{{ projectName || '자유 회고' }}</span>
           </span>
           <img v-if="editableMeta" src="/icons/chevron-right.svg" alt="" class="w-5 h-5" />
         </component>
@@ -59,11 +59,13 @@
           @click="editableMeta && $emit('edit-tags')"
         >
           <span class="flex gap-3 items-center text-label2 font-medium min-w-0">
-            <span class="text-grey-7 w-[50px] text-left shrink-0">태그</span>
+            <div class="w-4 h-4 flex justify-center items-center">
+              <img src="/icons/tag.png" alt="tag" />
+            </div>
             <span v-if="tags && tags.length" class="flex gap-[6px] flex-wrap">
               <UiTag v-for="t in tags" :key="t.id" :color="getTagColor(t.id)">#{{ t.name }}</UiTag>
             </span>
-            <span v-else class="text-grey-8">태그 없음</span>
+            <span v-else class="text-grey-8 text-label1">태그 없음</span>
           </span>
           <img v-if="editableMeta" src="/icons/chevron-right.svg" alt="" class="w-5 h-5 shrink-0" />
         </component>
@@ -71,10 +73,13 @@
     </div>
 
     <!-- 본문 -->
-    <div class="flex flex-col gap-5">
+    <div v-if="part !== 'header'" class="flex flex-col gap-5">
       <!-- 회고 요약 -->
-      <div class="bg-grey-3 rounded-2xl p-[22px] flex flex-col gap-[10px]">
-        <p class="text-label2 font-semibold text-grey-7">회고 요약</p>
+      <div class="bg-green-light rounded-2xl p-[22px] flex flex-col gap-[10px]">
+        <div class="text-label2 font-semibold text-green-hover flex items-center gap-[8px]">
+          <img src="/logo-green.svg" alt="logo-small" />
+          <span class="block mt-[2px]">회고 요약</span>
+        </div>
         <p class="text-body3-reading text-grey-13 whitespace-pre-line">{{ content.summary }}</p>
       </div>
 
@@ -127,8 +132,10 @@ const props = withDefaults(
     deletable?: boolean
     variant?: 'result' | 'detail' // 상세: 날짜 노출, 제목 하단 라인 미노출, 프로젝트 링크
     date?: string | null // 상세 화면에 노출할 작성 날짜 (예: 2026년 3월 5일)
+    // 일부만 렌더 — 상세 화면은 제목·메타(header)를 탭 위에, 본문(body)을 '기본' 탭 안에 나눠 배치한다
+    part?: 'all' | 'header' | 'body'
   }>(),
-  { projectName: null, tags: () => [], editableTitle: false, editableMeta: false, deletable: false, variant: 'result', date: null },
+  { projectName: null, tags: () => [], editableTitle: false, editableMeta: false, deletable: false, variant: 'result', date: null, part: 'all' },
 )
 
 defineEmits<{ delete: []; 'edit-project': []; 'edit-tags': []; 'open-project': []; 'update:title': [value: string] }>()

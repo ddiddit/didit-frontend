@@ -24,7 +24,8 @@ export function useProfile() {
     if (inflight.value && !force) return inflight.value
     inflight.value = (async () => {
       try {
-        const res = await $api.get<ApiResponse<UserProfile>>('/api/v2/users/profile')
+        // force면 axios GET 캐시도 건너뛰고 서버에서 새로 받는다
+        const res = await $api.get<ApiResponse<UserProfile>>('/api/v2/users/profile', { cache: !force })
         setProfile(res.data.data)
       } catch {
         // 401/403은 axios 인터셉터가 처리

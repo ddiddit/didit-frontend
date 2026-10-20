@@ -1,3 +1,5 @@
+import { clearApiCache } from '~/utils/axios'
+
 // 새로고침·재진입 때마다 같은 조회 API를 다시 부르지 않도록 응답을 localStorage에 보관하는 공용 캐시.
 // 키는 모두 PREFIX로 시작해 로그아웃·계정 전환 시 clearPersistedCaches()로 한 번에 비울 수 있다.
 // 저장소 접근이 막힌 환경(사생활 보호 모드 등)에서는 조용히 캐시 없이 동작한다.
@@ -45,6 +47,7 @@ export function isCacheFresh(entry: PersistedEntry<unknown> | null, ttl: number)
 // 로그아웃·다른 계정 로그인 시 — 이전 계정 데이터가 남지 않도록 캐시 전체 삭제
 export function clearPersistedCaches() {
   if (!import.meta.client) return
+  clearApiCache() // axios GET 메모리 캐시도 계정 단위라 함께 비운다
   try {
     Object.keys(localStorage)
       .filter((k) => k.startsWith(PREFIX))

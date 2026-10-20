@@ -7,6 +7,7 @@ import {
   hasRequiredFirebaseMessagingConfig,
 } from '~/utils/firebaseMessagingConfig'
 import { isFirebaseNativePlatformEnabled } from '~/utils/firebaseNativePlatform'
+import { clearApiCache } from '~/utils/axios'
 
 // FCM 푸시: 권한 요청 → 토큰 발급 → 백엔드 등록 → 포그라운드 수신.
 // 웹은 Firebase JS SDK, 현재 배포 대상인 iOS는 Firebase Messaging 플러그인을 사용한다.
@@ -67,6 +68,7 @@ export function usePushNotifications() {
     nativeListenersBound = true
     // 앱이 포그라운드일 때 수신 → 토스트
     FirebaseMessaging.addListener('notificationReceived', ({ notification }) => {
+      clearApiCache() // 서버 쪽 데이터(알림·미션 등)가 바뀌었을 수 있어 다음 조회는 새로 받는다
       const data = notificationData(notification.data)
       const title = notification.title ?? (typeof data.title === 'string' ? data.title : '알림')
       const body = notification.body ?? (typeof data.body === 'string' ? data.body : '')

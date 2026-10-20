@@ -39,10 +39,11 @@
         </button>
       </div>
 
-      <!-- 본문: 하단 내비바(edge-to-edge) 영역만큼 여백 가산 -->
-      <div class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5" style="padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px))">
+      <!-- 제목·프로젝트·태그 — 탭과 무관하게 탭 위에 고정 (회고 상세와 같은 구성) -->
+      <div class="px-5 pb-5 shrink-0">
         <RetrospectiveResult
           v-model:title="title"
+          part="header"
           :content="result"
           :project-name="selectedProject?.name ?? null"
           :tags="selectedTags"
@@ -51,6 +52,23 @@
           @edit-project="showProjectSelect = true"
           @edit-tags="showTagEdit = true"
         />
+      </div>
+
+      <RetrospectTabs v-model="activeTab" />
+
+      <!-- 기본 탭: 하단 내비바(edge-to-edge) 영역만큼 여백 가산 -->
+      <div v-show="activeTab === 'basic'" class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pt-6" style="padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px))">
+        <RetrospectiveResult part="body" :title="title" :content="result" />
+      </div>
+
+      <!-- 메모 탭: 처음 열 때 조회하고, 이후 탭을 오가도 입력 중인 내용·목록을 유지 -->
+      <div
+        v-if="memoTabOpened"
+        v-show="activeTab === 'memo'"
+        class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pt-6"
+        style="padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px))"
+      >
+        <RetrospectMemo :retrospective-id="completingId" />
       </div>
     </template>
 
@@ -73,6 +91,8 @@
 </template>
 
 <script setup lang="ts">
+import RetrospectMemo from '~/components/RetrospectMemo.vue'
+import RetrospectTabs, { type RetrospectTab } from '~/components/RetrospectTabs.vue'
 import RetrospectTagEdit from '~/components/RetrospectTagEdit.vue'
 import RetrospectiveResult from '~/components/RetrospectiveResult.vue'
 import RetrospectProjectSelect from '~/components/RetrospectProjectSelect.vue'
@@ -94,6 +114,11 @@ const { show: showBadge } = useBadgeAcquired()
 
 const completingId = useState<string>('retrospect:completing-id', () => readCompletingRetrospective() ?? '')
 // 채팅(start.vue)에서 회고 마치기로 이미 생성한 결과 — 있으면 재생성 없이 사용
+
+// 기본(회고 결과) / 메모 탭 — 메모는 처음 열 때만 조회
+const activeTab = ref<RetrospectTab>('basic')
+const memoTabOpened = ref(false)
+watch(activeTab, (tab) => { if (tab === 'memo') memoTabOpened.value = true })
 
 const isLoading = ref(true)
 const errorVariant = ref<'network' | 'server' | 'generic' | null>(null)
