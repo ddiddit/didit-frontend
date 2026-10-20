@@ -40,18 +40,43 @@
       <span class="text-body3 text-grey-7">불러오는 중…</span>
     </div>
 
-    <!-- 본문: 하단 내비바(edge-to-edge) 영역만큼 여백 가산 -->
-    <div v-else-if="detail && detail.content" class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5" style="padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px))">
-      <RetrospectiveResult
-        variant="detail"
-        :title="detail.title"
-        :content="detail.content"
-        :project-name="detail.project?.name ?? null"
-        :tags="detail.tags"
-        :date="dateLabel"
-        @open-project="goProjectRetrospects"
-      />
-    </div>
+    <template v-else-if="detail && detail.content">
+      <!-- 날짜·제목·프로젝트·태그 — 탭과 무관하게 탭 위에 고정 -->
+      <div class="px-5 pb-5 shrink-0">
+        <RetrospectiveResult
+          variant="detail"
+          part="header"
+          :title="detail.title"
+          :content="detail.content"
+          :project-name="detail.project?.name ?? null"
+          :tags="detail.tags"
+          :date="dateLabel"
+          @open-project="goProjectRetrospects"
+        />
+      </div>
+
+      <RetrospectTabs v-model="activeTab" />
+
+      <!-- 기본 탭: 하단 내비바(edge-to-edge) 영역만큼 여백 가산 -->
+      <div v-show="activeTab === 'basic'" class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pt-6" style="padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px))">
+        <RetrospectiveResult
+          variant="detail"
+          part="body"
+          :title="detail.title"
+          :content="detail.content"
+        />
+      </div>
+
+      <!-- 메모 탭: 처음 열 때 조회하고, 이후 탭을 오가도 입력 중인 내용·목록을 유지 -->
+      <div
+        v-if="memoTabOpened"
+        v-show="activeTab === 'memo'"
+        class="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pt-6"
+        style="padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px))"
+      >
+        <RetrospectMemo :retrospective-id="id" />
+      </div>
+    </template>
 
     <!-- 에러: 회고 조회 실패 (figma 회고 결과 조회 실패). 인증 만료는 제외(로그인 이동) -->
     <UiErrorState
@@ -123,6 +148,8 @@
 </template>
 
 <script setup lang="ts">
+import RetrospectMemo from '~/components/RetrospectMemo.vue'
+import RetrospectTabs, { type RetrospectTab } from '~/components/RetrospectTabs.vue'
 import RetrospectTagEdit from '~/components/RetrospectTagEdit.vue'
 import RetrospectiveResult from '~/components/RetrospectiveResult.vue'
 import RetrospectProjectSelect from '~/components/RetrospectProjectSelect.vue'
@@ -153,6 +180,11 @@ const authFailed = ref(false) // 인증 만료 시 에러 화면 대신 로그�
 const menuOpen = ref(false)
 const showDeletePopup = ref(false)
 const isDeleting = ref(false)
+
+// 상세 탭 — 기본: 회고 결과 / 메모
+const activeTab = ref<RetrospectTab>('basic')
+const memoTabOpened = ref(false)
+watch(activeTab, (tab) => { if (tab === 'memo') memoTabOpened.value = true })
 
 const showProjectSelect = ref(false)
 const showTagEdit = ref(false)

@@ -378,6 +378,15 @@ export interface RetrospectiveDetail {
   tags: Tag[]
 }
 
+// 회고 메모 — 회고별로 한국 날짜 기준 하루 1개 작성 가능, 목록은 memoDate 최신순
+export interface RetrospectiveMemo {
+  id: string
+  content: string
+  memoDate: string // 작성 기준일 (YYYY-MM-DD)
+  createdAt: string | null
+  updatedAt: string | null
+}
+
 // 첨부파일 업로드 URL 발급 요청
 export interface UploadUrlRequest {
   filename: string
