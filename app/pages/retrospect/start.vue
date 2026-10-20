@@ -222,6 +222,19 @@ function cacheLastDiditMessage(message: ConversationCache['message'], readyToCom
   saveConversationCache({ retrospectiveId: retrospectiveId.value, message, readyToComplete, action })
 }
 
+// 회고 챗봇을 써 본 적 있는 사용자(=회고를 1회 이상 완료, Lv.1 이상)에게는 첫 인사 메시지를
+// '오늘 어떤 일을 하셨나요?'까지만 보여준다 — 처음 쓰는 사용자용 안내(뒷부분·가이드 말풍선)는 생략
+const RETURNING_INTRO_QUESTION = '오늘 어떤 일을 하셨나요?'
+const isReturningUser = computed(() => (profile.value?.currentLevel ?? 0) > 0)
+
+function toReturningIntro(message: ConversationCache['message']): ConversationCache['message'] {
+  if (!isReturningUser.value) return message
+  const full = [message.content ?? message.title, message.body].filter(Boolean).join('\n')
+  const idx = full.indexOf(RETURNING_INTRO_QUESTION)
+  const text = idx >= 0 ? full.slice(0, idx + RETURNING_INTRO_QUESTION.length).trim() : RETURNING_INTRO_QUESTION
+  return { ...message, title: text, body: null, content: null }
+}
+
 // 진행 중이던 회고 이어가기 — 이어서 진행할 수 있으면 true.
 // 캐시된 마지막 AI 메시지가 있으면 대화 조회 요청 없이 바로 복구하고, 없을 때만(답변 후 응답을 못 받고 나간 경우 등)
 // 대화 조회(getConversation)로 복구한다. 조회는 AI 메시지만 내려오고 사용자 답변 텍스트는 포함되지 않아,
@@ -237,8 +250,10 @@ async function resumeActiveRetrospective(id: string): Promise<boolean> {
     const conversation = await retro.getConversation(id)
     if (conversation.conversationStatus !== 'ACTIVE') return false
 
-    const lastMessage = conversation.messages.at(-1)
-    if (!lastMessage) return false
+    const lastServerMessage = conversation.messages.at(-1)
+    if (!lastServerMessage) return false
+    // 아직 첫 인사만 받은 상태라면 시작할 때와 같은 문구로 복구
+    const lastMessage = conversation.messages.length === 1 ? toReturningIntro(lastServerMessage) : lastServerMessage
 
     // 첫 질문이 아니라 답변 후 받은 AI 답장이었다면 선택 UI도 함께 복구
     restoreDiditMessage(id, lastMessage, conversation.readyToComplete, conversation.messages.length > 1)
@@ -289,9 +304,11 @@ async function initialApplication() {
       },
       createAnalyticsInsertId('retrospect_started', first_response.retrospectiveId),
     )
-    const diditMessage = buildDiditMessage(first_response.initialMessage)
+    // 재방문 사용자는 첫 인사를 '오늘 어떤 일을 하셨나요?'까지만 노출 (재진입 복구도 같은 문구가 되도록 잘라낸 메시지를 캐시)
+    const initialMessage = toReturningIntro(first_response.initialMessage)
+    const diditMessage = buildDiditMessage(initialMessage)
     messages.value = [diditMessage]
-    cacheLastDiditMessage(first_response.initialMessage, first_response.readyToComplete)
+    cacheLastDiditMessage(initialMessage, first_response.readyToComplete)
     isBusy.value = true
     typeDiditMessage(diditMessage, 50, onDiditTyped)
   } catch (err) {
