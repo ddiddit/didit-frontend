@@ -176,7 +176,7 @@
       <div v-else-if="!isLoading">
         <ul class="flex flex-col px-5 py-3">
           <template v-for="group in groupedRetrospects" :key="group.label || 'this-week'">
-            <!-- 주 단위 디바이더 (이번 주는 미표시) -->
+            <!-- 7일 단위 디바이더 (최근 7일은 미표시) -->
             <li v-if="group.label" class="relative flex items-center justify-center py-6">
               <!-- 전체 폭 구분선 (라벨이 bg-background로 가운데를 가림) -->
               <span class="absolute inset-x-0 h-px bg-grey-5" aria-hidden="true" />
@@ -359,6 +359,7 @@ definePageMeta({ middleware: 'auth', layout: 'default' })
 const { $api } = useNuxtApp()
 const route = useRoute()
 const { track } = useAmplitude()
+const retro = useRetrospect()
 
 // 페이지 재방문 시 깜빡임 없도록 SPA 전체에서 상태 유지
 const retrospects = useState<Retrospective[]>('retrospects:list', () => [])
@@ -385,22 +386,23 @@ function clearKeyword() {
   navigateTo('/retrospects')
 }
 
-// 주(월~일) 단위 날짜 디바이더로 그룹핑 (REC_003 기준, 이번 주 / 일주일 전 / N주 전)
+// 접속일 기준 7일 단위 날짜 디바이더로 그룹핑 (REC_003 기준, 최근 7일 / 일주일 전 / N주 전)
 const groupedRetrospects = computed(() => {
   const groups: { label: string; items: Retrospective[] }[] = []
-  const startOfWeek = (d: Date) => {
+  const startOfDay = (d: Date) => {
     const x = new Date(d)
     x.setHours(0, 0, 0, 0)
-    x.setDate(x.getDate() - ((x.getDay() + 6) % 7)) // 월요일 시작
     return x.getTime()
   }
   const now = new Date()
-  const thisWeek = startOfWeek(now)
+  const today = startOfDay(now)
   const nowMonths = now.getFullYear() * 12 + now.getMonth()
   for (const item of retrospects.value) {
     const date = parseServerDate(item.completedAt ?? item.createdAt)
-    const weeksAgo = Math.max(0, Math.round((thisWeek - startOfWeek(date)) / (7 * 86_400_000)))
-    // 이번 주: 디바이더 없음 / ~4주: 주 단위 / 그 이후: 달 단위 / 12달 초과: 년 단위
+    // 날짜 차이(서머타임 오차는 round로 보정) → 0~6일: 최근, 7~13일: 일주일 전 ...
+    const daysAgo = Math.max(0, Math.round((today - startOfDay(date)) / 86_400_000))
+    const weeksAgo = Math.floor(daysAgo / 7)
+    // 최근 7일: 디바이더 없음 / ~4주: 주 단위 / 그 이후: 달 단위 / 12달 초과: 년 단위
     let label: string
     if (weeksAgo === 0) {
       label = ''
@@ -475,6 +477,7 @@ async function fetchRetrospects() {
       )
     }
     retrospects.value = list
+    fillMissingSummaries(retrospects.value)
     // 검색어로 진입한 경우에만 검색 이벤트 발생 (결과 개수 포함)
     if (keyword.value) {
       track('retrospect_searched', { result_count: list.length })
@@ -489,6 +492,39 @@ async function fetchRetrospects() {
     if (slowTimer) { clearTimeout(slowTimer); slowTimer = null }
     slowLoading.value = false
   }
+}
+
+// v2 finish()로 생성된 회고는 목록 응답의 summary가 비어 있고 결과 본문(content.summary)에만 있음
+// → 요약이 빈 완료 회고만 결과를 조회해 채운다. 회고 id별로 한 번만 조회(SPA 전체 유지)
+const summaryById = useState<Record<string, string>>('retrospects:summary', () => ({}))
+const pendingSummaryIds = new Set<string>()
+const SUMMARY_FETCH_CONCURRENCY = 4
+
+async function fillMissingSummaries(items: { id: string; summary: string | null; status?: string }[]) {
+  const targets = items.filter((r) => !r.summary?.trim() && (r.status ?? 'COMPLETED') === 'COMPLETED')
+  // 이미 받아둔 요약은 즉시 반영
+  for (const r of targets) {
+    const cached = summaryById.value[r.id]
+    if (cached) r.summary = cached
+  }
+  const queue = targets.filter((r) => !r.summary?.trim() && !pendingSummaryIds.has(r.id))
+  queue.forEach((r) => pendingSummaryIds.add(r.id))
+  async function worker() {
+    for (let r = queue.shift(); r; r = queue.shift()) {
+      try {
+        const summary = (await retro.getResult(r.id)).content?.summary?.trim()
+        if (summary) {
+          summaryById.value[r.id] = summary
+          r.summary = summary
+        }
+      } catch {
+        /* 결과가 없거나 조회 실패 → '회고 요약이 없습니다' 유지 */
+      } finally {
+        pendingSummaryIds.delete(r.id)
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: SUMMARY_FETCH_CONCURRENCY }, worker))
 }
 
 async function selectProject(id: string | null, fromPicker = false) {
@@ -594,8 +630,10 @@ async function fetchDaily(date: number) {
         ...d,
         projectName: d.projectName ?? full?.projectName ?? null,
         tags: d.tags?.length ? d.tags : (full?.tags ?? []),
+        summary: d.summary?.trim() ? d.summary : (full?.summary ?? null),
       }
     })
+    fillMissingSummaries(dailyRetrospects.value)
   } catch {
     dailyRetrospects.value = []
   } finally {
