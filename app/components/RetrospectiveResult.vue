@@ -14,7 +14,7 @@
           v-if="editableTitle"
           :value="title"
           maxlength="25"
-          placeholder="회고 제목을 입력하세요"
+          placeholder="회고 제목을 입력해주세요"
           class="flex-1 min-w-0 bg-transparent outline-none text-[19px] font-semibold text-grey-13 leading-[1.4] tracking-[-0.38px] placeholder:text-grey-6"
           @input="$emit('update:title', ($event.target as HTMLInputElement).value)"
         />
@@ -65,7 +65,7 @@
             <span v-if="tags && tags.length" class="flex gap-[6px] flex-wrap">
               <UiTag v-for="t in tags" :key="t.id" :color="getTagColor(t.id)">#{{ t.name }}</UiTag>
             </span>
-            <span v-else class="text-grey-8 text-label1">태그 없음</span>
+            <span v-else class="text-grey-6 text-label1">태그 없음</span>
           </span>
           <img v-if="editableMeta" src="/icons/chevron-right.svg" alt="" class="w-5 h-5 shrink-0" />
         </component>
@@ -101,7 +101,7 @@
       <!-- 인사이트 / 다음 행동 제안 (v2는 다음 행동 제안이 여러 개일 수 있음) -->
       <div class="flex flex-col gap-4">
         <div class="bg-grey-3 rounded-2xl p-[22px] flex flex-col gap-[6px]">
-          <p class="text-label2 font-semibold text-green-hover">인사이트</p>
+          <p class="text-label2 font-semibold text-green-hover">디딧 인사이트</p>
           <p class="text-body2-reading font-semibold text-grey-10">{{ content.insight.title }}</p>
           <p class="text-body3-reading text-grey-13 whitespace-pre-line">{{ content.insight.description }}</p>
         </div>
@@ -146,8 +146,8 @@ const listSections = computed(() => {
   if ('strengths' in c) {
     return [
       { key: 'strengths', label: '잘한 점', items: c.strengths ?? [] },
-      { key: 'improvements', label: '개선점', items: c.improvements ?? [] },
-      { key: 'processes', label: '진행 과정', items: c.processes ?? [] },
+      { key: 'improvements', label: '어려웠던 점', items: c.improvements ?? [] },
+      { key: 'processes', label: '해결 과정', items: c.processes ?? [] },
       { key: 'learnings', label: '배운 점', items: c.learnings ?? [] },
     ]
   }

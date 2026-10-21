@@ -5,7 +5,7 @@
       ref="textarea"
       v-model="input"
       rows="1"
-      placeholder="메모할 사항들을 작성해 보세요."
+      placeholder="메모를 자유롭게 작성해 보세요"
       class="w-full resize-none bg-transparent outline-none text-body3-reading text-grey-13 placeholder:text-grey-7"
     />
     <div v-if="input.trim() || cancelable" class="flex justify-end gap-4">

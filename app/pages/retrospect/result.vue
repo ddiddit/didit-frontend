@@ -35,7 +35,7 @@
           :disabled="!canSave || isSaving"
           @click="onSave"
         >
-          완료
+          저장
         </button>
       </div>
 
