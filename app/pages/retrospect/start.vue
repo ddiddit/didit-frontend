@@ -1,10 +1,12 @@
 <template>
   <div
-    class="relative h-full flex flex-col overflow-clip bg-retro-fade"
+    ref="rootEl"
+    class="relative h-full flex flex-col overflow-clip bg-grey-1"
     :style="keyboardOpen ? { height: `calc(100% - ${keyboardHeight}px)` } : undefined"
   >
     <!-- 헤더 영역 — 오른쪽 '회고 마치기'는 응답 대기 중·마치기 처리 중에만 잠기고, 그 외에는 언제나 누를 수 있다 -->
-    <RetroHeader :title="'회고 마치기'" :isBusy="isBusy" :finishDisabled="isBusy || isFinishing" :onBack="onBack" :onFinish="onFinishClick" />
+    <!-- 헤더는 대화 영역 위에 겹쳐(z-10) 반투명 그라데이션으로 아래 대화가 비쳐 보이게 한다 -->
+    <RetroHeader class="relative z-10 bg-retro-header-fade" :title="'회고 마치기'" :isBusy="isBusy" :finishDisabled="isBusy || isFinishing" :onBack="onBack" :onFinish="onFinishClick" />
 
     <!-- 마이크 접근 모달 — 권한이 아직 없을 때만. 이미 허용된 경우 accessMic()에서 바로 레코더를 연다 -->
     <UiPopup :modelValue="isAccessMicModal" :title="'디딧(didit)이(가) 마이크에 접근하려고 합니다.'" :description="'회고를 음성으로 기록하기 위해 마이크 접근 권한이 필요해요.'" :confirmText="'허용'" :cancelText="'허용 안 함'" :loading="micRequesting" @cancel="isAccessMicModal = false" @confirm="confirmAccessMic" />
@@ -20,7 +22,8 @@
 
     <!-- 대화 영역 -->
     <!-- 고정 높이(calc) 대신 flex-1 — 입력창이 여러 줄·첨부로 커져도 대화 영역이 줄어들 뿐, 헤더가 밀려나지 않는다 -->
-    <div ref="scrollEl" class="message_wrapper flex-1 min-h-0 overflow-y-auto">
+    <!-- 위·아래를 헤더(50px)·입력 영역 페이드(20px)만큼 겹쳐 그 밑으로 스크롤되게 하고, 같은 만큼 안쪽 여백을 둬 첫·마지막 말풍선은 가리지 않는다 -->
+    <div ref="scrollEl" class="message_wrapper flex-1 min-h-0 overflow-y-auto -mt-[50px] pt-[50px] pb-[20px]">
       <div class="message_area px-[20px] pt-[20px] flex flex-col" v-for="(m, i) in messages" :key="m.id">
         <div class="didit_message_wrapper self-start" v-if="m.role === 'didit'">
           <div class="didit_profile flex flex-col mb-[20px]">
@@ -58,8 +61,8 @@
               </div>
             </template>
             <!-- 마무리 선택 UI — 답변 응답의 action이 OFFER_COMPLETION/CONFIRM_COMPLETION이면 답장 타이핑이 끝난 뒤 노출(showCompletionOffer).
-                 이대로 마치기: OFFER_COMPLETION이면 마무리 의사를 답변으로 전송(→ 서버가 CONFIRM_COMPLETION으로 응답),
-                 CONFIRM_COMPLETION이면 바로 결과 화면으로. 계속 작성하기를 누르거나 답변을 보내면 사라진다 -->
+                 이대로 마치기: action과 무관하게 바로 결과 화면으로 이동해 회고 내용 정리(finish).
+                 계속 작성하기를 누르거나 답변을 보내면 사라진다 -->
             <Transition name="sub-bubble">
               <div v-if="m.id === completionOffer?.messageId && m.typedMain === m.main" class="flex gap-[8px] mt-[10px]">
                 <UiButton variant="chip" size="sm" :disabled="isBusy || isFinishing" @click="onOfferContinue">
@@ -97,7 +100,9 @@
     </div>
 
     <!-- 입력 영역 -->
-    <RetroTextarea ref="textareaRef" :disabled="isBusy" :retrospectiveId="retrospectiveId" @send="onSend" @accessMic="accessMic" />
+    <div class="relative z-10 shrink-0 -mt-[20px] pt-[20px] pb-[14px] bg-retro-input-fade">
+      <RetroTextarea ref="textareaRef" :disabled="isBusy" :retrospectiveId="retrospectiveId" @send="onSend" @accessMic="accessMic" />
+    </div>
   </div>
 </template>
 
@@ -124,9 +129,6 @@ definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
 // generating 자리표시자(다음 질문 대기 중)에서 재생할 로티 — public/icons/loading.lottie
 const GENERATING_LOTTIE = '/icons/loading.lottie'
-
-// 선택 UI '마치기' — 마무리 의사를 일반 답변으로 보내면 서버가 CONFIRM_COMPLETION(마무리 확인)으로 응답한다
-const FINISH_INTENT_MESSAGE = '더 이상 없어요. 이제 마무리할게요'
 
 // 선택 UI를 붙이는 action — 그 외(ASK/REFLECT)에는 붙이지 않는다
 type CompletionAction = Extract<AssistantAction, 'OFFER_COMPLETION' | 'CONFIRM_COMPLETION'>
@@ -192,6 +194,38 @@ function scrollToBottom() {
   const el = scrollEl.value
   if (!el) return
   el.scrollTop = el.scrollHeight
+}
+
+// 입력창이 여러 줄로 커지거나 키보드가 올라와 대화 영역 높이가 줄어도, 보고 있던 대화 위치(바닥 기준 거리)를 유지한다
+// — 그대로 두면 scrollTop이 고정돼 아래쪽 말풍선(마지막 질문)이 입력창 뒤로 밀려 사라진다
+let distanceFromBottom = 0
+let resizeObserver: ResizeObserver | undefined
+function onMessageScroll() {
+  const el = scrollEl.value
+  if (!el) return
+  distanceFromBottom = el.scrollHeight - el.clientHeight - el.scrollTop
+}
+function keepMessagePosition() {
+  const el = scrollEl.value
+  if (!el) return
+  el.scrollTop = el.scrollHeight - el.clientHeight - distanceFromBottom
+}
+
+// [iOS] 리사이즈 모드 none이라 장문 입력 중 커서를 보여주려고 WebView가 문서(또는 overflow-hidden 조상)를
+// 위로 스크롤해 헤더·디딧 말풍선이 화면 밖으로 밀려난다 → 이 화면의 바깥쪽 스크롤은 항상 0으로 되돌린다.
+// 대화 영역·입력창 자체의 스크롤은 그대로 둔다
+const rootEl = ref<HTMLElement | null>(null)
+function pinOuterScroll(e: Event) {
+  const target = e.target
+  if (target === document || target === window) {
+    if (window.scrollY !== 0) window.scrollTo(0, 0)
+    return
+  }
+  if (!(target instanceof HTMLElement)) return
+  if (target.scrollTop !== 0 && (target === rootEl.value || target.contains(rootEl.value))) target.scrollTop = 0
+}
+function pinViewport() {
+  if (window.scrollY !== 0) window.scrollTo(0, 0)
 }
 
 // 앰플리튜드 분석용 — 회고 시작 시각/심화질문 노출·스킵 여부 추적
@@ -406,12 +440,10 @@ function onOfferContinue() {
   focusInput()
 }
 
-// 선택 UI의 '이대로 마치기'
-// - OFFER_COMPLETION: 바로 종료하지 않고 마무리 의사를 답변으로 보낸다 → 서버가 CONFIRM_COMPLETION으로 응답하면 다시 선택 UI가 붙는다
-// - CONFIRM_COMPLETION: 결과 화면으로 넘어가 대화 종료·결과 생성(finish)
+// 선택 UI의 '이대로 마치기' — action(OFFER/CONFIRM_COMPLETION)과 무관하게 바로 결과 화면으로 넘어가
+// 대화 종료·회고 내용 정리(finish)를 진행한다
 function onOfferFinish() {
-  if (completionOffer.value?.action === 'CONFIRM_COMPLETION') onFinishConfirm()
-  else onSend(FINISH_INTENT_MESSAGE)
+  onFinishConfirm()
 }
 
 // 답변 응답의 action에 따라 AI 답장 아래에 '계속 작성하기 / 이대로 마치기'를 붙인다(화면엔 타이핑이 끝난 뒤 노출).
@@ -637,7 +669,14 @@ onMounted(async () => {
   if (scrollEl.value) {
     scrollObserver = new MutationObserver(scrollToBottom)
     scrollObserver.observe(scrollEl.value, { childList: true, subtree: true, characterData: true })
+    scrollEl.value.addEventListener('scroll', onMessageScroll, { passive: true })
+    resizeObserver = new ResizeObserver(keepMessagePosition)
+    resizeObserver.observe(scrollEl.value)
   }
+
+  // 바깥 스크롤 고정 — scroll 이벤트는 버블링되지 않아 capture로 받는다
+  document.addEventListener('scroll', pinOuterScroll, { capture: true, passive: true })
+  window.visualViewport?.addEventListener('scroll', pinViewport)
 
   // 안드로이드 하드웨어/제스처 뒤로가기 — 헤더의 뒤로가기 버튼과 동일하게 확인 모달을 띄운다.
   // 리스너를 등록하면 Capacitor의 기본 동작(뒤로 이동/앱 종료)이 자동으로 실행되지 않고,
@@ -661,6 +700,10 @@ onUnmounted(() => {
   clearTypingTimers()
   clearTimeout(pollTimer) // 첨부 분석 폴링 중 화면을 벗어나면 예약된 다음 조회를 멈춘다
   scrollObserver?.disconnect()
+  resizeObserver?.disconnect()
+  scrollEl.value?.removeEventListener('scroll', onMessageScroll)
+  document.removeEventListener('scroll', pinOuterScroll, { capture: true })
+  window.visualViewport?.removeEventListener('scroll', pinViewport)
   backButtonListener?.remove()
   kbShow?.remove()
   kbDidShow?.remove()

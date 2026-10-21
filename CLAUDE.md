@@ -102,7 +102,7 @@ AI 기반 회고(retrospective) 앱의 프론트엔드.
 - **skippable / readyToComplete**: 답변 응답의 `readyToComplete`가 true면 해당 질문은 `skippable: true`로 표시됨. 단 이 로컬 신호는 마무리 시점에도 false로 남는 경우가 있어 **완료 판정 기준으로 쓰지 않는다**
   - `readyToComplete=false`여도 **종료를 차단하지 않는다** — 헤더 "회고 마치기"는 항상 확인 모달 → `finish()`
 - **AI 답장 아래 선택 버튼** (`showCompletionOffer`): 답변 응답의 `action`이 `OFFER_COMPLETION`/`CONFIRM_COMPLETION`이면 답장 **타이핑이 끝난 뒤** 말풍선 아래 "계속 작성하기 / 이대로 마치기"(`completionOffer`)를 노출
-  - 이대로 마치기: `OFFER_COMPLETION`이면 바로 종료하지 않고 마무리 의사(`FINISH_INTENT_MESSAGE`)를 일반 답변으로 전송, `CONFIRM_COMPLETION`이면 `onFinishConfirm()`으로 결과 화면 이동
+  - 이대로 마치기: action과 무관하게 `onFinishConfirm()`으로 바로 결과 화면 이동 → 회고 내용 정리(`finish()`) 진행
   - `ASK`/`REFLECT`/null → 버튼 없음. 계속 작성하기나 새 답변 전송 시 버튼 제거
   - 대화 조회(`getConversation`) 응답엔 `action`이 없어 첨부 분석 폴링·서버 조회 복구 시에는 버튼을 붙이지 않음 (대화 캐시에 저장된 `action`으로 복구할 때만 복원)
 - **입력창 포커스**: `RetroTextarea`의 textarea는 응답 대기 중(`isBusy`)에도 **`disabled`로 잠그지 않는다** — 잠그면 포커스·모바일 키보드가 내려가 전송할 때마다 다시 눌러야 함. 대신 전송·첨부·마이크 버튼만 잠근다. AI 응답 출력 완료(`onDiditTyped`)·종료 선택 UI/모달 닫힘 시 `focusInput()`으로 자동 포커스(모달·레코더가 떠 있으면 생략)
@@ -113,7 +113,7 @@ AI 기반 회고(retrospective) 앱의 프론트엔드.
 
 ## 화면별 UI 규칙
 
-- **배경**: 회고 진행 화면(intro/start)은 `bg-retro-fade`(위→아래 그라데이션), 채팅 입력창(`RetroTextarea`)은 `bg-retro-fade-x`(왼→오른쪽). **결과 화면(`retrospect/result.vue`)은 그라데이션 금지** — 단색 `bg-background`
+- **배경**: 회고 인트로(intro)는 `bg-retro-fade`(위→아래 그라데이션). 회고 진행(start) 채팅은 단색 `bg-grey-1`(Neutral/0), 디딧 말풍선 `bg-grey-3`(Neutral/10), 헤더는 대화 위에 겹친 `bg-retro-header-fade`(흰색 100%→40%), 입력 영역은 `bg-retro-input-fade`(흰색 0%→100%, 60% 지점). 채팅 입력창 박스(`RetroTextarea`)는 `bg-retro-fade-x`(왼→오른쪽). **결과 화면(`retrospect/result.vue`)은 그라데이션 금지** — 단색 `bg-background`
 - **배지 획득 배너** (`UiBadgeAcquiredPopup` + `useBadgeAcquired`): 회고 저장 후 새 배지가 있으면 화면 **상단** 토스트 배너로 노출하고 **1.5초 뒤 자동으로 닫힘**(탭하면 즉시). 하단의 저장 완료 토스트와 겹치지 않게 상단에 둔다. 여러 개면 큐로 순차 노출, 홈의 미션 팝업이 떠 있는 동안은 보류(`setHold`) 후 해제 시점부터 다시 1.5초
 - **회고 목록 요약** (`retrospects/index.vue`): 제목 아래 `summary`를 2줄까지(`line-clamp-2`) 표시. 비어 있으면 "회고 요약이 없습니다"를 연한 색(`text-grey-7`)으로 표시 — 전체 목록·캘린더 날짜별 목록 공통
 
