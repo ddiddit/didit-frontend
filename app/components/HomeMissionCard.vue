@@ -34,7 +34,7 @@
         </div>
       </div>
 
-      <!-- 이번 주 회고 현황 (데이터가 없어도 요일 스탬프는 항상 노출) -->
+      <!-- 이번 주 회고 현황 (데이터가 없어도 요일 스탬프는 항상 노출, 완료 요일은 레벨 태그와 같은 색) -->
       <div class="flex flex-col gap-3 mb-[20px]">
         <p class="text-[14px] font-semibold text-grey-9 tracking-[-0.02em]">이번 주 회고 현황</p>
         <div class="flex gap-2 justify-between">
@@ -42,7 +42,8 @@
             v-for="d in weekDays"
             :key="d.day"
             class="flex-1 aspect-square max-w-11 rounded-xl flex items-center justify-center text-[15px] font-semibold"
-            :class="d.isCompleted ? 'bg-green-light-hover text-green-hover' : 'bg-grey-4 text-grey-6'"
+            :class="d.isCompleted ? '' : 'bg-grey-4 text-grey-6'"
+            :style="d.isCompleted ? { backgroundColor: theme.light, color: theme.accent } : undefined"
           >
             {{ d.day }}
           </div>
@@ -61,17 +62,18 @@
           <!-- 연결선 + 진행바 (Lv.2 외 나머지 레벨) -->
           <div v-if="missionLevel != 2" class="relative w-full h-[16px] rounded-[8px] bg-grey-4">
            <div
-              v-if="rowFillFrac(row) > 0"
-              class="progress h-full rounded-[8px_0px_0px_8px]"
-              :style="{ width: `${rowFillFrac(row) * 100}%`, backgroundColor: theme.fill }"
+              v-if="rowFillWidth(row) !== '0px'"
+              class="progress h-full rounded-full transition-[width] duration-300"
+              :style="{ width: rowFillWidth(row), backgroundColor: theme.fill }"
             />
             <div class="exp_wrapper absolute top-0 left-[8px] right-[8px] flex justify-between">
-              <div class="zero">
+              <!-- 마커 폭을 점(8px)으로 고정해 두 자리 숫자 라벨이 있어도 점 간격이 균등하게 유지되도록 함 -->
+              <div class="zero w-[8px] whitespace-nowrap">
                 <span class="block my-[4px] w-[8px] h-[8px] bg-grey-1 rounded-full"></span>
                 <span class="block mt-[8px] text-grey-6">0</span>
               </div>
               <template v-for="(number, i) in row" :key="i">
-                <div class="other_number">
+                <div class="other_number w-[8px] whitespace-nowrap">
                   <span class="block my-[4px] w-[8px] h-[8px] bg-grey-1 rounded-full"></span>
                   <span class="block mt-[8px] text-grey-6 ml-[1px]">{{ number }}</span>
                 </div>
@@ -87,11 +89,18 @@
               class="level_2_stamp relative z-[10] flex flex-col items-center gap-[4px]"
               :class="{ 'level_2_stamp_done': number <= m.progress }"
             >
-              <div class="rounded-full" :class="number <= m.progress ? 'bg-green-light-hover' : 'bg-grey-4'">
-                <img v-if="number <= m.progress" src="/icons/check-on.svg" alt="check_on" class="p-[6px]" />
+              <!-- 완료 스탬프는 레벨 태그와 같은 색(theme.light 배경 + theme.accent 체크) -->
+              <div
+                class="rounded-full"
+                :class="number <= m.progress ? '' : 'bg-grey-4'"
+                :style="number <= m.progress ? { backgroundColor: theme.light } : undefined"
+              >
+                <svg v-if="number <= m.progress" width="16" height="16" viewBox="0 0 16 16" fill="none" class="box-content p-[6px]" :style="{ color: theme.accent }" aria-label="check_on">
+                  <path d="M14.9138 4.00094L5.44384 13.4709L1.08984 8.39394L2.60784 7.09094L5.55584 10.5309L13.4998 2.58594L14.9138 4.00094Z" fill="currentColor" />
+                </svg>
                 <img v-else src="/icons/check-off.svg" alt="check_off" class="p-[6px]" />
               </div>
-              <span class="text-[14px]" :class="number <= m.progress ? 'text-green' : 'text-grey-6'">{{ number }}회</span>
+              <span class="text-[14px] text-grey-6">{{ number }}회</span>
 
               <!-- 레벨업 힌트: 목표 횟수 스탬프(=target) 바로 옆에 고정 — 컨테이너 기준 매직넘버 대신 해당 스탬프 자신에 앵커링해 레이아웃이 달라져도 항상 정확한 스탬프를 가리킴 -->
               <div
@@ -178,14 +187,16 @@ const circleRows = computed(() => {
 
 // 카드에는 '진행 중인 미션'의 레벨을 표시 — 백엔드 currentLevel은 달성한 레벨이라 +1 (레벨 0 없음, 모든 유저 Lv.1부터)
 const missionLevel = computed(() => props.data.currentLevel + 1)
+// const missionLevel = computed(() => 1)
 
 
-// 완료 구간 연결선 비율: 해당 줄에서 완료된 스탬프 수 기준 (첫 스탬프 중심 → 마지막 완료 스탬프 중심)
-function rowFillFrac(row: number[]): number {
+// 완료 구간 진행바 폭: 0 마커부터 시작해 해당 줄에서 완료된 마지막 마커의 흰 점을 덮는 지점까지
+// 마커 점(8px)은 좌우 8px 안쪽에 균등 배치 → 점 중심 = 12px + (100% - 24px) * k/n, 점 오른쪽 끝 +4px 여유
+function rowFillWidth(row: number[]): string {
   const p = m.value?.progress ?? 0
   const done = Math.min(Math.max(p - (row[0] ?? 1) + 1, 0), row.length)
-  if (done <= 1 || row.length <= 1) return 0
-  return (done - 1) / (row.length - 1)
+  if (done <= 0 || row.length === 0) return '0px'
+  return `calc((100% - 24px) * ${done / row.length} + 20px)`
 }
 
 // 레벨별 색상은 공용 유틸(levelTheme)에서 — 미션카드·마이페이지 공유
