@@ -111,7 +111,7 @@ definePageMeta({ middleware: 'auth', layout: 'default', hideTabBar: true })
 const { $api } = useNuxtApp()
 const authStore = useAuthStore()
 const { reload: reloadProfile } = useProfile()
-const { track, reset } = useAmplitude()
+const { trackAndWait, reset } = useAmplitude()
 const { loadError, slowLoading, run } = useLoadState()
 
 const nickname = ref('')
@@ -157,7 +157,7 @@ async function handleWithdraw() {
         reasonDetail: selectedReason.value === 'OTHER' ? reasonDetail.value.trim() : null,
       },
     })
-    await track('user_withdrew', { reason: selectedReason.value }).promise.catch(() => undefined)
+    await trackAndWait('user_withdrew', { reason: selectedReason.value })
     useAttribution().clear()
     clearCompletingRetrospective()
     reset()
