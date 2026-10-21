@@ -188,6 +188,13 @@
 
   // 입력창 최대 높이(px) — 클래스 max-h-[280px]와 같은 값
   const TEXTAREA_MAX_HEIGHT = 280
+  // 키보드가 떠 화면이 좁아졌을 때 입력창이 커져 헤더·대화를 밀어내지 않도록, 보이는 높이의 30%까지만 늘린다
+  const VISIBLE_HEIGHT_RATIO = 0.3
+
+  function maxTextareaHeight() {
+    const visibleHeight = window.visualViewport?.height ?? window.innerHeight
+    return Math.max(24, Math.min(TEXTAREA_MAX_HEIGHT, Math.floor(visibleHeight * VISIBLE_HEIGHT_RATIO)))
+  }
 
   const handleTextareaChange = (e: Event) => {
     textareaValue.value = (e.target as HTMLTextAreaElement).value
@@ -198,13 +205,15 @@
   // (풀지 않고 재면 이전에 고정해둔 높이가 그대로 나와서, 두 줄→한 줄로 줄어들 때 반영이 안 됨)
   // textarea가 flex 흐름 안에 그대로 있어서(position 안 바뀜), 이 높이가 늘어나면
   // 부모 .retro__input도 자동으로 같이 늘어난다 — 컨테이너 높이를 따로 계산해서 맞출 필요가 없다
-  // 최대 TEXTAREA_MAX_HEIGHT까지만 늘어나고, 넘치면 textarea 안에서 스크롤된다
+  // 최대 maxTextareaHeight()까지만 늘어나고, 넘치면 textarea 안에서 스크롤된다
   function syncHeight() {
     const el = textRef.value
     if (!el) return
     el.style.height = 'auto'
     const naturalHeight = el.scrollHeight
-    el.style.height = `${Math.min(naturalHeight, TEXTAREA_MAX_HEIGHT)}px`
+    const maxHeight = maxTextareaHeight()
+    el.style.maxHeight = `${maxHeight}px`
+    el.style.height = `${Math.min(naturalHeight, maxHeight)}px`
     isWrapped.value = naturalHeight > 24
   }
 
@@ -364,8 +373,12 @@
     previewUrlIsTemp = false
   }
 
+  // 키보드가 오르내려 보이는 높이가 바뀌면 이미 작성한 장문도 새 최대 높이에 맞춘다
+  onMounted(() => window.visualViewport?.addEventListener('resize', syncHeight))
+
   // 전송 없이 화면을 떠나는 경우(뒤로가기 등)에도 진행 중인 업로드를 취소하고 미리보기 URL을 정리
   onUnmounted(() => {
+    window.visualViewport?.removeEventListener('resize', syncHeight)
     uploadControllers.forEach(c => c.abort())
     uploadControllers.clear()
     attachments.value.forEach(revokeAttachmentPreview)
