@@ -101,8 +101,10 @@ const newProjectName = ref('')
 const newProjectEl = ref<HTMLInputElement | null>(null)
 const saving = ref(false)
 
-// 현재 지정값과 달라졌을 때만 '선택 완료' 활성
-const canConfirm = computed(() => selectedId.value !== props.currentProjectId)
+// 새 프로젝트 입력 중이면 이름이 있을 때, 아니면 현재 지정값과 달라졌을 때만 '선택 완료' 활성
+const canConfirm = computed(() =>
+  adding.value ? newProjectName.value.trim().length > 0 : selectedId.value !== props.currentProjectId,
+)
 
 const checkSrc = (on: boolean) => (on ? '/icons/check-circle-on.svg' : '/icons/check-circle-off.svg')
 
@@ -129,29 +131,42 @@ function startAddProject() {
   nextTick(() => newProjectEl.value?.focus())
 }
 
-async function onNewProjectEnter(e: KeyboardEvent) {
-  if (e.isComposing || e.keyCode === 229) return
-  e.preventDefault()
+// 입력 중인 새 프로젝트를 생성하고 선택 상태로 만든다. 성공 여부 반환
+async function createNewProject(): Promise<boolean> {
   const name = newProjectName.value.trim()
-  if (!name) return
+  if (!name) return false
   try {
     const before = new Set(projects.value.map((p) => p.id))
     await org.createProject(name)
     // 백엔드가 204라 생성된 id를 못 받음 → 목록 재조회 후 새 프로젝트 선택
     projects.value = await org.listProjects()
     const created = projects.value.find((p) => !before.has(p.id))
-    if (created) selectedId.value = created.id
+    if (!created) return false
+    selectedId.value = created.id
     adding.value = false
     newProjectName.value = ''
+    return true
   } catch (err: unknown) {
     // 중복 이름·개수 초과(DUPLICATED_PROJECT_NAME, PROJECT_LIMIT_EXCEEDED 등) 코드별 문구
     show(getApiErrorMessage(err, '프로젝트를 추가하지 못했어요. 잠시 후 다시 시도해주세요.'))
+    return false
   }
+}
+
+async function onNewProjectEnter(e: KeyboardEvent) {
+  if (e.isComposing || e.keyCode === 229) return
+  e.preventDefault()
+  await createNewProject()
 }
 
 async function onConfirm() {
   if (!canConfirm.value || saving.value) return
   saving.value = true
+  // 새 프로젝트 입력 중이면 먼저 생성한 뒤 그 프로젝트로 지정
+  if (adding.value && !(await createNewProject())) {
+    saving.value = false
+    return
+  }
   try {
     if (selectedId.value === null) {
       await retro.detachProject(props.retrospectiveId)
