@@ -21,7 +21,7 @@
 | `retrospect_exited` | 사용자가 나가기를 확정 | `retrospective_id`, `last_completed_turn`, `exit_reason` |
 | `retrospect_result_generated` | finish와 결과 조회 성공 | `retrospective_id`, `answer_count` |
 | `retrospect_completed` | DB 완료 전환과 결과 조회 성공 | `retrospective_id`, `answer_count`, `turn_count`, `elapsed_duration_sec`, `active_duration_sec`, 유입 정보 |
-| `retrospect_complete_failed` | 완료 또는 결과 조회 실패 | `retrospective_id`, `reason`, `last_completed_turn` |
+| `retrospect_complete_failed` | 완료 또는 결과 조회 실패 | `retrospective_id`, `reason`(`timeout`·`network`·`server`·`generic`), `last_completed_turn` |
 
 `elapsed_duration_sec`는 생성부터 완료까지의 전체 시간이고, `active_duration_sec`는 화면이 활성 상태였던 시간이다. 앱 강제 종료는 마지막 성공 답변 뒤 퍼널 이탈로 본다.
 

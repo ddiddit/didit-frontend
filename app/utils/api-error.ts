@@ -75,6 +75,11 @@ export function isNetworkError(error: unknown): boolean {
   return axios.isAxiosError(error) && !error.response
 }
 
+// 요청 시간 초과 여부 (axios timeout) — 응답이 없어 isNetworkError()도 true이므로 그보다 먼저 판별한다
+export function isTimeoutError(error: unknown): boolean {
+  return axios.isAxiosError(error) && (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT')
+}
+
 // 서버 오류(5xx) 여부 → '일시적인 오류' / '알 수 없는 오류' 분기용
 export function isServerError(error: unknown): boolean {
   return axios.isAxiosError(error) && (error.response?.status ?? 0) >= 500

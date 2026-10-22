@@ -26,7 +26,7 @@ import { createAnalyticsInsertId } from '~/analytics/events'
 // 기본 10초 타임아웃으로 부족할 수 있어 요청별로 더 길게 설정한다.
 // 백엔드 RestClient 읽기 타임아웃(60초)보다 약간 길게 둬서, 서버가 먼저 끊고
 // 정상 에러 응답(problem+json)을 주도록 한다(클라이언트가 먼저 abort하지 않게).
-const AI_TIMEOUT = 65_000
+export const AI_TIMEOUT = 65_000
 
 // 진행 중인 회고 id를 저장하는 localStorage 키.
 // 답변 도중 화면을 나갔다 들어와도(뒤로가기·앱 재시작 등) start()를 다시 호출해 새 회고를
@@ -151,6 +151,9 @@ export function useRetrospect() {
   async function finish(id: string): Promise<FinishRetrospectiveResponse> {
     const res = await $api.post<ApiResponse<FinishRetrospectiveResponse>>(
       `/api/v2/retrospectives/${id}/finish`,
+      undefined,
+      // 종료와 동시에 AI 결과를 생성하므로 기본 10초로는 부족하다
+      { timeout: AI_TIMEOUT },
     )
     invalidateDerivedCaches({ profile: true })
     return res.data.data
