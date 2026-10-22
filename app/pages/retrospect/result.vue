@@ -16,11 +16,15 @@
       </p>
     </div>
 
-    <!-- 에러: 결과 생성 실패 (figma 31141) — 네트워크 끊김은 문구 구분 -->
-    <div v-else-if="errorVariant" class="flex-1 flex flex-col items-center justify-center px-8 text-center gap-5">
-      <p class="text-body2 font-semibold text-grey-13 whitespace-pre-line">{{ errorTitle }}</p>
-      <UiButton size="md" class="w-auto px-6" @click="generate">다시 시도</UiButton>
-    </div>
+    <!-- 에러: 요청 시간 초과(figma Error/요청 시간 초과/회고 결과 생성) · 결과 생성 실패(figma Error/회고 결과 생성 실패) · 네트워크 끊김 -->
+    <UiErrorState
+      v-else-if="errorKind"
+      :variant="errorKind === 'network' ? 'network' : 'server'"
+      :title="errorCopy?.title"
+      :description="errorCopy?.description"
+      action-text="다시 시도"
+      @action="generate"
+    />
 
     <!-- 결과 (MAKE_002) -->
     <template v-else-if="result">
@@ -96,9 +100,9 @@ import RetrospectTabs, { type RetrospectTab } from '~/components/RetrospectTabs.
 import RetrospectTagEdit from '~/components/RetrospectTagEdit.vue'
 import RetrospectiveResult from '~/components/RetrospectiveResult.vue'
 import RetrospectProjectSelect from '~/components/RetrospectProjectSelect.vue'
-import UiButton from '~/components/ui/UiButton.vue'
+import UiErrorState from '~/components/ui/UiErrorState.vue'
 import type { RetrospectiveResultV2, Tag } from '~/types/api'
-import { isAuthError, toErrorVariant } from '~/utils/api-error'
+import { isAuthError, isNetworkError, isTimeoutError, toErrorVariant } from '~/utils/api-error'
 import { createAnalyticsInsertId } from '~/analytics/events'
 
 definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
@@ -121,15 +125,36 @@ const memoTabOpened = ref(false)
 watch(activeTab, (tab) => { if (tab === 'memo') memoTabOpened.value = true })
 
 const isLoading = ref(true)
-const errorVariant = ref<'network' | 'server' | 'generic' | null>(null)
+// 결과를 불러오지 못한 이유 — timeout: 생성 대기 시간 초과 / failed: 생성 실패(서버 오류·결과 없음) / network: 연결 끊김
+type ResultErrorKind = 'timeout' | 'failed' | 'network'
+const errorKind = ref<ResultErrorKind | null>(null)
 const isSaving = ref(false)
 
-// 네트워크 끊김은 '연결 확인' 안내, 그 외(서버/알수없음)는 '생성 실패'로 표시
-const errorTitle = computed(() =>
-  errorVariant.value === 'network'
-    ? '인터넷 연결을 확인해 주세요.\n연결 후 다시 시도해 주세요.'
-    : '회고 결과를 생성하지 못했어요',
+// 네트워크 끊김은 UiErrorState 기본 문구를 그대로 쓰고, 시간 초과·생성 실패만 문구를 덮어쓴다
+const ERROR_COPY: Record<Exclude<ResultErrorKind, 'network'>, { title: string; description: string }> = {
+  timeout: { title: '요청 시간이 초과됐어요', description: '회고 결과 생성이 지연되고 있어요. 다시 시도해 주세요.' },
+  failed: { title: '회고 결과를 생성하지 못했어요', description: '잠시 후 다시 시도해 주세요.' },
+}
+const errorCopy = computed(() =>
+  errorKind.value && errorKind.value !== 'network' ? ERROR_COPY[errorKind.value] : undefined,
 )
+
+// 결과 생성 대기 한도 — 네이티브(CapacitorHttp)에선 axios timeout이 동작하지 않을 수 있어 화면에서도 직접 끊는다
+class ResultTimeoutError extends Error {}
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new ResultTimeoutError()), ms)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+}
+
+function toResultErrorKind(e: unknown): ResultErrorKind {
+  // 시간 초과도 응답이 없어 네트워크 에러로 잡히므로 먼저 판별한다
+  if (e instanceof ResultTimeoutError || isTimeoutError(e)) return 'timeout'
+  if (isNetworkError(e)) return 'network'
+  return 'failed'
+}
 const result = ref<RetrospectiveResultV2 | null>(null)
 const title = ref('')
 // getResult()로 받은(=이미 저장된) 제목 — 완료 시 이 값과 다를 때만 제목 수정 API를 호출한다
@@ -165,12 +190,12 @@ async function generate() {
   // 생성 실패 상태였다면 재요청으로 생성 상태를 복구해 재시도한다 — 에러 화면의 '다시 시도'도 이 함수를 그대로 쓴다.
   // 자동 저장 로딩 화면은 응답이 빨라도 최소 MIN_LOADING_MS 동안 보여줘 깜빡이듯 지나가지 않게 한다.
   isLoading.value = true
-  errorVariant.value = null
+  errorKind.value = null
   try {
     const id = completingId.value
     retrospectiveAnalytics.restore(id)
     const [res] = await Promise.all([
-      retro.finish(id).then(() => retro.getResult(id)),
+      withTimeout(retro.finish(id).then(() => retro.getResult(id)), AI_TIMEOUT),
       new Promise((resolve) => setTimeout(resolve, MIN_LOADING_MS)),
     ])
     if (!res.content) throw new Error('회고 결과가 아직 생성되지 않았어요')
@@ -207,12 +232,12 @@ async function generate() {
     if (id) {
       trackEvent('retrospect_complete_failed', {
         retrospective_id: id,
-        reason: toErrorVariant(e),
+        reason: toResultErrorKind(e) === 'timeout' ? 'timeout' : toErrorVariant(e),
         last_completed_turn: retrospectiveAnalytics.context.value?.answerCount ?? 0,
       })
     }
     // 인증 만료는 인터셉터가 로그인으로 보냄 → 에러 화면 X
-    if (!isAuthError(e)) errorVariant.value = toErrorVariant(e)
+    if (!isAuthError(e)) errorKind.value = toResultErrorKind(e)
   } finally {
     isLoading.value = false
   }
