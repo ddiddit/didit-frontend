@@ -60,19 +60,6 @@
                 </button>
               </div>
             </template>
-            <!-- 마무리 선택 UI — 답변 응답의 action이 OFFER_COMPLETION/CONFIRM_COMPLETION이면 답장 타이핑이 끝난 뒤 노출(showCompletionOffer).
-                 이대로 마치기: action과 무관하게 바로 결과 화면으로 이동해 회고 내용 정리(finish).
-                 계속 작성하기를 누르거나 답변을 보내면 사라진다 -->
-            <Transition name="sub-bubble">
-              <div v-if="m.id === completionOffer?.messageId && m.typedMain === m.main" class="flex gap-[8px] mt-[10px]">
-                <UiButton variant="chip" size="sm" :disabled="isBusy || isFinishing" @click="onOfferContinue">
-                  계속 작성하기
-                </UiButton>
-                <UiButton size="sm" :loading="isFinishing" :disabled="isBusy" @click="onOfferFinish">
-                  이대로 마치기
-                </UiButton>
-              </div>
-            </Transition>
           </div>
         </div>
         <div class="didit_message_wrapper self-start" v-else-if="m.role === 'generating'">
@@ -96,6 +83,36 @@
           :retrospective-id="retrospectiveId"
           @delete-attachment="onDeleteAttachment(m, $event)"
         />
+        <!-- 회고 종료 제안 — 답변 응답의 action이 OFFER_COMPLETION/CONFIRM_COMPLETION이면 답장 타이핑이 끝난 뒤
+             디딧의 종료 제안 말풍선과 오른쪽 선택 버튼 두 개를 노출(showCompletionOffer, 피그마 '챗봇/회고 종료 제안').
+             '네': action과 무관하게 바로 결과 화면으로 이동해 회고 내용 정리(finish).
+             '아니요'를 누르거나 답변을 보내면 사라진다 -->
+        <Transition name="sub-bubble">
+          <div v-if="m.role === 'didit' && m.id === completionOffer?.messageId && m.typedMain === m.main" class="flex flex-col">
+            <div class="didit_profile flex flex-col mb-[20px] self-start">
+              <img src="/icons/icon_chat_didit.png" alt="디딧" class="w-6 h-6" />
+              <div class="didit_message_box mt-[10px] px-[12px] max-w-[250px] py-[14px] bg-grey-3 inline-block text-[14px] rounded-[24px] whitespace-pre-line self-start">
+                {{ COMPLETION_OFFER_MESSAGE }}
+              </div>
+            </div>
+            <div class="flex flex-col items-end gap-[10px] mb-[20px]">
+              <button
+                class="px-[16px] py-[11px] rounded-[24px] border border-grey-5 bg-white text-[14px] leading-[22px] text-grey-13 disabled:opacity-50"
+                :disabled="isBusy || isFinishing"
+                @click="onOfferContinue"
+              >
+                아니요. 회고 더 할래요.
+              </button>
+              <button
+                class="px-[16px] py-[11px] rounded-[24px] bg-primary active:bg-green-active text-[14px] leading-[22px] text-grey-13 disabled:opacity-50"
+                :disabled="isBusy || isFinishing"
+                @click="onOfferFinish"
+              >
+                네. 회고 내용 정리할게요.
+              </button>
+            </div>
+          </div>
+        </Transition>
       </div>
     </div>
 
@@ -129,6 +146,9 @@ definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
 // generating 자리표시자(다음 질문 대기 중)에서 재생할 로티 — public/icons/loading.lottie
 const GENERATING_LOTTIE = '/icons/loading.lottie'
+
+// 회고 종료 제안 말풍선 문구 (피그마 '챗봇/회고 종료 제안')
+const COMPLETION_OFFER_MESSAGE = '오늘 회고 내용은 충분해요.\n지금까지 나눈 내용을 정리해볼까요?'
 
 // 선택 UI를 붙이는 action — 그 외(ASK/REFLECT)에는 붙이지 않는다
 type CompletionAction = Extract<AssistantAction, 'OFFER_COMPLETION' | 'CONFIRM_COMPLETION'>
@@ -214,6 +234,7 @@ function keepMessagePosition() {
 // [iOS] 리사이즈 모드 none이라 장문 입력 중 커서를 보여주려고 WebView가 문서(또는 overflow-hidden 조상)를
 // 위로 스크롤해 헤더·디딧 말풍선이 화면 밖으로 밀려난다 → 이 화면의 바깥쪽 스크롤은 항상 0으로 되돌린다.
 // 대화 영역·입력창 자체의 스크롤은 그대로 둔다
+// (네이티브 WebView 스크롤뷰의 밀림은 keyboard.client.ts의 setScroll로 막고, 여기서는 문서·조상 요소 스크롤만 되돌린다)
 const rootEl = ref<HTMLElement | null>(null)
 function pinOuterScroll(e: Event) {
   const target = e.target
