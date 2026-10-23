@@ -87,12 +87,12 @@
       />
 
       <!-- 최근 제안 받은 행동 (단일 카드 + 구분선) — Figma 새 홈 UI: 날짜·제목·프로젝트·태그
-           Lv.0(아직 회고 이력 없음)에서는 목록이 비어도 섹션 자체는 노출하고 안내문(빈 상태)을 보여준다 -->
-      <div v-if="recentList.length > 0 || isLevelZero" class="mt-8 px-5">
+           회고가 없으면 레벨과 무관하게(회고를 모두 삭제한 경우 포함) 섹션은 노출하고 안내문(빈 상태)을 보여준다 -->
+      <div class="mt-8 px-5">
         <p class="text-[16px] font-semibold text-grey-10 leading-[1.5] tracking-[-0.02em]">최근 제안 받은 행동</p>
         <p class="text-[14px] font-medium text-grey-7 leading-[1.4] tracking-[-0.02em] mt-[3px]">제안 받은 피드백을 업무에 적용해보세요</p>
         <div class="mt-3.5 bg-grey-1 rounded-[18px] px-5 py-[22px] flex flex-col gap-[14px]">
-          <!-- Lv.0 빈 상태 -->
+          <!-- 빈 상태 -->
           <div v-if="recentList.length === 0" class="flex items-center gap-[6px] py-5.5 px-5">
             <img src="/icons/empty-retrospects.svg" alt="empty-retrospect" class="w-[24px] h-[24px]" />
             <p class="text-[14px] font-semibold text-grey-6">아직 작성한 회고가 없어요</p>
@@ -301,7 +301,7 @@ async function fillMissingNextActions() {
 // 캐시 복구·홈 재조회로 최근 목록이 바뀔 때마다 비어 있는 제안을 채운다
 watch(recentList, fillMissingNextActions, { immediate: true })
 
-// Lv.0(아직 회고를 한 번도 완료하지 않음) — 이 경우에만 "최근 제안 받은 행동" 섹션을 빈 상태로라도 노출한다
+// Lv.0(아직 회고를 한 번도 완료하지 않음)
 const isLevelZero = computed(() => (mission.value?.currentLevel ?? 0) === 0)
 
 // 피드백 캐러셀 (transform 방식 — 모든 카드 좌측 정렬 + 우측 peek, 마우스/터치 드래그)
