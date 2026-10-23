@@ -500,8 +500,20 @@ const summaryById = useState<Record<string, string>>('retrospects:summary', () =
 const pendingSummaryIds = new Set<string>()
 const SUMMARY_FETCH_CONCURRENCY = 4
 
+// 상세 화면과 동일하게 v2 결과(/result)를 먼저 보고, 실패하거나 요약이 비면(v1 회고 등) 상세 조회로 대체
+async function fetchSummary(id: string): Promise<string | undefined> {
+  try {
+    const summary = (await retro.getResult(id)).content?.summary?.trim()
+    if (summary) return summary
+  } catch (e) {
+    if (isAuthError(e)) throw e
+  }
+  return (await retro.getDetail(id)).content?.summary?.trim() || undefined
+}
+
 async function fillMissingSummaries(items: { id: string; summary: string | null; status?: string }[]) {
-  const targets = items.filter((r) => !r.summary?.trim() && (r.status ?? 'COMPLETED') === 'COMPLETED')
+  // 진행 중 회고만 제외 — 상태값이 없거나 다른 완료 상태로 와도 요약을 채운다
+  const targets = items.filter((r) => !r.summary?.trim() && r.status !== 'IN_PROGRESS')
   // 이미 받아둔 요약은 즉시 반영
   for (const r of targets) {
     const cached = summaryById.value[r.id]
@@ -512,7 +524,7 @@ async function fillMissingSummaries(items: { id: string; summary: string | null;
   async function worker() {
     for (let r = queue.shift(); r; r = queue.shift()) {
       try {
-        const summary = (await retro.getResult(r.id)).content?.summary?.trim()
+        const summary = await fetchSummary(r.id)
         if (summary) {
           summaryById.value[r.id] = summary
           r.summary = summary
