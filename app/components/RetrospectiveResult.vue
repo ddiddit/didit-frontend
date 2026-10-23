@@ -84,9 +84,9 @@
       </div>
 
       <!-- 막힌 지점 / 해결 과정 / 배운 점 -->
-      <div class="bg-grey-1 rounded-[9px] p-2 flex flex-col gap-5">
+      <div v-if="listSections.length" class="bg-grey-1 rounded-[9px] p-2 flex flex-col gap-5">
         <template v-for="(section, i) in listSections" :key="section.key">
-          <div v-if="section.items.length" class="flex flex-col gap-[6px]">
+          <div class="flex flex-col gap-[6px]">
             <p class="text-body3 font-semibold text-grey-10">{{ section.label }}</p>
             <ul class="flex flex-col gap-[2px] text-body3-reading text-grey-13">
               <li v-for="(item, j) in section.items" :key="j" class="list-disc ms-[22px]">
@@ -94,7 +94,7 @@
               </li>
             </ul>
           </div>
-          <div v-if="section.items.length && i < listSections.length - 1" class="h-px bg-grey-4" />
+          <div v-if="i < listSections.length - 1" class="h-px bg-grey-4" />
         </template>
       </div>
 
@@ -140,27 +140,28 @@ const props = withDefaults(
 
 defineEmits<{ delete: []; 'edit-project': []; 'edit-tags': []; 'open-project': []; 'update:title': [value: string] }>()
 
-// v2는 강점/개선점/진행 과정/배운 점, v1은 막힌 지점/해결 과정/배운 점 — 필드명으로 형태를 구분한다
-const listSections = computed(() => {
-  const c = props.content
-  if ('strengths' in c) {
-    return [
-      { key: 'strengths', label: '잘한 점', items: c.strengths ?? [] },
-      { key: 'improvements', label: '어려웠던 점', items: c.improvements ?? [] },
-      { key: 'processes', label: '해결 과정', items: c.processes ?? [] },
-      { key: 'learnings', label: '배운 점', items: c.learnings ?? [] },
-    ]
-  }
-  return [
-    { key: 'blocked', label: '막힌 지점', items: c.blockedPoint ?? [] },
-    { key: 'solution', label: '해결 과정', items: c.solutionProcess ?? [] },
-    { key: 'lesson', label: '배운 점', items: c.lessonLearned ?? [] },
-  ]
-})
+// 응답 필드를 안전하게 문자열 배열로 읽는다 — 키가 없거나 null이면 빈 배열
+function listOf(key: string): string[] {
+  const value = (props.content as unknown as Record<string, unknown>)[key]
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string' && v.trim().length > 0) : []
+}
+
+// v2는 강점/개선점/진행 과정/배운 점, v1은 막힌 지점/해결 과정/배운 점.
+// 상세 조회(v2 /result 실패 시 대체 조회)가 어느 형태로 내려와도 섹션이 빠지지 않도록 두 형태의 필드를 모두 읽어
+// 값이 있는 섹션만 노출한다 (같은 의미의 필드는 v2 → v1 순으로 이어 붙임)
+const listSections = computed(() =>
+  [
+    { key: 'strengths', label: '잘한 점', items: listOf('strengths') },
+    { key: 'improvements', label: '어려웠던 점', items: [...listOf('improvements'), ...listOf('blockedPoint')] },
+    { key: 'processes', label: '해결 과정', items: [...listOf('processes'), ...listOf('solutionProcess')] },
+    { key: 'learnings', label: '배운 점', items: [...listOf('learnings'), ...listOf('lessonLearned')] },
+  ].filter((section) => section.items.length > 0),
+)
 
 // v1은 다음 행동 제안이 하나(nextAction), v2는 여러 개(nextActions) — 항상 배열로 통일해 노출한다
 const nextActions = computed(() => {
   const c = props.content
-  return 'nextActions' in c ? (c.nextActions ?? []) : c.nextAction ? [c.nextAction] : []
+  if ('nextActions' in c && c.nextActions?.length) return c.nextActions
+  return 'nextAction' in c && c.nextAction ? [c.nextAction] : []
 })
 </script>

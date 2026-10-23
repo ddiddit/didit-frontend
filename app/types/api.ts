@@ -329,12 +329,13 @@ export interface RetrospectiveResultResponse {
 
 // v2 회고 결과 — finish()로 생성됨. v1 CompleteRetrospectiveResponse.content(RetrospectiveContent)와 필드명이 다르다
 // (blockedPoint/solutionProcess/lessonLearned/nextAction(단수) → strengths/improvements/processes/learnings/nextActions(복수))
+// 강점/개선점/진행 과정/배운 점은 응답에서 키 자체가 빠질 수 있다(실제 응답에서 확인됨) → 선택 필드
 export interface RetrospectiveResultV2 {
   summary: string
-  strengths: string[]
-  improvements: string[]
-  processes: string[]
-  learnings: string[]
+  strengths?: string[]
+  improvements?: string[]
+  processes?: string[]
+  learnings?: string[]
   insight: RetrospectiveInsight
   nextActions: RetrospectiveInsight[]
 }

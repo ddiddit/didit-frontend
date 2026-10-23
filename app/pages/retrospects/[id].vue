@@ -209,14 +209,32 @@ const editTitle = ref('')
 const isSavingTitle = ref(false)
 const canSaveTitle = computed(() => editTitle.value.trim().length > 0)
 
-// v2 회고 결과는 GET /result로 조회한다. /result가 실패하면(v1 회고 등) 기존 상세 조회로 대체
+// 잘한 점·어려웠던 점·해결 과정·배운 점 중 하나라도 내용이 있는지 (v1·v2 필드명 모두 확인)
+const SECTION_KEYS = ['strengths', 'improvements', 'processes', 'learnings', 'blockedPoint', 'solutionProcess', 'lessonLearned']
+function hasSections(content: unknown): boolean {
+  if (!content || typeof content !== 'object') return false
+  const c = content as Record<string, unknown>
+  return SECTION_KEYS.some((key) => Array.isArray(c[key]) && (c[key] as unknown[]).length > 0)
+}
+
+// v2 회고 결과는 GET /result로 조회한다. /result가 실패하면(v1 회고 등) 기존 상세 조회로 대체.
+// /result는 성공했지만 섹션(잘한 점 등)이 비어 있으면 상세 조회도 확인해 내용이 있는 쪽을 쓴다
 async function loadRetrospective(): Promise<RetrospectiveResultResponse | RetrospectiveDetail> {
+  let result: RetrospectiveResultResponse
   try {
-    return await retro.getResult(id.value)
+    result = await retro.getResult(id.value)
   } catch (e) {
     if (isAuthError(e)) throw e
     return await retro.getDetail(id.value)
   }
+  if (hasSections(result.content)) return result
+  try {
+    const fallback = await retro.getDetail(id.value)
+    if (hasSections(fallback.content)) return fallback
+  } catch (e) {
+    if (isAuthError(e)) throw e
+  }
+  return result
 }
 
 async function loadDetail() {
