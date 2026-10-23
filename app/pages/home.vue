@@ -104,7 +104,7 @@
               </div>
               <div class="flex-1 min-w-0 flex flex-col gap-1">
                 <!-- 상단: 다음 행동 제안 요약구 (최대 2줄) -->
-                <p class="text-[15px] font-medium text-grey-13 leading-[1.5] tracking-[-0.02em] line-clamp-2">{{ r.nextAction || r.title }}</p>
+                <p class="text-[15px] font-medium text-grey-13 leading-[1.5] tracking-[-0.02em] line-clamp-2">{{ nextActionText(r) }}</p>
                 <!-- 하단: 프로젝트명 · 회고제목 (자유회고는 제목만) -->
                 <div class="flex items-center gap-[5px]">
                   <template v-if="r.projectName">
@@ -257,6 +257,49 @@ function formatDate(dateStr: string): string {
 // 최근 회고 최대 3개 — 피드백 슬라이더(다음 행동 제안 있는 것)와 최근 회고 리스트에 사용
 const topFeedbacks = computed(() => recentRetrospectives.value.filter((r) => r.nextAction).slice(0, 3))
 const recentList = computed(() => recentRetrospectives.value.slice(0, 5))
+
+// 홈 응답의 nextAction이 비어 있는 회고(v2 finish()로 생성 등)는 회고 결과의 다음 행동 제안 제목으로 채운다
+// → 제목이 위아래로 중복 노출되지 않도록. 회고 id별로 한 번만 조회(SPA 전체 유지), ''는 '제안 없음'으로 확인된 상태
+const retro = useRetrospect()
+const nextActionById = useState<Record<string, string>>('home:nextActions', () => ({}))
+const pendingNextActionIds = new Set<string>()
+
+function nextActionText(r: HomeResponse['recentRetrospectives'][number]): string {
+  if (r.nextAction?.trim()) return r.nextAction
+  const fetched = nextActionById.value[r.id]
+  // 조회 중엔 비워 두고, 제안이 정말 없을 때만 회고 제목으로 대체
+  if (fetched === undefined) return ''
+  return fetched || r.title || ''
+}
+
+// 상세 화면과 동일하게 v2 결과(/result)를 먼저 보고, 실패하거나 제안이 비면(v1 회고 등) 상세 조회로 대체
+async function fetchNextActionTitle(id: string): Promise<string> {
+  try {
+    const title = (await retro.getResult(id)).content?.nextActions?.[0]?.title?.trim()
+    if (title) return title
+  } catch (e) {
+    if (isAuthError(e)) throw e
+  }
+  return (await retro.getDetail(id)).content?.nextAction?.title?.trim() ?? ''
+}
+
+async function fillMissingNextActions() {
+  const targets = recentList.value.filter(
+    (r) => !r.nextAction?.trim() && nextActionById.value[r.id] === undefined && !pendingNextActionIds.has(r.id),
+  )
+  await Promise.all(targets.map(async (r) => {
+    pendingNextActionIds.add(r.id)
+    try {
+      nextActionById.value[r.id] = await fetchNextActionTitle(r.id)
+    } catch {
+      nextActionById.value[r.id] = '' // 조회 실패 → 제목으로 대체
+    } finally {
+      pendingNextActionIds.delete(r.id)
+    }
+  }))
+}
+// 캐시 복구·홈 재조회로 최근 목록이 바뀔 때마다 비어 있는 제안을 채운다
+watch(recentList, fillMissingNextActions, { immediate: true })
 
 // Lv.0(아직 회고를 한 번도 완료하지 않음) — 이 경우에만 "최근 제안 받은 행동" 섹션을 빈 상태로라도 노출한다
 const isLevelZero = computed(() => (mission.value?.currentLevel ?? 0) === 0)
