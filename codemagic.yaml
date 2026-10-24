@@ -1,0 +1,89 @@
+workflows:
+  ios-testflight:
+    name: DIDIT iOS - TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    integrations:
+      app_store_connect: didit-app-store-connect
+
+    environment:
+      groups:
+        - didit_production
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.swyp.didit
+      vars:
+        APP_STORE_APPLE_ID: "6761548843"
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+      node: "22"
+      xcode: latest
+      cocoapods: default
+
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+
+      - name: Run unit tests
+        script: npm test
+
+      - name: Check iOS release configuration
+        script: npm run ios:preflight
+
+      - name: Restore production environment
+        script: |
+          test -n "$IOS_ENV_PRODUCTION"
+          printf '%s' "$IOS_ENV_PRODUCTION" > .env.production
+
+      - name: Restore Firebase iOS configuration
+        script: |
+          test -n "$FIREBASE_IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64"
+          printf '%s' "$FIREBASE_IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64" | openssl base64 -d -A > ios/App/App/GoogleService-Info.plist
+
+      - name: Build web and sync Capacitor
+        script: npm run cap:sync:prod
+
+      - name: Configure iOS login and Firebase
+        script: bash scripts/configure-ios.sh
+
+      - name: Install CocoaPods dependencies
+        script: |
+          test -f ios/App/Podfile.lock
+          cd ios/App
+          pod install --deployment
+
+      - name: Apply App Store signing profiles
+        script: xcode-project use-profiles
+
+      - name: Set app version and next build number
+        script: |
+          set -euo pipefail
+          APP_VERSION="$(node -p "require('./package.json').version")"
+          LATEST_BUILD_NUMBER="$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" --all-versions)"
+          if [ -z "$LATEST_BUILD_NUMBER" ]; then
+            LATEST_BUILD_NUMBER=0
+          fi
+          case "$LATEST_BUILD_NUMBER" in
+            *[!0-9]*) echo "Invalid TestFlight build number: $LATEST_BUILD_NUMBER" >&2; exit 1 ;;
+          esac
+          cd ios/App
+          agvtool new-marketing-version "$APP_VERSION"
+          agvtool new-version -all "$((LATEST_BUILD_NUMBER + 1))"
+
+      - name: Build signed IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$CM_BUILD_DIR/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
