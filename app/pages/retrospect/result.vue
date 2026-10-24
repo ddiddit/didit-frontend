@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-background flex flex-col">
+  <div class="h-full bg-grey-1 flex flex-col">
     <!-- 로딩 (MAKE_001 / figma 25712): AI 요약 생성 중 -->
     <div v-if="isLoading" class="flex-1 flex flex-col items-center justify-center px-8 text-center">
       <div class="flex gap-[7px] mb-8">
