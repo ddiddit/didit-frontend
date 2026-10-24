@@ -99,10 +99,9 @@ AI 기반 회고(retrospective) 앱의 프론트엔드.
 - **타이핑 애니메이션 공용 로직**: `app/composables/useDiditTyping.ts`의 `buildDiditMessage()`(AI 메시지 → 채팅 말풍선 변환) / `typeDiditMessage()`(한 글자씩 타이핑)를 첫 질문·다음 질문·재개 복구 등 여러 곳에서 재사용. 새 위치에서 AI 메시지를 화면에 추가할 땐 이 두 함수를 그대로 쓸 것 — push한 메시지 객체를 직접 `reactive()`로 감싸지 않으면(평범한 객체만 push) 이후 `typedMain` 등을 mutate해도 화면이 갱신되지 않는 반응성 함정이 있음
 - **회고 마치기 버튼**: 헤더 오른쪽 "회고 마치기"(`RetroHeader`의 `onFinish`)는 **항상 노출**되며, AI 응답 대기 중(=`generating` 자리표시자가 떠 있음)·초기 로딩·`finish()` 처리 중일 때만 잠긴다(`isFinishBlocked`)
   - 마치기가 성공해 결과 화면으로 넘어가는 경우엔 `isFinishing`을 풀지 않는다 — 라우팅 전환 중에 버튼이 다시 눌려 `finish`/`complete`가 중복 호출되는 것을 막기 위함. 조회 결과가 not-ready거나 실패했을 때만 잠금 해제
-- **skippable / readyToComplete**: 답변 응답의 `readyToComplete`가 true면 해당 질문은 `skippable: true`로 표시됨. 단 이 로컬 신호는 마무리 시점에도 false로 남는 경우가 있어 **완료 판정 기준으로 쓰지 않는다**
-  - `readyToComplete=false`여도 **종료를 차단하지 않는다** — 헤더 "회고 마치기"는 항상 확인 모달 → `finish()`
-- **AI 답장 아래 선택 버튼** (`showCompletionOffer`): 답변 응답의 `action`이 `OFFER_COMPLETION`/`CONFIRM_COMPLETION`이면 답장 **타이핑이 끝난 뒤** 디딧 종료 제안 말풍선("오늘 회고 내용은 충분해요. 지금까지 나눈 내용을 정리해볼까요?")과 오른쪽 버튼 "아니요. 회고 더 할래요. / 네. 회고 내용 정리할게요."(`completionOffer`)를 노출 (피그마 `챗봇/회고 종료 제안`)
-  - 네(정리할게요): action과 무관하게 `onFinishConfirm()`으로 바로 결과 화면 이동 → 회고 내용 정리(`finish()`) 진행
+- **skippable / readyToComplete**: 답변 응답의 `readyToComplete`가 true면 해당 질문은 `skippable: true`로 표시됨. 헤더 "회고 마치기"는 이 값과 관계없이 확인 모달 → `finish()`로 진행하지만, AI 답장 아래 선택 버튼은 이 값에 따라 `finish()`/`exit()`을 구분한다
+- **AI 답장 아래 선택 버튼** (`showCompletionOffer`): 답변 응답의 `action`이 `OFFER_COMPLETION`/`CONFIRM_COMPLETION`이면 답장 **타이핑이 끝난 뒤** 서버가 내려준 종료 안내 말풍선 아래에 오른쪽 버튼 "아니요. 회고 더 할래요. / 네. 회고 내용 정리할게요."(`completionOffer`)만 노출 (피그마 `챗봇/회고 종료 제안`). "정리할게요" 선택 시 `readyToComplete=true`면 결과 화면에서 `finish()`, false면 `exit()` 호출 후 홈으로 이동
+  - 네(정리할게요): `readyToComplete=true`면 `onFinishConfirm()`으로 결과 화면 이동 → 회고 내용 정리(`finish()`), false면 저장하지 않고 `exit()` 후 홈으로 이동
   - `ASK`/`REFLECT`/null → 버튼 없음. 아니요(더 할래요)나 새 답변 전송 시 제안 말풍선·버튼 제거
   - 대화 조회(`getConversation`) 응답엔 `action`이 없어 첨부 분석 폴링·서버 조회 복구 시에는 버튼을 붙이지 않음 (대화 캐시에 저장된 `action`으로 복구할 때만 복원)
 - **입력창 포커스**: `RetroTextarea`의 textarea는 응답 대기 중(`isBusy`)에도 **`disabled`로 잠그지 않는다** — 잠그면 포커스·모바일 키보드가 내려가 전송할 때마다 다시 눌러야 함. 대신 전송·첨부·마이크 버튼만 잠근다. AI 응답 출력 완료(`onDiditTyped`)·종료 선택 UI/모달 닫힘 시 `focusInput()`으로 자동 포커스(모달·레코더가 떠 있으면 생략)
