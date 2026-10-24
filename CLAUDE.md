@@ -114,7 +114,7 @@ AI 기반 회고(retrospective) 앱의 프론트엔드.
 ## 화면별 UI 규칙
 
 - **배경**: 회고 인트로(intro)는 `bg-retro-fade`(위→아래 그라데이션). 회고 진행(start) 채팅은 단색 `bg-grey-1`(Neutral/0), 디딧 말풍선 `bg-grey-3`(Neutral/10), 헤더는 대화 위에 겹친 `bg-retro-header-fade`(흰색 100%→40%), 입력 영역은 `bg-retro-input-fade`(세로 그라데이션 — 위 20px 투명→흰색, 이후 흰색→`background`). 채팅 입력창 박스(`RetroTextarea`)는 단색 `bg-background/90`(#F6F6F6 90%). **결과 화면(`retrospect/result.vue`)은 그라데이션 금지** — 회고 상세(`retrospects/[id].vue`)와 동일한 단색 `bg-grey-1`(Neutral/0, #FFFFFF)
-- **배지 획득 배너** (`UiBadgeAcquiredPopup` + `useBadgeAcquired`): 회고 저장 후 새 배지가 있으면 화면 **상단** 토스트 배너로 노출하고 **1.5초 뒤 자동으로 닫힘**(탭하면 즉시). 하단의 저장 완료 토스트와 겹치지 않게 상단에 둔다. 여러 개면 큐로 순차 노출, 홈의 미션 팝업이 떠 있는 동안은 보류(`setHold`) 후 해제 시점부터 다시 1.5초
+- **배지 획득 팝업** (`UiBadgeAcquiredPopup` + `useBadgeAcquired`): 회고 저장 후 새 배지가 있으면 딤 배경 위 **가운데 카드**(배지 이미지 + `congratsTitle` + `congratsText`)로 노출하고 **1.5초 뒤 자동으로 닫힘**(탭하면 즉시). 여러 개면 큐로 순차 노출, 홈의 미션 팝업이 떠 있는 동안은 보류(`setHold`) 후 해제 시점부터 다시 1.5초
 - **회고 목록 요약** (`retrospects/index.vue`): 제목 아래 `summary`를 2줄까지(`line-clamp-2`) 표시. 비어 있으면 "회고 요약이 없습니다"를 연한 색(`text-grey-7`)으로 표시 — 전체 목록·캘린더 날짜별 목록 공통
 
 ## 분석 (Amplitude)

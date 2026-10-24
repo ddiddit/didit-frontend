@@ -1,22 +1,18 @@
 <template>
   <Teleport to="#app-container">
-    <!-- 배지 획득 토스트 배너 — 상단에 노출되고 BANNER_DURATION_MS 뒤 자동으로 사라진다(탭하면 즉시 닫힘).
-         저장 완료 토스트(UiToast)가 하단에 함께 뜨므로 겹치지 않게 상단에 둔다 -->
-    <Transition name="badge-banner">
+    <!-- 배지 획득 팝업 — 딤 배경 위 가운데 카드로 노출되고 BANNER_DURATION_MS 뒤 자동으로 사라진다(탭하면 즉시 닫힘) -->
+    <Transition name="badge-popup">
       <div
         v-if="badge"
         :key="badge.code"
-        class="absolute left-0 right-0 z-50 flex justify-center top-[calc(16px+env(safe-area-inset-top,0px))]"
+        class="absolute inset-0 z-50 flex items-center justify-center px-[56px] cursor-pointer"
+        @click="hide"
       >
-        <div
-          class="bg-grey-10 rounded-xl px-[14px] py-[10px] flex items-center gap-[10px] max-w-[calc(100%-40px)] cursor-pointer"
-          @click="hide"
-        >
-          <img :src="badge.image" :alt="badge.name" class="w-[36px] h-[36px] object-contain shrink-0" />
-          <div class="flex flex-col min-w-0">
-            <p class="text-[14px] font-semibold leading-[1.5] tracking-[-0.28px] text-grey-1">{{ badge.congratsTitle }}</p>
-            <p class="text-[12px] font-normal leading-[1.5] tracking-[-0.24px] text-grey-5 truncate">{{ badge.name }} 배지를 획득했어요</p>
-          </div>
+        <div class="absolute inset-0 bg-black/40" />
+        <div class="badge-popup__card relative w-full max-w-[300px] bg-grey-1 rounded-[20px] px-5 pt-[24px] pb-[36px] flex flex-col items-center">
+          <img :src="badge.image" :alt="badge.name" class="w-[164px] h-[120px] object-contain" />
+          <p class="mt-[16px] text-[17px] font-semibold leading-[1.4] tracking-[-0.02em] text-grey-13 text-center">{{ badge.congratsTitle }}</p>
+          <p class="mt-2 text-[14px] font-normal leading-[1.6] tracking-[-0.02em] text-grey-8 text-center whitespace-pre-line">{{ badge.congratsText }}</p>
         </div>
       </div>
     </Transition>
@@ -41,8 +37,8 @@ onUnmounted(() => clearTimeout(timer))
 </script>
 
 <style scoped>
-.badge-banner-enter-active { transition: opacity 0.2s ease, transform 0.2s ease; }
-.badge-banner-leave-active { transition: opacity 0.2s ease, transform 0.15s ease; }
-.badge-banner-enter-from  { opacity: 0; transform: translateY(-8px); }
-.badge-banner-leave-to    { opacity: 0; transform: translateY(-8px); }
+.badge-popup-enter-active, .badge-popup-leave-active { transition: opacity 0.2s ease; }
+.badge-popup-enter-from, .badge-popup-leave-to { opacity: 0; }
+.badge-popup-enter-active .badge-popup__card { transition: transform 0.2s ease; }
+.badge-popup-enter-from .badge-popup__card { transform: scale(0.95); }
 </style>
