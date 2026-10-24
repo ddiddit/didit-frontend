@@ -83,18 +83,8 @@
           :retrospective-id="retrospectiveId"
           @delete-attachment="onDeleteAttachment(m, $event)"
         />
-        <!-- 회고 종료 제안 — 답변 응답의 action이 OFFER_COMPLETION/CONFIRM_COMPLETION이면 답장 타이핑이 끝난 뒤
-             디딧의 종료 제안 말풍선과 오른쪽 선택 버튼 두 개를 노출(showCompletionOffer, 피그마 '챗봇/회고 종료 제안').
-             '네': action과 무관하게 바로 결과 화면으로 이동해 회고 내용 정리(finish).
-             '아니요'를 누르거나 답변을 보내면 사라진다 -->
         <Transition name="sub-bubble">
           <div v-if="m.role === 'didit' && m.id === completionOffer?.messageId && m.typedMain === m.main" class="flex flex-col">
-            <div class="didit_profile flex flex-col mb-[20px] self-start">
-              <img src="/icons/icon_chat_didit.png" alt="디딧" class="w-6 h-6" />
-              <div class="didit_message_box mt-[10px] px-[12px] max-w-[250px] py-[14px] bg-grey-3 inline-block text-[14px] rounded-[24px] whitespace-pre-line self-start">
-                {{ COMPLETION_OFFER_MESSAGE }}
-              </div>
-            </div>
             <div class="flex flex-col items-end gap-[10px] mb-[20px]">
               <button
                 class="px-[16px] py-[11px] rounded-[24px] border border-grey-5 bg-white text-[14px] leading-[22px] text-grey-13 disabled:opacity-50"
@@ -140,15 +130,13 @@ import { isServerError } from '~/utils/api-error'
 import type { AnswerGuide, AssistantAction } from '~/types/api'
 import type { SentAttachment } from '~/utils/attachment'
 import type { ConversationCache } from '~/composables/useRetrospect'
-import { createAnalyticsInsertId } from '~/analytics/events'
+import { createAnalyticsInsertId, type AnalyticsEventProperties } from '~/analytics/events'
+import { resolveCompletionAction } from '~/utils/retrospectCompletion'
 
 definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
 // generating 자리표시자(다음 질문 대기 중)에서 재생할 로티 — public/icons/loading.lottie
 const GENERATING_LOTTIE = '/icons/loading.lottie'
-
-// 회고 종료 제안 말풍선 문구 (피그마 '챗봇/회고 종료 제안')
-const COMPLETION_OFFER_MESSAGE = '오늘 회고 내용은 충분해요.\n지금까지 나눈 내용을 정리해볼까요?'
 
 // 선택 UI를 붙이는 action — 그 외(ASK/REFLECT)에는 붙이지 않는다
 type CompletionAction = Extract<AssistantAction, 'OFFER_COMPLETION' | 'CONFIRM_COMPLETION'>
@@ -196,7 +184,7 @@ const isBackLeaving = ref(false) // 뒤로가기 확인('나가기') 처리 중(
 const isFinishModal = ref(false) // 회고 마치기 확인 모달 여부
 const isFinishing = ref(false) // finish() 처리 중 — 결과 화면으로 넘어가는 라우팅 전환까지는 풀지 않는다
 // 마무리 선택 UI를 붙일 didit 메시지 — OFFER_COMPLETION이면 '계속하기 / 마치기', CONFIRM_COMPLETION이면 '마무리하기'
-const completionOffer = ref<{ messageId: string; action: CompletionAction } | null>(null)
+const completionOffer = ref<{ messageId: string; readyToComplete: boolean } | null>(null)
 const micRequesting = ref(false) // 권한 요청 진행 중 — '허용' 버튼 잠금
 const isRecorderOpen = ref(false) // 음성 레코더 표시 여부
 // 음성 레코더가 변환한 텍스트를 입력창(RetroTextarea)으로 넘기는 초안 채널
@@ -297,7 +285,7 @@ function toReturningIntro(message: ConversationCache['message']): ConversationCa
 async function resumeActiveRetrospective(id: string): Promise<boolean> {
   const cached = readConversationCache(id)
   if (cached) {
-    restoreDiditMessage(id, cached.message, cached.readyToComplete, cached.isReply)
+    restoreDiditMessage(id, cached.message, cached.readyToComplete, cached.action ?? null)
     retrospectiveAnalytics.restore(id)
     return true
   }
@@ -311,8 +299,8 @@ async function resumeActiveRetrospective(id: string): Promise<boolean> {
     const lastMessage = conversation.messages.length === 1 ? toReturningIntro(lastServerMessage) : lastServerMessage
 
     // 첫 질문이 아니라 답변 후 받은 AI 답장이었다면 선택 UI도 함께 복구
-    restoreDiditMessage(id, lastMessage, conversation.readyToComplete, conversation.messages.length > 1)
-    cacheLastDiditMessage(lastMessage, conversation.readyToComplete, conversation.messages.length > 1)
+    restoreDiditMessage(id, lastMessage, conversation.readyToComplete, null)
+    cacheLastDiditMessage(lastMessage, conversation.readyToComplete)
     retrospectiveAnalytics.restore(id)
     return true
   } catch (err) {
@@ -328,7 +316,7 @@ function restoreDiditMessage(id: string, message: ConversationCache['message'], 
   diditMessage.typedMain = diditMessage.main
   diditMessage.showSub = !!diditMessage.sub
   messages.value = [diditMessage]
-  showCompletionOffer(diditMessage.id, action)
+  showCompletionOffer(diditMessage.id, action, readyToComplete)
   focusInput()
 }
 
@@ -392,12 +380,7 @@ function onBack() {
   isBackModal.value = true
 }
 
-// 뒤로가기 확인('나가기') — 저장 없이 exit()로 정리한다(PENDING이면 삭제). 답변이 있어도 저장하지 않음 —
-// 저장(결과 생성)은 '회고 마치기' 버튼(onFinishConfirm/finish())을 통해서만 이뤄진다.
-// 실패해도 나가는 것 자체는 막지 않음 — ACTIVE_RETROSPECTIVE_KEY가 남아있으면 다음 진입 시 이어서 진행 가능
-async function onBackConfirm() {
-  if (isBackLeaving.value) return
-  isBackLeaving.value = true
+async function exitRetrospective(exitReason: AnalyticsEventProperties['retrospect_exited']['exit_reason']) {
   if (retrospectiveId.value) {
     const id = retrospectiveId.value
     const lastCompletedTurn = retrospectiveAnalytics.context.value?.answerCount ?? 0
@@ -406,7 +389,7 @@ async function onBackConfirm() {
       {
         retrospective_id: id,
         last_completed_turn: lastCompletedTurn,
-        exit_reason: 'user_confirmed',
+        exit_reason: exitReason,
       },
       createAnalyticsInsertId('retrospect_exited', id),
     )
@@ -418,6 +401,15 @@ async function onBackConfirm() {
       console.log(err)
     }
   }
+}
+
+// 뒤로가기 확인('나가기') — 저장 없이 exit()로 정리한다(PENDING이면 삭제). 답변이 있어도 저장하지 않음 —
+// 저장(결과 생성)은 '회고 마치기' 버튼(onFinishConfirm/finish())을 통해서만 이뤄진다.
+// 실패해도 나가는 것 자체는 막지 않음 — ACTIVE_RETROSPECTIVE_KEY가 남아있으면 다음 진입 시 이어서 진행 가능
+async function onBackConfirm() {
+  if (isBackLeaving.value) return
+  isBackLeaving.value = true
+  await exitRetrospective('user_confirmed')
   isBackLeaving.value = false
   isBackModal.value = false
   navigateTo('/home')
@@ -461,17 +453,27 @@ function onOfferContinue() {
   focusInput()
 }
 
-// 선택 UI의 '이대로 마치기' — action(OFFER/CONFIRM_COMPLETION)과 무관하게 바로 결과 화면으로 넘어가
-// 대화 종료·회고 내용 정리(finish)를 진행한다
-function onOfferFinish() {
-  onFinishConfirm()
+async function onOfferFinish() {
+  if (isFinishing.value || !retrospectiveId.value || !completionOffer.value) return
+  if (resolveCompletionAction(completionOffer.value.readyToComplete) === 'finish') {
+    onFinishConfirm()
+    return
+  }
+
+  isFinishing.value = true
+  completionOffer.value = null
+  await exitRetrospective('completion_not_ready')
+  isFinishing.value = false
+  navigateTo('/home')
 }
 
 // 답변 응답의 action에 따라 AI 답장 아래에 '계속 작성하기 / 이대로 마치기'를 붙인다(화면엔 타이핑이 끝난 뒤 노출).
 // OFFER_COMPLETION·CONFIRM_COMPLETION만 붙이고, 그 외(ASK/REFLECT/null)는 붙이지 않음
-function showCompletionOffer(messageId: string, action: AssistantAction | null) {
+function showCompletionOffer(messageId: string, action: AssistantAction | null, readyToComplete: boolean) {
   completionOffer.value =
-    action === 'OFFER_COMPLETION' || action === 'CONFIRM_COMPLETION' ? { messageId, action } : null
+    action === 'OFFER_COMPLETION' || action === 'CONFIRM_COMPLETION'
+      ? { messageId, readyToComplete }
+      : null
 }
 
 // 답변 제출 — 사용자 메시지를 먼저 반영하고, AI 응답을 기다리는 동안 generating 자리표시자를 보여준 뒤
@@ -527,7 +529,7 @@ async function onSend(content: string, attachments: SentAttachment[] = []) {
     const diditMessage = buildDiditMessage(response.assistantMessage, response.readyToComplete)
     messages.value = messages.value.map((m) => (m.id === generatingId ? diditMessage : m))
     cacheLastDiditMessage(response.assistantMessage, response.readyToComplete, response.action)
-    showCompletionOffer(diditMessage.id, response.action)
+    showCompletionOffer(diditMessage.id, response.action, response.readyToComplete)
     typeDiditMessage(diditMessage, 50, onDiditTyped)
   } catch (err) {
     messages.value = messages.value.filter((m) => m.id !== generatingId)
