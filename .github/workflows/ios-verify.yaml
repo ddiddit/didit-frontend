@@ -62,7 +62,13 @@ jobs:
           printf '%s' "$FIREBASE_PLIST_BASE64" | openssl base64 -d -A > ios/App/App/GoogleService-Info.plist
 
       - name: Build web and sync Capacitor
-        run: npm run cap:sync:prod
+        run: |
+          npm run generate -- --dotenv .env.production
+          if [ -f ios/App/Podfile.lock ]; then
+            npx cap sync ios --deployment
+          else
+            npx cap sync ios
+          fi
 
       - name: Configure iOS login and Firebase
         run: bash scripts/configure-ios.sh
