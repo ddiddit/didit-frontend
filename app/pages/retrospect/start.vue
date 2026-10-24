@@ -604,19 +604,20 @@ async function onDeleteAttachment(message: ChatMessage, attachmentId: string) {
 }
 
 
-// [iOS·AOS 공통] 키보드가 가리는 만큼 화면을 JS로 줄여 헤더·말풍선이 위로 밀려나지 않게 한다.
-// - iOS: 리사이즈 모드 none(keyboard.client.ts)이라 레이아웃이 전혀 줄지 않음 → 키보드 높이 전체만큼 축소
-// - AOS: adjustResize로 WebView가 줄어야 하지만, targetSdk 35(Android 15 edge-to-edge 강제)에선 기기에 따라
-//   리사이즈가 안 되거나 덜 줄어, 장문 입력 시 커서를 보이려고 화면 전체가 위로 밀린다
-// → "키보드 높이 − 이 화면을 담는 컨테이너가 이미 줄어든 양"만큼만 줄인다. WebView가 정상 리사이즈되면 0이 되어 이중 축소되지 않는다.
-// 줄어든 양은 window resize·documentElement 대신 컨테이너(#app-container) 실제 높이를 ResizeObserver로 잰다
-// — resize 이벤트가 키보드 이벤트보다 먼저 오거나, 문서 높이와 컨테이너(h-dvh) 높이가 따로 노는 기기가 있어 가려지던 문제 대응
-// (visualViewport는 iOS 추천줄 높이를 누락하므로 네이티브 키보드 높이를 쓴다)
+// [iOS·AOS·모바일 웹 공통] 키보드가 가리는 만큼 화면을 JS로 줄여 입력창·헤더·말풍선이 가려지거나 밀려나지 않게 한다.
+// 가려지는 양은 두 가지로 재서 큰 쪽을 쓴다(어느 한쪽 값이 부정확한 기기에서도 입력창이 가려지지 않게)
+// ① 네이티브 키보드 높이 − 이 화면을 담는 컨테이너(#app-container)가 이미 줄어든 양
+//    - iOS: 리사이즈 모드 none(keyboard.client.ts)이라 컨테이너가 줄지 않음 → 키보드 높이 전체
+//    - AOS: adjustResize로 WebView가 줄면 0, targetSdk 35(edge-to-edge)에서 덜 줄거나 안 줄면 그 차이만큼
+//    (visualViewport는 iOS 추천줄 높이를 누락하므로 네이티브 키보드 높이를 기준으로 쓴다)
+// ② 컨테이너 아래쪽 중 visual viewport 밖으로 벗어난 양 — 모바일 브라우저(Safari·Chrome)는 키보드가
+//    레이아웃을 줄이지 않고 visual viewport만 줄이므로 이 값으로만 잡힌다
 const keyboardInset = ref(0) // 네이티브가 알려준 키보드 높이(CSS px)
-const containerHeight = ref(0) // 현재 컨테이너 높이
 const fullContainerHeight = ref(0) // 키보드가 닫혀 있을 때의 컨테이너 높이
-const keyboardHeight = computed(() => Math.max(0, keyboardInset.value - Math.max(0, fullContainerHeight.value - containerHeight.value)))
+const keyboardHeight = ref(0)
 const keyboardOpen = computed(() => keyboardHeight.value > 0)
+// 키보드가 올라와 화면이 줄어든 뒤 채팅을 맨 아래로 → 마지막 질문이 키보드에 가려지지 않음
+watch(keyboardHeight, (h, prev) => { if (h > prev) nextTick(scrollToBottom) })
 let kbShow: PluginListenerHandle | undefined
 let kbDidShow: PluginListenerHandle | undefined
 let kbHide: PluginListenerHandle | undefined
@@ -625,19 +626,29 @@ let appStateListener: PluginListenerHandle | undefined
 let backButtonListener: PluginListenerHandle | undefined
 let containerObserver: ResizeObserver | undefined
 
-// 컨테이너 높이 갱신. 키보드가 닫혀 있는 동안엔 기준 높이도 함께 갱신하되 더 큰 값만 받는다
-// — 키보드 이벤트보다 컨테이너 축소가 먼저 와도 줄어든 높이가 기준으로 잡히지 않게 (기준은 keyboardDidHide에서 다시 맞춘다)
-function syncContainerHeight() {
-  const h = rootEl.value?.parentElement?.clientHeight ?? 0
-  if (!h) return
-  containerHeight.value = h
+function updateKeyboardHeight() {
+  const container = rootEl.value?.parentElement
+  if (!container) return
+  const h = container.clientHeight
+  // 키보드가 닫혀 있는 동안의 기준 높이는 더 큰 값만 받는다 — 키보드 이벤트보다 컨테이너 축소가 먼저 와도
+  // 줄어든 높이가 기준으로 잡히지 않게 (기준은 keyboardDidHide에서 다시 맞춘다)
   if (keyboardInset.value === 0) fullContainerHeight.value = Math.max(fullContainerHeight.value, h)
+
+  const nativeCovered = keyboardInset.value > 0
+    ? keyboardInset.value - Math.max(0, fullContainerHeight.value - h)
+    : 0
+  const vv = window.visualViewport
+  const viewportCovered = vv ? container.getBoundingClientRect().bottom - (vv.offsetTop + vv.height) : 0
+  const covered = Math.round(Math.max(nativeCovered, viewportCovered))
+  // 소수점 오차·브라우저 툴바 1~2px 차이는 무시
+  keyboardHeight.value = covered > 2 ? covered : 0
 }
 
 function applyKeyboardHeight(raw: number) {
   // 일부 기기는 물리 px로 주므로 CSS px로 정규화
   const h = raw > window.innerHeight ? raw / window.devicePixelRatio : raw
   keyboardInset.value = h > 0 ? h : 0
+  updateKeyboardHeight()
 }
 
 
@@ -716,6 +727,15 @@ onMounted(async () => {
   document.addEventListener('scroll', pinOuterScroll, { capture: true, passive: true })
   window.visualViewport?.addEventListener('scroll', pinViewport)
 
+  // 키보드가 가리는 양 계산 (위 keyboardHeight 참고) — 컨테이너 크기·visual viewport가 바뀔 때마다 다시 잰다
+  const container = rootEl.value?.parentElement
+  if (container) {
+    updateKeyboardHeight()
+    containerObserver = new ResizeObserver(updateKeyboardHeight)
+    containerObserver.observe(container)
+  }
+  window.visualViewport?.addEventListener('resize', updateKeyboardHeight)
+
   // 안드로이드 하드웨어/제스처 뒤로가기 — 헤더의 뒤로가기 버튼과 동일하게 확인 모달을 띄운다.
   // 리스너를 등록하면 Capacitor의 기본 동작(뒤로 이동/앱 종료)이 자동으로 실행되지 않고,
   // 여기서 직접 처리해야 한다.
@@ -724,28 +744,22 @@ onMounted(async () => {
       onBack()
     })
 
-    // 키보드가 가리는 만큼 직접 화면을 줄여야 헤더·말풍선이 위로 밀려나지 않는다 (iOS·AOS 공통, 위 keyboardHeight 참고)
-    const container = rootEl.value?.parentElement
-    if (container) {
-      fullContainerHeight.value = 0
-      syncContainerHeight()
-      containerObserver = new ResizeObserver(syncContainerHeight)
-      containerObserver.observe(container)
-    }
     kbShow = await Keyboard.addListener('keyboardWillShow', info => applyKeyboardHeight(info.keyboardHeight))
-    kbHide = await Keyboard.addListener('keyboardWillHide', () => { keyboardInset.value = 0 })
+    kbHide = await Keyboard.addListener('keyboardWillHide', () => {
+      keyboardInset.value = 0
+      updateKeyboardHeight()
+    })
     // 키보드가 다 올라온 뒤(레이아웃 축소 완료) 최종 키보드 높이·컨테이너 높이로 다시 맞추고 채팅을 맨 아래로
     // → 애니메이션 시작 시점 값이 부정확한 기기에서도 입력창·마지막 질문이 키보드에 가려지지 않음 (iOS·AOS 공통)
     kbDidShow = await Keyboard.addListener('keyboardDidShow', (info) => {
       if (info.keyboardHeight > 0) applyKeyboardHeight(info.keyboardHeight)
-      syncContainerHeight()
-      nextTick(scrollToBottom)
+      else updateKeyboardHeight()
     })
     // 키보드가 완전히 내려간 뒤 원래 높이로 복구된 컨테이너 높이를 기준으로 다시 잡는다
     kbDidHide = await Keyboard.addListener('keyboardDidHide', () => {
       keyboardInset.value = 0
       fullContainerHeight.value = 0
-      syncContainerHeight()
+      updateKeyboardHeight()
     })
   }
 })
@@ -759,6 +773,7 @@ onUnmounted(() => {
   document.removeEventListener('scroll', pinOuterScroll, { capture: true })
   window.visualViewport?.removeEventListener('scroll', pinViewport)
   containerObserver?.disconnect()
+  window.visualViewport?.removeEventListener('resize', updateKeyboardHeight)
   backButtonListener?.remove()
   kbShow?.remove()
   kbDidShow?.remove()
