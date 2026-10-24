@@ -607,24 +607,31 @@ async function onDeleteAttachment(message: ChatMessage, attachmentId: string) {
 // [iOS·AOS 공통] 키보드가 가리는 만큼 화면을 JS로 줄여 헤더·말풍선이 위로 밀려나지 않게 한다.
 // - iOS: 리사이즈 모드 none(keyboard.client.ts)이라 레이아웃이 전혀 줄지 않음 → 키보드 높이 전체만큼 축소
 // - AOS: adjustResize로 WebView가 줄어야 하지만, targetSdk 35(Android 15 edge-to-edge 강제)에선 기기에 따라
-//   리사이즈가 안 되거나 visual viewport만 줄어, 장문 입력 시 커서를 보이려고 화면 전체가 위로 밀린다
-// → "키보드 높이 − 레이아웃이 이미 줄어든 양"만큼만 줄인다. WebView가 정상 리사이즈되면 0이 되어 이중 축소되지 않는다.
+//   리사이즈가 안 되거나 덜 줄어, 장문 입력 시 커서를 보이려고 화면 전체가 위로 밀린다
+// → "키보드 높이 − 이 화면을 담는 컨테이너가 이미 줄어든 양"만큼만 줄인다. WebView가 정상 리사이즈되면 0이 되어 이중 축소되지 않는다.
+// 줄어든 양은 window resize·documentElement 대신 컨테이너(#app-container) 실제 높이를 ResizeObserver로 잰다
+// — resize 이벤트가 키보드 이벤트보다 먼저 오거나, 문서 높이와 컨테이너(h-dvh) 높이가 따로 노는 기기가 있어 가려지던 문제 대응
 // (visualViewport는 iOS 추천줄 높이를 누락하므로 네이티브 키보드 높이를 쓴다)
 const keyboardInset = ref(0) // 네이티브가 알려준 키보드 높이(CSS px)
-const layoutHeight = ref(0) // 현재 레이아웃 뷰포트 높이
-const fullLayoutHeight = ref(0) // 키보드가 닫혀 있을 때의 레이아웃 뷰포트 높이
-const keyboardHeight = computed(() => Math.max(0, keyboardInset.value - (fullLayoutHeight.value - layoutHeight.value)))
+const containerHeight = ref(0) // 현재 컨테이너 높이
+const fullContainerHeight = ref(0) // 키보드가 닫혀 있을 때의 컨테이너 높이
+const keyboardHeight = computed(() => Math.max(0, keyboardInset.value - Math.max(0, fullContainerHeight.value - containerHeight.value)))
 const keyboardOpen = computed(() => keyboardHeight.value > 0)
 let kbShow: PluginListenerHandle | undefined
 let kbDidShow: PluginListenerHandle | undefined
 let kbHide: PluginListenerHandle | undefined
+let kbDidHide: PluginListenerHandle | undefined
 let appStateListener: PluginListenerHandle | undefined
 let backButtonListener: PluginListenerHandle | undefined
+let containerObserver: ResizeObserver | undefined
 
-// 레이아웃 뷰포트(ICB) 높이 갱신 — visual viewport만 줄어드는 경우엔 변하지 않으므로 innerHeight 대신 clientHeight를 쓴다
-function syncLayoutHeight() {
-  layoutHeight.value = document.documentElement.clientHeight
-  if (keyboardInset.value === 0) fullLayoutHeight.value = layoutHeight.value
+// 컨테이너 높이 갱신. 키보드가 닫혀 있는 동안엔 기준 높이도 함께 갱신하되 더 큰 값만 받는다
+// — 키보드 이벤트보다 컨테이너 축소가 먼저 와도 줄어든 높이가 기준으로 잡히지 않게 (기준은 keyboardDidHide에서 다시 맞춘다)
+function syncContainerHeight() {
+  const h = rootEl.value?.parentElement?.clientHeight ?? 0
+  if (!h) return
+  containerHeight.value = h
+  if (keyboardInset.value === 0) fullContainerHeight.value = Math.max(fullContainerHeight.value, h)
 }
 
 function applyKeyboardHeight(raw: number) {
@@ -718,12 +725,28 @@ onMounted(async () => {
     })
 
     // 키보드가 가리는 만큼 직접 화면을 줄여야 헤더·말풍선이 위로 밀려나지 않는다 (iOS·AOS 공통, 위 keyboardHeight 참고)
-    syncLayoutHeight()
-    window.addEventListener('resize', syncLayoutHeight)
+    const container = rootEl.value?.parentElement
+    if (container) {
+      fullContainerHeight.value = 0
+      syncContainerHeight()
+      containerObserver = new ResizeObserver(syncContainerHeight)
+      containerObserver.observe(container)
+    }
     kbShow = await Keyboard.addListener('keyboardWillShow', info => applyKeyboardHeight(info.keyboardHeight))
     kbHide = await Keyboard.addListener('keyboardWillHide', () => { keyboardInset.value = 0 })
-    // 키보드가 다 올라온 뒤(레이아웃 축소 완료) 채팅을 맨 아래로 → 마지막 질문이 키보드에 가려지지 않음 (iOS·AOS 공통)
-    kbDidShow = await Keyboard.addListener('keyboardDidShow', () => scrollToBottom())
+    // 키보드가 다 올라온 뒤(레이아웃 축소 완료) 최종 키보드 높이·컨테이너 높이로 다시 맞추고 채팅을 맨 아래로
+    // → 애니메이션 시작 시점 값이 부정확한 기기에서도 입력창·마지막 질문이 키보드에 가려지지 않음 (iOS·AOS 공통)
+    kbDidShow = await Keyboard.addListener('keyboardDidShow', (info) => {
+      if (info.keyboardHeight > 0) applyKeyboardHeight(info.keyboardHeight)
+      syncContainerHeight()
+      nextTick(scrollToBottom)
+    })
+    // 키보드가 완전히 내려간 뒤 원래 높이로 복구된 컨테이너 높이를 기준으로 다시 잡는다
+    kbDidHide = await Keyboard.addListener('keyboardDidHide', () => {
+      keyboardInset.value = 0
+      fullContainerHeight.value = 0
+      syncContainerHeight()
+    })
   }
 })
 
@@ -735,11 +758,12 @@ onUnmounted(() => {
   scrollEl.value?.removeEventListener('scroll', onMessageScroll)
   document.removeEventListener('scroll', pinOuterScroll, { capture: true })
   window.visualViewport?.removeEventListener('scroll', pinViewport)
-  window.removeEventListener('resize', syncLayoutHeight)
+  containerObserver?.disconnect()
   backButtonListener?.remove()
   kbShow?.remove()
   kbDidShow?.remove()
   kbHide?.remove()
+  kbDidHide?.remove()
 })
 
 </script>
