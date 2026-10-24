@@ -108,7 +108,7 @@
 
     <!-- 입력 영역 -->
     <div class="relative z-10 shrink-0 -mt-[20px] pt-[20px] pb-[14px] bg-retro-input-fade">
-      <RetroTextarea ref="textareaRef" :disabled="isBusy" :retrospectiveId="retrospectiveId" @send="onSend" @accessMic="accessMic" />
+      <RetroTextarea ref="textareaRef" :disabled="isBusy || isFinishing" :retrospectiveId="retrospectiveId" @send="onSend" @accessMic="accessMic" />
     </div>
   </div>
 </template>
@@ -479,7 +479,7 @@ function showCompletionOffer(messageId: string, action: AssistantAction | null, 
 // 답변 제출 — 사용자 메시지를 먼저 반영하고, AI 응답을 기다리는 동안 generating 자리표시자를 보여준 뒤
 // 도착하면 didit 메시지로 교체해 타이핑 애니메이션을 시작한다 (배열은 매번 새로 만들어 불변성 유지)
 async function onSend(content: string, attachments: SentAttachment[] = []) {
-  if (!retrospectiveId.value || isBusy.value) return
+  if (!retrospectiveId.value || isBusy.value || isFinishing.value) return
   if (!content.trim() && attachments.length === 0) return // 텍스트도 첨부도 없으면 보낼 게 없음
   clearConversationCache() // 답변을 보내면 서버 대화가 바뀌므로 캐시를 지운다 — 응답 전에 나가면 재진입 시 서버에서 조회
   completionOffer.value = null // 선택 없이 답변을 이어 쓰면 '계속하기'로 간주해 선택 UI를 닫는다
