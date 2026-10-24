@@ -35,6 +35,16 @@ const config: CapacitorConfig = {
       // 포그라운드 알림은 usePushNotifications의 앱 토스트로만 표시해 중복 노출을 막는다.
       presentationOptions: [],
     },
+    SocialLogin: {
+      // DIDIT에서 사용하는 공급자만 네이티브 앱에 포함한다.
+      // Facebook SDK까지 기본 포함되면 앱 크기와 개인정보 고지 범위가 불필요하게 늘어난다.
+      providers: {
+        google: true,
+        apple: true,
+        facebook: false,
+        twitter: false,
+      },
+    },
   },
 }
 

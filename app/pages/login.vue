@@ -136,7 +136,13 @@ onMounted(async () => {
     // 앱: 네이티브 SDK 초기화
     await CapacitorKakaoLogin.initialize({ appKey: config.public.kakaoNativeKey })
     await SocialLogin.initialize({
-      google: { webClientId: config.public.googleClientId },
+      google: platform === 'ios'
+        ? {
+            iOSClientId: config.public.googleIosClientId,
+            iOSServerClientId: config.public.googleClientId,
+            mode: 'online',
+          }
+        : { webClientId: config.public.googleClientId },
       // 애플은 iOS에서만 (안드로이드는 버튼 자체가 없음)
       ...(showApple.value && platform === 'ios' ? { apple: { clientId: config.public.appleClientId } } : {}),
     })

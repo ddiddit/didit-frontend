@@ -15,6 +15,7 @@
     "generate": "nuxt generate",
     "cap:sync": "nuxt generate && cap sync",
     "cap:sync:prod": "nuxt generate --dotenv .env.production && cap sync",
+    "ios:preflight": "bash scripts/check-ios-release-readiness.sh",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "test": "node --test tests/**/*.test.ts"
