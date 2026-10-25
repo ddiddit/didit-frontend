@@ -17,6 +17,10 @@
     <!-- 회고 마치기 확인 모달 — 실수로 대화를 끝내지 않도록 확인 후 결과를 생성한다 -->
     <UiPopup :modelValue="isFinishModal" :title="'회고를 마칠까요?'" :description="'지금까지의 답변으로 회고 결과를 만들어요.'" :confirmText="'마치기'" :cancelText="'계속하기'" :loading="isFinishing" @cancel="onFinishCancel" @confirm="onFinishConfirm" />
 
+    <!-- 아직 결과를 만들 수 없을 때는 첫 시도에 작성 안내만 보여주고, 다시 누르면 실제 나가기 여부를 확인한다 -->
+    <UiPopup :modelValue="isInsufficientContentModal" :title="'아직 내용이 충분하지 않아요.'" :description="'결과 생성을 위해 내용을 더 작성해 주세요.'" :confirmText="'확인'" :showCancel="false" variant="dark" @confirm="onInsufficientContentConfirm" />
+    <UiPopup :modelValue="isExitConfirmModal" :title="'아직 회고 결과 생성이 어려워요.'" :description="'충분한 회고가 이뤄지지 않아\n지금 나가면 결과가 생성되지 않아요.'" :confirmText="'나가기'" :cancelText="'계속하기'" variant="destructive" :loading="isFinishing" @cancel="onExitConfirmCancel" @confirm="onExitConfirm" />
+
     <!-- 음성 레코더 (녹음 중 파형·타이머, 엔터로 STT 변환) -->
     <RetrospectVoiceRecorder v-if="isRecorderOpen" :retrospectiveId="retrospectiveId" @done="onVoiceDone" @cancel="isRecorderOpen = false" @blocked="onVoiceBlocked" />
 
@@ -131,7 +135,7 @@ import type { AnswerGuide, AssistantAction } from '~/types/api'
 import type { SentAttachment } from '~/utils/attachment'
 import type { ConversationCache } from '~/composables/useRetrospect'
 import { createAnalyticsInsertId, type AnalyticsEventProperties } from '~/analytics/events'
-import { resolveCompletionAction } from '~/utils/retrospectCompletion'
+import { resolveCompletionAction, resolveHeaderCompletionAction } from '~/utils/retrospectCompletion'
 
 definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
@@ -182,6 +186,10 @@ const isAccessMicModal = ref(false) // 마이크 접근 모달 여부
 const isBackModal = ref(false) // 뒤로가기 확인 모달 여부
 const isBackLeaving = ref(false) // 뒤로가기 확인('나가기') 처리 중(finish 호출) — 버튼 잠금
 const isFinishModal = ref(false) // 회고 마치기 확인 모달 여부
+const isInsufficientContentModal = ref(false) // 완료 준비 전 첫 번째 작성 안내
+const isExitConfirmModal = ref(false) // 작성 안내 확인 후 다시 마치기를 눌렀을 때 나가기 확인
+const hasSeenInsufficientContentWarning = ref(false)
+const readyToComplete = ref(false) // 마지막 서버 응답 기준 결과 생성 가능 여부
 const isFinishing = ref(false) // finish() 처리 중 — 결과 화면으로 넘어가는 라우팅 전환까지는 풀지 않는다
 // 마무리 선택 UI를 붙일 didit 메시지 — OFFER_COMPLETION이면 '계속하기 / 마치기', CONFIRM_COMPLETION이면 '마무리하기'
 const completionOffer = ref<{ messageId: string; readyToComplete: boolean } | null>(null)
@@ -247,7 +255,7 @@ const textareaRef = ref<InstanceType<typeof RetroTextarea> | null>(null)
 
 // 모달·레코더가 떠 있거나 회고를 마치는 중이면 포커스하지 않는다(모달 위로 키보드가 올라오는 것 방지)
 function focusInput() {
-  if (isFinishModal.value || isBackModal.value || isAccessMicModal.value || isRecorderOpen.value || isFinishing.value) return
+  if (isFinishModal.value || isInsufficientContentModal.value || isExitConfirmModal.value || isBackModal.value || isAccessMicModal.value || isRecorderOpen.value || isFinishing.value) return
   nextTick(() => textareaRef.value?.focus())
 }
 
@@ -310,14 +318,19 @@ async function resumeActiveRetrospective(id: string): Promise<boolean> {
 }
 
 // 이미 노출됐던 메시지 복구 — 재진입 시에는 타이핑 애니메이션 없이 바로 전체 노출 (sub이 없으면 노출 안 함)
-function restoreDiditMessage(id: string, message: ConversationCache['message'], readyToComplete: boolean, action: AssistantAction | null) {
+function restoreDiditMessage(id: string, message: ConversationCache['message'], completionReady: boolean, action: AssistantAction | null) {
   retrospectiveId.value = id
-  const diditMessage = buildDiditMessage(message, readyToComplete)
+  setReadyToComplete(completionReady)
+  const diditMessage = buildDiditMessage(message, completionReady)
   diditMessage.typedMain = diditMessage.main
   diditMessage.showSub = !!diditMessage.sub
   messages.value = [diditMessage]
-  showCompletionOffer(diditMessage.id, action, readyToComplete)
+  showCompletionOffer(diditMessage.id, action, completionReady)
   focusInput()
+}
+
+function setReadyToComplete(value: boolean) {
+  readyToComplete.value = value
 }
 
 // 처음 start.vue 페이지에 접근 시 실행할 함수 — 저장된 진행 중 회고 id가 있으면 새로 만들지 않고 이어서 진행
@@ -335,6 +348,7 @@ async function initialApplication() {
       return
     }
     retrospectiveId.value = first_response.retrospectiveId
+    setReadyToComplete(first_response.readyToComplete)
     localStorage.setItem(ACTIVE_RETROSPECTIVE_KEY, first_response.retrospectiveId)
     retrospectiveAnalytics.begin(first_response.retrospectiveId)
     trackEvent(
@@ -421,11 +435,40 @@ function onBackCancel() {
   focusInput()
 }
 
-// 헤더 '회고 마치기' — readyToComplete·action과 관계없이 종료를 차단하지 않고 확인 모달을 띄운다.
-// (AI가 마무리를 제안할 때의 '계속하기 / 마치기' 선택은 AI 응답 아래에 붙는다 — showCompletionOffer)
+// 헤더 '회고 마치기' — 결과 생성 가능 상태면 기존 완료 확인을 띄운다.
+// 아직 결과를 만들 수 없으면 첫 시도에는 작성 안내, 이후 시도에는 계속하기/나가기를 띄운다.
 function onFinishClick() {
   if (isBusy.value || isFinishing.value || !retrospectiveId.value) return
-  isFinishModal.value = true
+  const action = resolveHeaderCompletionAction(readyToComplete.value, hasSeenInsufficientContentWarning.value)
+  if (action === 'finish') {
+    isFinishModal.value = true
+    return
+  }
+  if (action === 'warn') {
+    isInsufficientContentModal.value = true
+    return
+  }
+  isExitConfirmModal.value = true
+}
+
+function onInsufficientContentConfirm() {
+  hasSeenInsufficientContentWarning.value = true
+  isInsufficientContentModal.value = false
+  focusInput()
+}
+
+function onExitConfirmCancel() {
+  isExitConfirmModal.value = false
+  focusInput()
+}
+
+async function onExitConfirm() {
+  if (isFinishing.value || !retrospectiveId.value) return
+  isFinishing.value = true
+  await exitRetrospective('completion_not_ready')
+  isFinishing.value = false
+  isExitConfirmModal.value = false
+  navigateTo('/home')
 }
 
 // 회고 마치기 확인 — 바로 결과 화면(result.vue)으로 넘어가고, 대화 종료·결과 생성(finish)은 그 화면의
@@ -499,6 +542,7 @@ async function onSend(content: string, attachments: SentAttachment[] = []) {
   try {
     const attachmentIds = attachments.map((a) => a.attachmentId)
     const response = await retro.answer(retrospectiveId.value, content, attachmentIds)
+    setReadyToComplete(response.readyToComplete)
     const analyticsContext = retrospectiveAnalytics.recordAnswer(response.turnId)
     if (analyticsContext) {
       trackEvent(
@@ -551,6 +595,7 @@ async function pollAnalysisTurn(turnId: string, generatingId: string, attempt = 
   if (!retrospectiveId.value) return
   try {
     const conversation = await retro.getConversation(retrospectiveId.value)
+    setReadyToComplete(conversation.readyToComplete)
     const turn = conversation.turns.find((t) => t.id === turnId)
 
     if (turn?.status === 'COMPLETED') {
