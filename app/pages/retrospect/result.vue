@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-background flex flex-col">
+  <div class="h-full bg-grey-1 flex flex-col">
     <!-- 로딩 (MAKE_001 / figma 25712): AI 요약 생성 중 -->
     <div v-if="isLoading" class="flex-1 flex flex-col items-center justify-center px-8 text-center">
       <div class="flex gap-[7px] mb-8">
@@ -17,14 +17,22 @@
     </div>
 
     <!-- 에러: 요청 시간 초과(figma Error/요청 시간 초과/회고 결과 생성) · 결과 생성 실패(figma Error/회고 결과 생성 실패) · 네트워크 끊김 -->
-    <UiErrorState
-      v-else-if="errorKind"
-      :variant="errorKind === 'network' ? 'network' : 'server'"
-      :title="errorCopy?.title"
-      :description="errorCopy?.description"
-      action-text="다시 시도"
-      @action="generate"
-    />
+    <template v-else-if="errorKind">
+      <!-- 헤더 — 에러 화면에서도 홈으로 나갈 수 있게 뒤로가기 노출 -->
+      <div class="flex items-center h-[50px] px-5 shrink-0">
+        <button class="p-1 -ml-1" aria-label="뒤로" @click="navigateTo('/home')">
+          <img src="/icons/back.svg" alt="뒤로" class="w-6 h-6" />
+        </button>
+      </div>
+      <UiErrorState
+        :variant="errorKind === 'network' ? 'network' : 'server'"
+        :icon="errorCopy?.icon"
+        :title="errorCopy?.title"
+        :description="errorCopy?.description"
+        action-text="다시 시도"
+        @action="generate"
+      />
+    </template>
 
     <!-- 결과 (MAKE_002) -->
     <template v-else-if="result">
@@ -131,9 +139,9 @@ const errorKind = ref<ResultErrorKind | null>(null)
 const isSaving = ref(false)
 
 // 네트워크 끊김은 UiErrorState 기본 문구를 그대로 쓰고, 시간 초과·생성 실패만 문구를 덮어쓴다
-const ERROR_COPY: Record<Exclude<ResultErrorKind, 'network'>, { title: string; description: string }> = {
+const ERROR_COPY: Record<Exclude<ResultErrorKind, 'network'>, { icon?: string; title: string; description: string }> = {
   timeout: { title: '요청 시간이 초과됐어요', description: '회고 결과 생성이 지연되고 있어요. 다시 시도해 주세요.' },
-  failed: { title: '회고 결과를 생성하지 못했어요', description: '잠시 후 다시 시도해 주세요.' },
+  failed: { icon: '/icons/error-reload.svg', title: '회고 내용을 생성하지 못했어요', description: '다시 시도해 주세요.' },
 }
 const errorCopy = computed(() =>
   errorKind.value && errorKind.value !== 'network' ? ERROR_COPY[errorKind.value] : undefined,

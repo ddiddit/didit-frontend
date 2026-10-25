@@ -50,7 +50,7 @@ export interface AnalyticsEventProperties {
   retrospect_exited: {
     retrospective_id: string
     last_completed_turn: number
-    exit_reason: 'user_confirmed'
+    exit_reason: 'user_confirmed' | 'completion_not_ready'
   }
   retrospect_result_generated: {
     retrospective_id: string

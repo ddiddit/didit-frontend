@@ -5,7 +5,8 @@
     <!-- 뒤로가기 팝업 -->
     <UiPopup :modelValue="isPopupOpen" :title="'뒤로가기'" :description="'뒤로가기 하시겠습니까?'" :onConfirm="confirmBack" :onCancel="cancelBack" />
 
-    <RetroHeader :title="'건너뛰기'" :isBusy="isBusy" :onBack="onBack" />
+    <!-- 건너뛰기: 인트로 생략하고 바로 채팅 화면으로 이동 -->
+    <RetroHeader :title="'건너뛰기'" :isBusy="isBusy" :onBack="onBack" :onFinish="startRetrospect" />
     <div class="intro_body w-full h-[calc(100%-50px)] relative">
         <template v-if="stepIntro == 0">
             <div class="char_anime absolute top-[175px] left-0 right-0 mx-auto flex flex-col items-center">

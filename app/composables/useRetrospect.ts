@@ -230,6 +230,7 @@ export function useRetrospect() {
   // 진행 중 회고 나가기 (PENDING이면 삭제, 그 외 유지). 베스트에포트.
   async function exit(id: string): Promise<void> {
     await $api.post(`/api/v1/retrospectives/${id}/exit`)
+    invalidateDerivedCaches()
   }
 
   // 회고 완료 → AI 제목/요약 생성
