@@ -46,5 +46,7 @@ base64 -i android/didit-upload.keystore | pbcopy   # 클립보드에 복사됨
 `main.yaml`의 `status: draft` → `status: completed` 로 변경.
 (단, 구글 심사 후 전체 사용자에게 바로 라이브되므로 비권장. draft로 두고 콘솔에서 검토 후 출시 권장.)
 
-## 5. iOS (추후)
-iOS는 macOS 러너 + 인증서/프로비저닝 프로파일 필요 → 별도 워크플로로 추가 예정.
+## 5. iOS
+
+iOS는 GitHub Actions에서 원격 Xcode 빌드를 검증하고, Codemagic에서 서명된 IPA를 만들어 TestFlight에 업로드한다.
+전체 설정은 `docs/ios-cloud-release.md`를 따른다.

@@ -1,6 +1,8 @@
 # Firebase iOS 패키징 체크리스트
 
-웹 코드에는 Firebase Messaging과 Crashlytics 연결이 포함되어 있다. 다음 단계는 iOS 앱을 패키징하는 Mac에서 진행한다.
+> 현재 프로젝트는 Mac 수동 패키징 대신 GitHub Actions와 Codemagic을 사용한다. 최초 연결과 실제 배포 순서는 `docs/ios-cloud-release.md`를 우선 참고한다. 아래 내용은 저장소에 이미 반영된 네이티브 설정을 점검할 때 사용하는 기술 체크리스트다.
+
+웹 코드에는 Firebase Messaging과 Crashlytics 연결이 포함되어 있으며, iOS 프로젝트에도 필요한 설정이 반영되어 있다. 원격 macOS 빌드 환경이 이를 검증하고 패키징한다.
 
 ## 준비 파일
 
