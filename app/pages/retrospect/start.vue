@@ -135,7 +135,7 @@ import type { AnswerGuide, AssistantAction } from '~/types/api'
 import type { SentAttachment } from '~/utils/attachment'
 import type { ConversationCache } from '~/composables/useRetrospect'
 import { createAnalyticsInsertId, type AnalyticsEventProperties } from '~/analytics/events'
-import { resolveCompletionAction, resolveHeaderCompletionAction } from '~/utils/retrospectCompletion'
+import { resolveHeaderCompletionAction, shouldShowCompletionOffer } from '~/utils/retrospectCompletion'
 
 definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
@@ -192,7 +192,7 @@ const hasSeenInsufficientContentWarning = ref(false)
 const readyToComplete = ref(false) // 마지막 서버 응답 기준 결과 생성 가능 여부
 const isFinishing = ref(false) // finish() 처리 중 — 결과 화면으로 넘어가는 라우팅 전환까지는 풀지 않는다
 // 마무리 선택 UI를 붙일 didit 메시지 — OFFER_COMPLETION이면 '계속하기 / 마치기', CONFIRM_COMPLETION이면 '마무리하기'
-const completionOffer = ref<{ messageId: string; readyToComplete: boolean } | null>(null)
+const completionOffer = ref<{ messageId: string } | null>(null)
 const micRequesting = ref(false) // 권한 요청 진행 중 — '허용' 버튼 잠금
 const isRecorderOpen = ref(false) // 음성 레코더 표시 여부
 // 음성 레코더가 변환한 텍스트를 입력창(RetroTextarea)으로 넘기는 초안 채널
@@ -496,27 +496,17 @@ function onOfferContinue() {
   focusInput()
 }
 
-async function onOfferFinish() {
+// 선택 UI의 '정리할게요' — 선택 UI는 결과 생성이 가능할 때만 뜨므로 바로 결과 화면으로 넘어간다
+function onOfferFinish() {
   if (isFinishing.value || !retrospectiveId.value || !completionOffer.value) return
-  if (resolveCompletionAction(completionOffer.value.readyToComplete) === 'finish') {
-    onFinishConfirm()
-    return
-  }
-
-  isFinishing.value = true
-  completionOffer.value = null
-  await exitRetrospective('completion_not_ready')
-  isFinishing.value = false
-  navigateTo('/home')
+  onFinishConfirm()
 }
 
-// 답변 응답의 action에 따라 AI 답장 아래에 '계속 작성하기 / 이대로 마치기'를 붙인다(화면엔 타이핑이 끝난 뒤 노출).
-// OFFER_COMPLETION·CONFIRM_COMPLETION만 붙이고, 그 외(ASK/REFLECT/null)는 붙이지 않음
+// 답변 응답의 action에 따라 AI 답장 아래에 '더 할래요 / 정리할게요'를 붙인다(화면엔 타이핑이 끝난 뒤 노출).
+// 종료 제안(OFFER_COMPLETION·CONFIRM_COMPLETION)이면서 readyToComplete=true일 때만 붙인다 —
+// readyToComplete=false면 '아직 결과를 만들 수 없다'는 안내라 선택지 없이 대화를 이어간다
 function showCompletionOffer(messageId: string, action: AssistantAction | null, readyToComplete: boolean) {
-  completionOffer.value =
-    action === 'OFFER_COMPLETION' || action === 'CONFIRM_COMPLETION'
-      ? { messageId, readyToComplete }
-      : null
+  completionOffer.value = shouldShowCompletionOffer(action, readyToComplete) ? { messageId } : null
 }
 
 // 답변 제출 — 사용자 메시지를 먼저 반영하고, AI 응답을 기다리는 동안 generating 자리표시자를 보여준 뒤
