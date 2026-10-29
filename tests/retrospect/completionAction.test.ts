@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import {
+  resolveConversationCompletionAction,
   resolveHeaderCompletionAction,
   shouldShowCompletionOffer,
 } from '../../app/utils/retrospectCompletion.ts'
@@ -21,6 +22,21 @@ describe('retrospective completion action', () => {
     assert.equal(shouldShowCompletionOffer('ASK', true), false)
     assert.equal(shouldShowCompletionOffer('REFLECT', true), false)
     assert.equal(shouldShowCompletionOffer(null, true), false)
+  })
+
+  it('완료 가능한 종료 제안은 결과 생성 선택 메뉴로 해석한다', () => {
+    assert.equal(resolveConversationCompletionAction('OFFER_COMPLETION', true), 'finish')
+    assert.equal(resolveConversationCompletionAction('CONFIRM_COMPLETION', true), 'finish')
+  })
+
+  it('완료 불가능한 명시적 종료 요청은 결과 없는 나가기 메뉴로 해석한다', () => {
+    assert.equal(resolveConversationCompletionAction('CONFIRM_EXIT', false), 'exit')
+  })
+
+  it('작성 부족 안내와 일반 질문에는 채팅 메뉴를 붙이지 않는다', () => {
+    assert.equal(resolveConversationCompletionAction('REFLECT', false), null)
+    assert.equal(resolveConversationCompletionAction('ASK', false), null)
+    assert.equal(resolveConversationCompletionAction('OFFER_COMPLETION', false), null)
   })
 
   it('완료 준비가 되면 헤더에서 바로 완료 확인을 띄운다', () => {

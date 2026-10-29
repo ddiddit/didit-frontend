@@ -95,14 +95,15 @@
                 :disabled="isBusy || isFinishing"
                 @click="onOfferContinue"
               >
-                아니요. 회고 더 할래요.
+                {{ completionOffer.mode === 'exit' ? '계속하기' : '아니요. 회고 더 할래요.' }}
               </button>
               <button
-                class="px-[16px] py-[11px] rounded-[24px] bg-primary active:bg-green-active text-[14px] leading-[22px] text-grey-13 disabled:opacity-50"
+                class="px-[16px] py-[11px] rounded-[24px] text-[14px] leading-[22px] disabled:opacity-50"
+                :class="completionOffer.mode === 'exit' ? 'bg-danger-50 text-grey-1' : 'bg-primary active:bg-green-active text-grey-13'"
                 :disabled="isBusy || isFinishing"
                 @click="onOfferFinish"
               >
-                네. 회고 내용 정리할게요.
+                {{ completionOffer.mode === 'exit' ? '결과 없이 나가기' : '네. 회고 내용 정리할게요.' }}
               </button>
             </div>
           </div>
@@ -135,15 +136,12 @@ import type { AnswerGuide, AssistantAction } from '~/types/api'
 import type { SentAttachment } from '~/utils/attachment'
 import type { ConversationCache } from '~/composables/useRetrospect'
 import { createAnalyticsInsertId, type AnalyticsEventProperties } from '~/analytics/events'
-import { resolveHeaderCompletionAction, shouldShowCompletionOffer } from '~/utils/retrospectCompletion'
+import { resolveConversationCompletionAction, resolveHeaderCompletionAction } from '~/utils/retrospectCompletion'
 
 definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
 // generating 자리표시자(다음 질문 대기 중)에서 재생할 로티 — public/icons/loading.lottie
 const GENERATING_LOTTIE = '/icons/loading.lottie'
-
-// 선택 UI를 붙이는 action — 그 외(ASK/REFLECT)에는 붙이지 않는다
-type CompletionAction = Extract<AssistantAction, 'OFFER_COMPLETION' | 'CONFIRM_COMPLETION'>
 
 export type ChatMessage =
   | {
@@ -191,8 +189,8 @@ const isExitConfirmModal = ref(false) // 작성 안내 확인 후 다시 마치�
 const hasSeenInsufficientContentWarning = ref(false)
 const readyToComplete = ref(false) // 마지막 서버 응답 기준 결과 생성 가능 여부
 const isFinishing = ref(false) // finish() 처리 중 — 결과 화면으로 넘어가는 라우팅 전환까지는 풀지 않는다
-// 마무리 선택 UI를 붙일 didit 메시지 — OFFER_COMPLETION이면 '계속하기 / 마치기', CONFIRM_COMPLETION이면 '마무리하기'
-const completionOffer = ref<{ messageId: string } | null>(null)
+// 마무리 선택 UI를 붙일 didit 메시지. finish는 결과 생성, exit는 결과 없는 종료를 뜻한다.
+const completionOffer = ref<{ messageId: string, mode: 'finish' | 'exit' } | null>(null)
 const micRequesting = ref(false) // 권한 요청 진행 중 — '허용' 버튼 잠금
 const isRecorderOpen = ref(false) // 음성 레코더 표시 여부
 // 음성 레코더가 변환한 텍스트를 입력창(RetroTextarea)으로 넘기는 초안 채널
@@ -496,17 +494,25 @@ function onOfferContinue() {
   focusInput()
 }
 
-// 선택 UI의 '정리할게요' — 선택 UI는 결과 생성이 가능할 때만 뜨므로 바로 결과 화면으로 넘어간다
-function onOfferFinish() {
+// 선택 UI의 완료 버튼 — 결과 생성 가능 여부에 따라 결과 화면으로 이동하거나 결과 없이 종료한다.
+async function onOfferFinish() {
   if (isFinishing.value || !retrospectiveId.value || !completionOffer.value) return
+  if (completionOffer.value.mode === 'exit') {
+    isFinishing.value = true
+    await exitRetrospective('completion_not_ready')
+    isFinishing.value = false
+    completionOffer.value = null
+    navigateTo('/home')
+    return
+  }
   onFinishConfirm()
 }
 
-// 답변 응답의 action에 따라 AI 답장 아래에 '더 할래요 / 정리할게요'를 붙인다(화면엔 타이핑이 끝난 뒤 노출).
-// 종료 제안(OFFER_COMPLETION·CONFIRM_COMPLETION)이면서 readyToComplete=true일 때만 붙인다 —
-// readyToComplete=false면 '아직 결과를 만들 수 없다'는 안내라 선택지 없이 대화를 이어간다
+// 답변 응답의 action에 따라 결과 생성 또는 결과 없는 종료 선택지를 붙인다.
+// 일반 작성 부족 안내(REFLECT)에는 선택지를 붙이지 않는다.
 function showCompletionOffer(messageId: string, action: AssistantAction | null, readyToComplete: boolean) {
-  completionOffer.value = shouldShowCompletionOffer(action, readyToComplete) ? { messageId } : null
+  const mode = resolveConversationCompletionAction(action, readyToComplete)
+  completionOffer.value = mode ? { messageId, mode } : null
 }
 
 // 답변 제출 — 사용자 메시지를 먼저 반영하고, AI 응답을 기다리는 동안 generating 자리표시자를 보여준 뒤
