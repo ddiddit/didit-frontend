@@ -73,6 +73,9 @@ export default defineNuxtConfig({
       // 네이티브 앱 키 (앱 빌드에 박히는 공개키 — 커밋 무방). 네이티브 카카오 로그인용.
       kakaoNativeKey: process.env.NUXT_PUBLIC_KAKAO_NATIVE_KEY ?? 'a2d60240a516c8296d6506cad6ae841b',
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID ?? '',
+      // iOS 네이티브 Google 로그인용 OAuth 클라이언트 ID.
+      // 웹/백엔드 검증용 클라이언트 ID와 유형이 달라 별도로 주입한다.
+      googleIosClientId: process.env.NUXT_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '',
       appleClientId: process.env.NUXT_PUBLIC_APPLE_CLIENT_ID ?? '',
       appleLoginEnabled: process.env.NUXT_PUBLIC_APPLE_LOGIN_ENABLED === 'true',
       amplitudeApiKey: process.env.NUXT_PUBLIC_AMPLITUDE_API_KEY ?? '',

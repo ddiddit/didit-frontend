@@ -263,8 +263,8 @@ export interface StartRetrospectiveResponse {
 
 // 답변 제출 후 AI 응답의 후속 동작
 // ASK: 질문 표시 후 입력 유지 / REFLECT: 질문 없는 반응 표시 후 입력 유지
-// OFFER_COMPLETION: 계속하기·마치기 선택 UI 표시 / CONFIRM_COMPLETION: 종료 여부 확인 UI 표시
-export type AssistantAction = 'ASK' | 'REFLECT' | 'OFFER_COMPLETION' | 'CONFIRM_COMPLETION'
+// OFFER_COMPLETION·CONFIRM_COMPLETION: 결과 생성 선택 UI / CONFIRM_EXIT: 결과 없는 종료 선택 UI
+export type AssistantAction = 'ASK' | 'REFLECT' | 'OFFER_COMPLETION' | 'CONFIRM_COMPLETION' | 'CONFIRM_EXIT'
 
 // 답변 제출 - 텍스트
 export interface SubmitAnswerResponse {

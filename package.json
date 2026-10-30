@@ -14,7 +14,8 @@
     "cap:live:ios": "cap run ios --live-reload --host $(ipconfig getifaddr en0) --port 3000",
     "generate": "nuxt generate",
     "cap:sync": "nuxt generate && cap sync",
-    "cap:sync:prod": "nuxt generate --dotenv .env.production && cap sync",
+    "cap:sync:prod": "nuxt generate --dotenv .env.production && cap sync ios --deployment",
+    "ios:preflight": "bash scripts/check-ios-release-readiness.sh",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "test": "node --test tests/**/*.test.ts"
