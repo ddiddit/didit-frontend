@@ -265,6 +265,7 @@ export interface StartRetrospectiveResponse {
 // ASK: 질문 표시 후 입력 유지 / REFLECT: 질문 없는 반응 표시 후 입력 유지
 // OFFER_COMPLETION·CONFIRM_COMPLETION: 결과 생성 선택 UI / CONFIRM_EXIT: 결과 없는 종료 선택 UI
 export type AssistantAction = 'ASK' | 'REFLECT' | 'OFFER_COMPLETION' | 'CONFIRM_COMPLETION' | 'CONFIRM_EXIT'
+export type ConversationIntent = 'NORMAL' | 'CONTINUE_AFTER_COMPLETION'
 
 // 답변 제출 - 텍스트
 export interface SubmitAnswerResponse {
@@ -274,6 +275,7 @@ export interface SubmitAnswerResponse {
   assistantMessage: AssistantMessage | null // AI 응답 생성이 아직 끝나지 않은 경우 null로 옴
   readyToComplete: boolean
   action: AssistantAction | null // assistantMessage가 null이면 함께 null로 올 수 있음
+  canContinue: boolean
 }
 
 // 음성 → 텍스트 변환 전용 (전송 전 미리보기용)
@@ -303,6 +305,7 @@ export interface ConversationResponse {
   messages: ConversationMessage[]
   turns: ConversationTurn[]
   readyToComplete: boolean
+  canContinue: boolean
 }
 
 // 대화 종료 — v2는 종료와 동시에 확인된 대화 내용을 구조화해 결과를 생성한다.

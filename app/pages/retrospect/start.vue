@@ -91,6 +91,7 @@
           <div v-if="m.role === 'didit' && m.id === completionOffer?.messageId && m.typedMain === m.main" class="flex flex-col">
             <div class="flex flex-col items-end gap-[10px] mb-[20px]">
               <button
+                v-if="completionOffer.mode === 'exit' || completionOffer.canContinue"
                 class="px-[16px] py-[11px] rounded-[24px] border border-grey-5 bg-white text-[14px] leading-[22px] text-grey-13 disabled:opacity-50"
                 :disabled="isBusy || isFinishing"
                 @click="onOfferContinue"
@@ -113,7 +114,7 @@
 
     <!-- 입력 영역 -->
     <div class="relative z-10 shrink-0 -mt-[20px] pt-[20px] pb-[14px] bg-retro-input-fade">
-      <RetroTextarea ref="textareaRef" :disabled="isBusy || isFinishing" :retrospectiveId="retrospectiveId" @send="onSend" @accessMic="accessMic" />
+      <RetroTextarea ref="textareaRef" :disabled="isBusy || isFinishing || isContinuationBlocked" :retrospectiveId="retrospectiveId" @send="onSend" @accessMic="accessMic" />
     </div>
   </div>
 </template>
@@ -132,11 +133,11 @@ import RetrospectVoiceRecorder from '~/components/RetrospectVoiceRecorder.vue'
 import UiPopup from '~/components/ui/UiPopup.vue'
 import UiButton from '~/components/ui/UiButton.vue'
 import { isServerError } from '~/utils/api-error'
-import type { AnswerGuide, AssistantAction } from '~/types/api'
+import type { AnswerGuide, AssistantAction, ConversationIntent } from '~/types/api'
 import type { SentAttachment } from '~/utils/attachment'
 import type { ConversationCache } from '~/composables/useRetrospect'
 import { createAnalyticsInsertId, type AnalyticsEventProperties } from '~/analytics/events'
-import { resolveConversationCompletionAction, resolveHeaderCompletionAction } from '~/utils/retrospectCompletion'
+import { resolveConversationCompletionAction, resolveConversationIntent, resolveHeaderCompletionAction } from '~/utils/retrospectCompletion'
 
 definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
@@ -190,7 +191,10 @@ const hasSeenInsufficientContentWarning = ref(false)
 const readyToComplete = ref(false) // 마지막 서버 응답 기준 결과 생성 가능 여부
 const isFinishing = ref(false) // finish() 처리 중 — 결과 화면으로 넘어가는 라우팅 전환까지는 풀지 않는다
 // 마무리 선택 UI를 붙일 didit 메시지. finish는 결과 생성, exit는 결과 없는 종료를 뜻한다.
-const completionOffer = ref<{ messageId: string, mode: 'finish' | 'exit' } | null>(null)
+const completionOffer = ref<{ messageId: string, mode: 'finish' | 'exit', canContinue: boolean } | null>(null)
+const isContinuationBlocked = computed(
+  () => completionOffer.value?.mode === 'finish' && !completionOffer.value.canContinue,
+)
 const micRequesting = ref(false) // 권한 요청 진행 중 — '허용' 버튼 잠금
 const isRecorderOpen = ref(false) // 음성 레코더 표시 여부
 // 음성 레코더가 변환한 텍스트를 입력창(RetroTextarea)으로 넘기는 초안 채널
@@ -253,7 +257,7 @@ const textareaRef = ref<InstanceType<typeof RetroTextarea> | null>(null)
 
 // 모달·레코더가 떠 있거나 회고를 마치는 중이면 포커스하지 않는다(모달 위로 키보드가 올라오는 것 방지)
 function focusInput() {
-  if (isFinishModal.value || isInsufficientContentModal.value || isExitConfirmModal.value || isBackModal.value || isAccessMicModal.value || isRecorderOpen.value || isFinishing.value) return
+  if (isFinishModal.value || isInsufficientContentModal.value || isExitConfirmModal.value || isBackModal.value || isAccessMicModal.value || isRecorderOpen.value || isFinishing.value || isContinuationBlocked.value) return
   nextTick(() => textareaRef.value?.focus())
 }
 
@@ -267,8 +271,13 @@ function onDiditTyped() {
 const { typeDiditMessage, clearTypingTimers } = useDiditTyping()
 
 // AI 메시지를 화면에 띄울 때 함께 호출 — 재진입 시 대화 조회 없이 바로 복구할 수 있게 마지막 AI 메시지를 캐시한다
-function cacheLastDiditMessage(message: ConversationCache['message'], readyToComplete: boolean, action: AssistantAction | null = null) {
-  saveConversationCache({ retrospectiveId: retrospectiveId.value, message, readyToComplete, action })
+function cacheLastDiditMessage(
+  message: ConversationCache['message'],
+  readyToComplete: boolean,
+  action: AssistantAction | null = null,
+  canContinue = true,
+) {
+  saveConversationCache({ retrospectiveId: retrospectiveId.value, message, readyToComplete, action, canContinue })
 }
 
 // 회고 챗봇을 써 본 적 있는 사용자(=회고를 1회 이상 완료, Lv.1 이상)에게는 첫 인사 메시지를
@@ -291,7 +300,7 @@ function toReturningIntro(message: ConversationCache['message']): ConversationCa
 async function resumeActiveRetrospective(id: string): Promise<boolean> {
   const cached = readConversationCache(id)
   if (cached) {
-    restoreDiditMessage(id, cached.message, cached.readyToComplete, cached.action ?? null)
+    restoreDiditMessage(id, cached.message, cached.readyToComplete, cached.action ?? null, cached.canContinue ?? true)
     retrospectiveAnalytics.restore(id)
     return true
   }
@@ -305,8 +314,8 @@ async function resumeActiveRetrospective(id: string): Promise<boolean> {
     const lastMessage = conversation.messages.length === 1 ? toReturningIntro(lastServerMessage) : lastServerMessage
 
     // 첫 질문이 아니라 답변 후 받은 AI 답장이었다면 선택 UI도 함께 복구
-    restoreDiditMessage(id, lastMessage, conversation.readyToComplete, null)
-    cacheLastDiditMessage(lastMessage, conversation.readyToComplete)
+    restoreDiditMessage(id, lastMessage, conversation.readyToComplete, null, conversation.canContinue)
+    cacheLastDiditMessage(lastMessage, conversation.readyToComplete, null, conversation.canContinue)
     retrospectiveAnalytics.restore(id)
     return true
   } catch (err) {
@@ -316,14 +325,20 @@ async function resumeActiveRetrospective(id: string): Promise<boolean> {
 }
 
 // 이미 노출됐던 메시지 복구 — 재진입 시에는 타이핑 애니메이션 없이 바로 전체 노출 (sub이 없으면 노출 안 함)
-function restoreDiditMessage(id: string, message: ConversationCache['message'], completionReady: boolean, action: AssistantAction | null) {
+function restoreDiditMessage(
+  id: string,
+  message: ConversationCache['message'],
+  completionReady: boolean,
+  action: AssistantAction | null,
+  canContinue: boolean,
+) {
   retrospectiveId.value = id
   setReadyToComplete(completionReady)
   const diditMessage = buildDiditMessage(message, completionReady)
   diditMessage.typedMain = diditMessage.main
   diditMessage.showSub = !!diditMessage.sub
   messages.value = [diditMessage]
-  showCompletionOffer(diditMessage.id, action, completionReady)
+  showCompletionOffer(diditMessage.id, action, completionReady, canContinue)
   focusInput()
 }
 
@@ -488,10 +503,10 @@ function onFinishCancel() {
   focusInput()
 }
 
-// 선택 UI의 '계속 작성하기' — 선택 UI만 닫고 입력을 이어간다
-function onOfferContinue() {
-  completionOffer.value = null
-  focusInput()
+// 선택 UI의 '계속 작성하기' — 서버에 확장 모드 진입 의도를 명시적으로 전달한다.
+async function onOfferContinue() {
+  if (!completionOffer.value?.canContinue) return
+  await onSend('아니요. 회고 더 할래요.', [], 'CONTINUE_AFTER_COMPLETION')
 }
 
 // 선택 UI의 완료 버튼 — 결과 생성 가능 여부에 따라 결과 화면으로 이동하거나 결과 없이 종료한다.
@@ -510,16 +525,25 @@ async function onOfferFinish() {
 
 // 답변 응답의 action에 따라 결과 생성 또는 결과 없는 종료 선택지를 붙인다.
 // 일반 작성 부족 안내(REFLECT)에는 선택지를 붙이지 않는다.
-function showCompletionOffer(messageId: string, action: AssistantAction | null, readyToComplete: boolean) {
+function showCompletionOffer(messageId: string, action: AssistantAction | null, readyToComplete: boolean, canContinue: boolean) {
   const mode = resolveConversationCompletionAction(action, readyToComplete)
-  completionOffer.value = mode ? { messageId, mode } : null
+  completionOffer.value = mode ? { messageId, mode, canContinue } : null
 }
 
 // 답변 제출 — 사용자 메시지를 먼저 반영하고, AI 응답을 기다리는 동안 generating 자리표시자를 보여준 뒤
 // 도착하면 didit 메시지로 교체해 타이핑 애니메이션을 시작한다 (배열은 매번 새로 만들어 불변성 유지)
-async function onSend(content: string, attachments: SentAttachment[] = []) {
-  if (!retrospectiveId.value || isBusy.value || isFinishing.value) return
+async function onSend(
+  content: string,
+  attachments: SentAttachment[] = [],
+  requestedIntent: ConversationIntent = 'NORMAL',
+) {
+  if (!retrospectiveId.value || isBusy.value || isFinishing.value || isContinuationBlocked.value) return
   if (!content.trim() && attachments.length === 0) return // 텍스트도 첨부도 없으면 보낼 게 없음
+  const conversationIntent = resolveConversationIntent(
+    requestedIntent,
+    completionOffer.value?.mode ?? null,
+    (completionOffer.value?.canContinue ?? false) && attachments.length === 0,
+  )
   clearConversationCache() // 답변을 보내면 서버 대화가 바뀌므로 캐시를 지운다 — 응답 전에 나가면 재진입 시 서버에서 조회
   completionOffer.value = null // 선택 없이 답변을 이어 쓰면 '계속하기'로 간주해 선택 UI를 닫는다
 
@@ -537,7 +561,7 @@ async function onSend(content: string, attachments: SentAttachment[] = []) {
   isBusy.value = true
   try {
     const attachmentIds = attachments.map((a) => a.attachmentId)
-    const response = await retro.answer(retrospectiveId.value, content, attachmentIds)
+    const response = await retro.answer(retrospectiveId.value, content, attachmentIds, conversationIntent)
     setReadyToComplete(response.readyToComplete)
     const analyticsContext = retrospectiveAnalytics.recordAnswer(response.turnId)
     if (analyticsContext) {
@@ -568,8 +592,8 @@ async function onSend(content: string, attachments: SentAttachment[] = []) {
 
     const diditMessage = buildDiditMessage(response.assistantMessage, response.readyToComplete)
     messages.value = messages.value.map((m) => (m.id === generatingId ? diditMessage : m))
-    cacheLastDiditMessage(response.assistantMessage, response.readyToComplete, response.action)
-    showCompletionOffer(diditMessage.id, response.action, response.readyToComplete)
+    cacheLastDiditMessage(response.assistantMessage, response.readyToComplete, response.action, response.canContinue)
+    showCompletionOffer(diditMessage.id, response.action, response.readyToComplete, response.canContinue)
     typeDiditMessage(diditMessage, 50, onDiditTyped)
   } catch (err) {
     messages.value = messages.value.filter((m) => m.id !== generatingId)

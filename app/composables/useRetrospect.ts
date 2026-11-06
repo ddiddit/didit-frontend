@@ -12,6 +12,7 @@ import type {
   UploadURL,
   AnswerGuide,
   AssistantAction,
+  ConversationIntent,
   UploadUrlRequest,
   AttachmentComplete,
   AttachmentDownloadUrl,
@@ -71,6 +72,7 @@ export interface ConversationCache {
   message: { id: string; title?: string | null; body?: string | null; content?: string | null; answerGuide?: AnswerGuide | null }
   readyToComplete: boolean
   action?: AssistantAction | null // 답변 응답의 action — OFFER_COMPLETION/CONFIRM_COMPLETION이면 선택 UI도 복구
+  canContinue?: boolean
 }
 
 export function saveConversationCache(cache: ConversationCache) {
@@ -120,7 +122,12 @@ export function useRetrospect() {
   // 텍스트/첨부 답변 제출 → 다음 질문 또는 완료 준비 신호.
   // 첨부만 보내는 경우 content는 비워도 되는데, 이때 서버는 content/inputType 필드 자체가
   // 없는 요청을 기대하므로(빈 문자열이 아니라) content가 없으면 두 필드를 통째로 뺀다.
-  async function answer(id: string, content: string, attachmentIds: string[] = []): Promise<SubmitAnswerResponse> {
+  async function answer(
+    id: string,
+    content: string,
+    attachmentIds: string[] = [],
+    conversationIntent: ConversationIntent = 'NORMAL',
+  ): Promise<SubmitAnswerResponse> {
     const trimmed = content.trim()
     const res = await $api.post<ApiResponse<SubmitAnswerResponse>>(
       `/api/v2/retrospectives/${id}/messages`,
@@ -130,6 +137,7 @@ export function useRetrospect() {
         clientMessageId: crypto.randomUUID(),
         ...(trimmed ? { content: trimmed, inputType: 'TEXT' } : {}),
         attachmentIds,
+        conversationIntent,
       },
     )
     return res.data.data
