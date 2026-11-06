@@ -3,6 +3,13 @@ import type { AssistantAction, ConversationIntent } from '~/types/api'
 export type HeaderCompletionAction = 'finish' | 'warn' | 'confirm-exit'
 export type ConversationCompletionAction = 'finish' | 'exit'
 
+export function shouldBlockContinuation(
+  offerMode: ConversationCompletionAction | null,
+  canContinue: boolean,
+): boolean {
+  return !canContinue && offerMode !== 'exit'
+}
+
 export function resolveConversationIntent(
   requestedIntent: ConversationIntent,
   offerMode: ConversationCompletionAction | null,

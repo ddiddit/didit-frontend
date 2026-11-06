@@ -137,7 +137,7 @@ import type { AnswerGuide, AssistantAction, ConversationIntent } from '~/types/a
 import type { SentAttachment } from '~/utils/attachment'
 import type { ConversationCache } from '~/composables/useRetrospect'
 import { createAnalyticsInsertId, type AnalyticsEventProperties } from '~/analytics/events'
-import { resolveConversationCompletionAction, resolveConversationIntent, resolveHeaderCompletionAction } from '~/utils/retrospectCompletion'
+import { resolveConversationCompletionAction, resolveConversationIntent, resolveHeaderCompletionAction, shouldBlockContinuation } from '~/utils/retrospectCompletion'
 
 definePageMeta({ middleware: ['auth', 'no-direct-entry'], layout: false })
 
@@ -192,9 +192,7 @@ const readyToComplete = ref(false) // 마지막 서버 응답 기준 결과 생�
 const isFinishing = ref(false) // finish() 처리 중 — 결과 화면으로 넘어가는 라우팅 전환까지는 풀지 않는다
 // 마무리 선택 UI를 붙일 didit 메시지. finish는 결과 생성, exit는 결과 없는 종료를 뜻한다.
 const completionOffer = ref<{ messageId: string, mode: 'finish' | 'exit', canContinue: boolean } | null>(null)
-const isContinuationBlocked = computed(
-  () => completionOffer.value?.mode === 'finish' && !completionOffer.value.canContinue,
-)
+const isContinuationBlocked = ref(false)
 const micRequesting = ref(false) // 권한 요청 진행 중 — '허용' 버튼 잠금
 const isRecorderOpen = ref(false) // 음성 레코더 표시 여부
 // 음성 레코더가 변환한 텍스트를 입력창(RetroTextarea)으로 넘기는 초안 채널
@@ -505,6 +503,11 @@ function onFinishCancel() {
 
 // 선택 UI의 '계속 작성하기' — 서버에 확장 모드 진입 의도를 명시적으로 전달한다.
 async function onOfferContinue() {
+  if (completionOffer.value?.mode === 'exit') {
+    completionOffer.value = null
+    focusInput()
+    return
+  }
   if (!completionOffer.value?.canContinue) return
   await onSend('아니요. 회고 더 할래요.', [], 'CONTINUE_AFTER_COMPLETION')
 }
@@ -528,6 +531,7 @@ async function onOfferFinish() {
 function showCompletionOffer(messageId: string, action: AssistantAction | null, readyToComplete: boolean, canContinue: boolean) {
   const mode = resolveConversationCompletionAction(action, readyToComplete)
   completionOffer.value = mode ? { messageId, mode, canContinue } : null
+  isContinuationBlocked.value = shouldBlockContinuation(mode, canContinue)
 }
 
 // 답변 제출 — 사용자 메시지를 먼저 반영하고, AI 응답을 기다리는 동안 generating 자리표시자를 보여준 뒤
