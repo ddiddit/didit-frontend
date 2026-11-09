@@ -180,7 +180,7 @@
             <li v-if="group.label" class="relative flex items-center justify-center py-6">
               <!-- 전체 폭 구분선 (라벨이 bg-background로 가운데를 가림) -->
               <span class="absolute inset-x-0 h-px bg-grey-5" aria-hidden="true" />
-              <span class="relative bg-background px-5 text-caption1 font-medium text-grey-7">{{ group.label }}</span>
+              <span class="relative bg-white px-5 text-caption1 font-medium text-grey-7">{{ group.label }}</span>
             </li>
             <li
               v-for="item in group.items"
