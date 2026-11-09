@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-background flex flex-col relative">
+  <div class="h-full bg-white flex flex-col relative">
 
     <!-- 미션 완료(레벨업) 팝업 -->
     <Teleport to="#app-container">
