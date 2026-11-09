@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-background flex flex-col relative">
+  <div class="h-full bg-white flex flex-col relative">
 
     <!-- 헤더 -->
     <div class="relative flex items-center justify-end px-5 h-[50px] shrink-0">
