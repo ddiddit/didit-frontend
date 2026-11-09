@@ -37,7 +37,7 @@
             </li>
             <li class="flex-1 p-6 bg-[#424E49] box-border rounded-[16px]">
               <h2 class="text-[14px] tracking-tight leading-[1.4] text-primary">회고 후</h2>
-              <span class="tracking-tight leading-[1.4] text-white">오늘도 제대로 한게 없고 <br />실수한 것만 자꾸 생각나</span>
+              <span class="tracking-tight leading-[1.4] text-white">내가 해낸 일도 있었네.<br />다음엔 이것부터 해보자!</span>
             </li>
           </ul>
 
