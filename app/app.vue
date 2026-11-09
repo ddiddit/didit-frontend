@@ -66,7 +66,7 @@
       <!-- overflow-clip: hidden과 달리 프로그래밍 스크롤도 불가 → 입력 포커스 시 scrollIntoView가 컨테이너를 밀어올려 헤더가 잘리는 문제 방지 -->
       <div
         id="app-container"
-        class="w-full tablet:max-w-[500px] tablet:mx-auto h-dvh overflow-clip flex flex-col bg-background relative safe-top"
+        class="w-full tablet:max-w-[500px] tablet:mx-auto h-dvh overflow-clip flex flex-col bg-white relative safe-top"
         :class="!isNative && 'desktop:max-w-none desktop:mx-0 desktop:w-[390px] desktop:flex-shrink-0'"
         :style="isTablet ? 'box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 8px 16px rgba(0,0,0,0.06), 0 24px 48px rgba(0,0,0,0.08);' : ''"
       >
