@@ -54,7 +54,7 @@
             alt="App Store 다운로드 QR 코드"
             class="w-[40px] h-[40px] flex-shrink-0"
           />
-          <a href="https://apps.apple.com/kr/app/디딧-didit-ai-업무-회고/id6761548843">
+          <a href="https://apps.apple.com/kr/app/디딧-didit-ai-업무-회고/id6761548843" >
             <span class="text-white">iOS 앱 설치하기</span>
           </a>
           <span class="absolute right-5 text-[12px] text-grey-7">Android 출시 예정</span>
