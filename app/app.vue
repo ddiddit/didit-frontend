@@ -1,7 +1,7 @@
 <template>
   <!-- 태블릿(600px+)부터 바깥은 흰 배경 → 중앙 앱 패널이 액자처럼 보이도록. 네이티브는 항상 단일 패널 -->
   <div
-    class="min-h-dvh bg-background tablet:bg-white"
+    class="min-h-dvh bg-background"
     :class="!isNative && 'desktop:flex desktop:justify-center desktop:items-start'"
   >
     <NuxtRouteAnnouncer />
@@ -14,61 +14,50 @@
         v-if="!isNative"
         class="hidden desktop:flex flex-col justify-center
                w-[440px] flex-shrink-0 min-h-dvh
-               bg-white border-r border-gray-100 p-10 gap-10"
+               border-r border-gray-100 py-10 pr-10 gap-10"
       >
         <div>
           <!-- 로고 -->
           <div class="flex items-center gap-2.5 mb-10">
-            <img src="/icon.png" alt="didit" class="w-9 h-9 rounded-[9px]" />
-            <span class="text-[22px] font-bold text-gray-900 tracking-tight">didit</span>
+            <img src="/side_logo.png" alt="didit" />
+            <span class="text-[22px] font-bold text-gray-900 tracking-tight sr-only">didit</span>
           </div>
 
           <!-- 헤드라인 -->
-          <h1 class="text-[28px] font-bold text-gray-900 leading-snug tracking-tight mb-3">
-            AI와 함께하는<br>더 깊은 업무 회고
+          <h1 class="text-[28px] font-bold text-white leading-snug tracking-tight mb-3">
+            오늘도 바빴는데 <br />
+            <b class="font-bold text-primary">뭐가 남았는지</b> 모르겠다면
           </h1>
-          <p class="text-[15px] text-gray-400 leading-relaxed mb-10">
-            하루의 업무를 기록하면 AI가<br>깊이 있는 질문으로 성장을 도와드립니다.
-          </p>
 
           <!-- 특징 -->
-          <ul class="space-y-3">
-            <li
-              v-for="feature in features"
-              :key="feature"
-              class="flex items-center gap-3 text-[14px] text-gray-600"
-            >
-              <span
-                class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                style="background-color: rgba(61,219,153,0.15);"
-              >
-                <span class="text-primary font-bold" style="font-size: 9px;">✓</span>
-              </span>
-              {{ feature }}
+          <ul class="flex gap-3 mb-3">
+            <li class="flex-1 p-6 bg-[#484848] box-border rounded-[16px]">
+              <h2 class="text-[14px] tracking-tight leading-[1.4] text-grey-7">회고 전</h2>
+              <span class="tracking-tight leading-[1.4] text-grey-7">오늘도 제대로 한게 없고 <br />실수한 것만 자꾸 생각나</span>
+            </li>
+            <li class="flex-1 p-6 bg-[#424E49] box-border rounded-[16px]">
+              <h2 class="text-[14px] tracking-tight leading-[1.4] text-primary">회고 후</h2>
+              <span class="tracking-tight leading-[1.4] text-white">오늘도 제대로 한게 없고 <br />실수한 것만 자꾸 생각나</span>
             </li>
           </ul>
+
+          <div class="message px-6 py-5 rounded-[16px] bg-[url('/dot_bg.png')] bg-cover flex items-center gap-6">
+            <img src="/didit.png" alt="didit_chc" />
+            <p class="text-white tracking-tight leading-[1.4] text-[18px]">정리되지 않은 이야기도 괜찮아요<br />디딧과 함께 돌아봐요</p>
+          </div>
         </div>
 
         <!-- QR 코드 -->
-        <div class="bg-gray-50 rounded-2xl p-5 flex items-center gap-4">
+        <div class="rounded-2xl relative p-5 flex items-center gap-4 border border-grey-9">
           <img
             src="/qr-appstore.png"
             alt="App Store 다운로드 QR 코드"
-            class="w-[88px] h-[88px] flex-shrink-0"
+            class="w-[40px] h-[40px] flex-shrink-0"
           />
-          <div>
-            <p class="text-[11px] text-gray-400 mb-0.5">카메라로 스캔하세요</p>
-            <p class="text-[14px] font-semibold text-gray-900">iOS 앱 설치하기</p>
-            <a
-              href="https://apps.apple.com/kr/app/%EB%94%94%EB%94%A7-didit-ai-%EC%97%85%EB%AC%B4-%ED%9A%8C%EA%B3%A0/id6761548843"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="text-[12px] text-primary mt-1 block hover:underline"
-            >
-              App Store 바로가기 →
-            </a>
-            <p class="text-[11px] text-gray-300 mt-0.5">Android 버전 출시 예정</p>
-          </div>
+          <a href="https://apps.apple.com/kr/app/디딧-didit-ai-업무-회고/id6761548843">
+            <span class="text-white">iOS 앱 설치하기</span>
+          </a>
+          <span class="absolute right-5 text-[12px] text-grey-7">Android 출시 예정</span>
         </div>
       </aside>
 
