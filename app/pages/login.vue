@@ -72,6 +72,7 @@ import { SocialLogin } from '@capgo/capacitor-social-login'
 import { CapacitorKakaoLogin } from '@team-lepisode/capacitor-kakao-login'
 import type { SocialCredentialType, SocialProvider } from '~/types/api'
 import { getApiErrorMessage } from '~/utils/api-error'
+import { createAppleNativeConfig, getAppleNativeCredentials } from '~/utils/appleNativeLogin'
 
 const { track } = useAmplitude()
 const config = useRuntimeConfig()
@@ -144,7 +145,9 @@ onMounted(async () => {
           }
         : { webClientId: config.public.googleClientId },
       // 애플은 iOS에서만 (안드로이드는 버튼 자체가 없음)
-      ...(showApple.value && platform === 'ios' ? { apple: { clientId: config.public.appleClientId } } : {}),
+      ...(showApple.value && platform === 'ios'
+        ? { apple: createAppleNativeConfig(config.public.appleClientId) }
+        : {}),
     })
     return
   }
@@ -190,7 +193,7 @@ async function submitLogin(
   provider: SocialProvider,
   credentialType: SocialCredentialType,
   credential: string,
-  options?: { redirectUri: string; nonce: string },
+  options?: { redirectUri?: string; nonce?: string; authorizationCode?: string },
 ) {
   isLoading.value = true
   try {
@@ -296,12 +299,14 @@ async function loginWithApple() {
     // iOS 앱: 네이티브 애플 로그인 → ID 토큰
     try {
       const res = await SocialLogin.login({ provider: 'apple', options: { scopes: ['email', 'name'] } })
-      const idToken = (res.result as { idToken?: string | null }).idToken
-      if (!idToken) {
+      const credentials = getAppleNativeCredentials(res.result)
+      if (!credentials) {
         showToast('Apple 로그인에 실패했어요. 다시 시도해 주세요.')
         return
       }
-      await submitLogin('APPLE', 'ID_TOKEN', idToken)
+      await submitLogin('APPLE', 'ID_TOKEN', credentials.idToken, {
+        authorizationCode: credentials.authorizationCode,
+      })
     } catch (e) {
       // 사용자가 취소한 경우는 실패가 아니므로 무시
       if (isUserCancelled(e)) return
