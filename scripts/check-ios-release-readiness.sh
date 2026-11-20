@@ -75,6 +75,9 @@ require_text ".github/workflows/ios-verify.yaml" "runs-on: macos-26" "GitHub Act
 
 if [[ -f "ios/App/Podfile.lock" ]]; then
   pass "ios/App/Podfile.lock is committed"
+
+  podfile_checksum="$(tr -d '\r' < ios/App/Podfile | sha1sum | awk '{print $1}')"
+  require_text "ios/App/Podfile.lock" "PODFILE CHECKSUM: $podfile_checksum" "Podfile.lock matches the current Podfile"
 elif [[ "$allow_missing_lock" == true ]]; then
   printf '[WAIT] ios/App/Podfile.lock will be produced by this first GitHub Actions run and must be committed before TestFlight\n'
 else
