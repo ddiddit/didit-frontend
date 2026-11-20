@@ -59,7 +59,7 @@ export default {
         // 편의 별칭
         error:      system.danger60,
         surface:    neutral[0],
-        background: neutral[80],
+        background: neutral[10],
       },
       borderRadius: {
         '2xl': '16px',

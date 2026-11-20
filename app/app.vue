@@ -1,7 +1,7 @@
 <template>
   <!-- 태블릿(600px+)부터 바깥은 흰 배경 → 중앙 앱 패널이 액자처럼 보이도록. 네이티브는 항상 단일 패널 -->
   <div
-    class="min-h-dvh bg-background"
+    class="min-h-dvh bg-grey-10"
     :class="!isNative && 'desktop:flex desktop:justify-center desktop:items-start'"
   >
     <NuxtRouteAnnouncer />

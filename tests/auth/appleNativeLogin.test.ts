@@ -4,10 +4,10 @@ import { describe, it } from 'node:test'
 import { createAppleNativeConfig, getAppleNativeCredentials } from '../../app/utils/appleNativeLogin.ts'
 
 describe('iOS Apple 로그인 토큰 교환', () => {
-  it('SDK 초기화에서 authorization code 반환을 활성화한다', () => {
+  it('iOS 7.20 플러그인의 accessToken 반환 방식을 사용한다', () => {
     assert.deepEqual(createAppleNativeConfig('com.swyp.didit'), {
       clientId: 'com.swyp.didit',
-      useProperTokenExchange: true,
+      useProperTokenExchange: false,
     })
   })
 
@@ -15,6 +15,10 @@ describe('iOS Apple 로그인 토큰 교환', () => {
     assert.deepEqual(
       getAppleNativeCredentials({ idToken: 'id-token', authorizationCode: 'authorization-code' }),
       { idToken: 'id-token', authorizationCode: 'authorization-code' },
+    )
+    assert.deepEqual(
+      getAppleNativeCredentials({ idToken: 'id-token', accessToken: { token: 'legacy-authorization-code' } }),
+      { idToken: 'id-token', authorizationCode: 'legacy-authorization-code' },
     )
     assert.equal(getAppleNativeCredentials({ idToken: 'id-token' }), null)
     assert.equal(getAppleNativeCredentials({ authorizationCode: 'authorization-code' }), null)

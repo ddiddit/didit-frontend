@@ -1,5 +1,5 @@
 <template>
-  <div class="h-dvh bg-primary flex flex-col">
+  <div class="h-full min-h-0 bg-primary flex flex-col">
     <!-- 상단: 헤드라인 (중앙 정렬) -->
     <div class="flex-1 flex flex-col items-center justify-center px-6 text-center">
       <div class="w-full max-w-[280px]">
