@@ -16,6 +16,7 @@ interface PendingSocialLogin {
 interface SocialLoginOptions {
   redirectUri?: string
   nonce?: string
+  authorizationCode?: string
 }
 
 const PENDING_LOGIN_KEY = 'pendingSocialLogin'
@@ -37,6 +38,7 @@ export function useSocialLoginFlow() {
       credential,
       ...(options?.redirectUri ? { redirectUri: options.redirectUri } : {}),
       ...(options?.nonce ? { nonce: options.nonce } : {}),
+      ...(options?.authorizationCode ? { authorizationCode: options.authorizationCode } : {}),
     })
     await handleResult(data.data, provider)
   }
