@@ -1,6 +1,6 @@
 <template>
-  <main class="min-h-dvh bg-white px-5 safe-bottom">
-    <div class="mx-auto flex min-h-dvh w-full max-w-md flex-col pt-6">
+  <main class="h-full min-h-0 bg-white px-5 safe-bottom">
+    <div class="mx-auto flex h-full min-h-0 w-full max-w-md flex-col pt-6">
       <button class="mb-10 flex h-10 w-10 items-center justify-center" aria-label="로그인으로 돌아가기" @click="goBack">
         <Icon name="material-symbols:arrow-back-ios-new-rounded" class="h-5 w-5 text-grey-9" />
       </button>
@@ -29,7 +29,7 @@
         <p v-if="errorMessage" class="mt-2 text-caption1 text-red-500">{{ errorMessage }}</p>
 
         <button
-          class="mt-auto h-14 w-full rounded-xl bg-grey-10 text-body2 font-semibold text-white disabled:opacity-40"
+          class="mt-auto h-14 shrink-0 w-full rounded-xl bg-grey-10 text-body2 font-semibold text-white disabled:opacity-40"
           :disabled="isLoading || !isEmailValid"
           @click="sendCode"
         >
@@ -67,7 +67,7 @@
         <p v-if="errorMessage" class="mt-3 text-caption1 text-red-500">{{ errorMessage }}</p>
 
         <button
-          class="mt-auto h-14 w-full rounded-xl bg-grey-10 text-body2 font-semibold text-white disabled:opacity-40"
+          class="mt-auto h-14 shrink-0 w-full rounded-xl bg-grey-10 text-body2 font-semibold text-white disabled:opacity-40"
           :disabled="isLoading || code.length !== 6 || remainingSeconds <= 0"
           @click="verifyCode"
         >
